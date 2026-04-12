@@ -95,9 +95,9 @@ export function getStoreHashFromUrl(url: string): string {
     const urlObj = new URL(url);
 
     // only keep some known query params that affect the page content
-    const relevantParams = ['keywords', 'geoId'];
+    const ignoredParams = ['currentJobId'];
     const filteredParams = new URLSearchParams(
-      [...urlObj.searchParams].filter(([key]) => relevantParams.includes(key)),
+      [...urlObj.searchParams].filter(([key]) => !ignoredParams.includes(key)),
     );
 
     urlObj.search = filteredParams.toString();
