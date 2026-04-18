@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `17:37` -- **Updated** `apps/desktopProbe/forge.config.ts`
 - `17:17` -- **Updated** `apps/backend/supabase/functions/.env.example`
 - `17:16` -- **Updated** `apps/backend/supabase/functions/_shared/advancedMatching.ts`
 - `17:14` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`

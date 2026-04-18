@@ -17,6 +17,8 @@ import { rendererConfig } from './webpack.renderer.config';
 // load env vars
 loadEnvVars({ path: path.join(__dirname, '..', 'desktopProbe', '.env') });
 
+const hasAppleCreds = !!(process.env.APPLE_ID && process.env.APPLE_PASSWORD && process.env.APPLE_TEAM_ID);
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
@@ -28,12 +30,16 @@ const config: ForgeConfig = {
         schemes: ['first2apply'],
       },
     ],
-    osxSign: {},
-    osxNotarize: {
-      appleId: process.env.APPLE_ID ?? '',
-      appleIdPassword: process.env.APPLE_PASSWORD ?? '',
-      teamId: process.env.APPLE_TEAM_ID ?? '',
-    },
+    ...(hasAppleCreds
+      ? {
+          osxSign: {},
+          osxNotarize: {
+            appleId: process.env.APPLE_ID as string,
+            appleIdPassword: process.env.APPLE_PASSWORD as string,
+            teamId: process.env.APPLE_TEAM_ID as string,
+          },
+        }
+      : {}),
   },
   rebuildConfig: {},
   makers: [
