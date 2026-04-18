@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `16:48` -- **Added** `apps/backend/supabase/migrations/20260418000001_seed_sites.sql`
 - `16:42` -- **Updated** `apps/backend/supabase/migrations/20260418000000_initial_schema.sql`
 - `16:30` -- **Updated** `apps/backend/supabase/config.toml`
 - `16:18` -- **Added** `apps/desktopProbe/README.pi.md`
