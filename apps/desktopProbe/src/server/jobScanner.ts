@@ -366,12 +366,15 @@ export class JobScanner {
       jobs_count: newJobs.length,
     });
 
-    // Fire Pushover in parallel if configured. Errors logged, not thrown.
-    if (this._settings.pushoverEnabled && this._settings.pushoverAppToken && this._settings.pushoverUserKey) {
+    // Fire Pushover in parallel if configured. Env vars win over settings (for headless deploys).
+    const appToken = ENV.pushover.appToken || this._settings.pushoverAppToken;
+    const userKey = ENV.pushover.userKey || this._settings.pushoverUserKey;
+    const pushoverEnabled = !!(ENV.pushover.appToken && ENV.pushover.userKey) || this._settings.pushoverEnabled;
+    if (pushoverEnabled && appToken && userKey) {
       const pushoverBody = `${firstJobsLabel}${otherJobsLabel} ${displatedJobs.length > 1 ? 'are' : 'is'} now available!`;
       sendPushover({
-        appToken: this._settings.pushoverAppToken,
-        userKey: this._settings.pushoverUserKey,
+        appToken,
+        userKey,
         title: 'Job Search Update',
         message: pushoverBody,
       }).catch((err) => this._logger.error(`pushover send failed: ${getExceptionMessage(err)}`));
