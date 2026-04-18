@@ -12,6 +12,7 @@ import { installLinkedInDecorator } from './browserHelpers';
 import { chunk, promiseAllSequence, waitRandomBetween } from './helpers';
 import { HtmlDownloader } from './htmlDownloader';
 import { ILogger } from './logger';
+import { sendPushover } from './pushover';
 
 const userDataPath = app.getPath('userData');
 const settingsPath = path.join(userDataPath, 'settings.json');
