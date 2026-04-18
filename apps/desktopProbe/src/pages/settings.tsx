@@ -128,6 +128,58 @@ export function SettingsPage() {
         />
       </div>
 
+      {/* Pushover notifications */}
+      <div className="space-y-4 rounded-lg border p-6">
+        <div className="flex flex-row items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h2 className="text-lg">Pushover notifications</h2>
+            <p className="text-sm font-light">
+              Send push notifications to your phone via{' '}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => openExternalUrl('https://pushover.net/')}
+              >
+                Pushover
+              </button>
+              . Create an app there to get an app token; your user key is on your Pushover dashboard.
+            </p>
+          </div>
+          <Switch
+            checked={!!settings.pushoverEnabled}
+            onCheckedChange={(checked) => onUpdatedSettings({ ...settings, pushoverEnabled: checked })}
+          />
+        </div>
+        {settings.pushoverEnabled && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="pushover-app-token">App token</Label>
+              <Input
+                id="pushover-app-token"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={settings.pushoverAppToken ?? ''}
+                onChange={(e) => onUpdatedSettings({ ...settings, pushoverAppToken: e.target.value })}
+                placeholder="axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="pushover-user-key">User key</Label>
+              <Input
+                id="pushover-user-key"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={settings.pushoverUserKey ?? ''}
+                onChange={(e) => onUpdatedSettings({ ...settings, pushoverUserKey: e.target.value })}
+                placeholder="uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* in-app browser settings */}
       <div className="flex flex-row items-center justify-between gap-6 rounded-lg border p-6">
         <div className="space-y-1">
