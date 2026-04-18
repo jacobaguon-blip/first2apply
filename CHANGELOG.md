@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `16:17` -- **Added** `apps/desktopProbe/.env.pi.example`
 - `16:17` -- **Added** `apps/desktopProbe/docker-compose.pi.yml`
 - `16:16` -- **Added** `apps/desktopProbe/Dockerfile.pi`
 - `16:15` -- **Updated** `apps/desktopProbe/src/server/jobScanner.ts`
