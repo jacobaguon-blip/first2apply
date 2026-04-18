@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `17:16` -- **Updated** `apps/backend/supabase/functions/_shared/advancedMatching.ts`
 - `17:14` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`
 - `17:13` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`
 - `17:12` -- **Updated** `apps/backend/supabase/functions/_shared/env.ts`

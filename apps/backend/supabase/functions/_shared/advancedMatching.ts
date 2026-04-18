@@ -112,7 +112,7 @@ async function promptOpenAI({
   supabaseAdminClient: SupabaseClient<DbSchema, 'public'>;
 }) {
   const { llmConfig, openAi } = buildOpenAiClient({
-    modelName: 'gpt-5.4',
+    modelName: 'gpt-4o',
   });
 
   const response = await openAi.chat.completions.create({
