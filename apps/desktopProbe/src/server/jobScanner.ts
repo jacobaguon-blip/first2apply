@@ -355,10 +355,26 @@ export class JobScanner {
         jobs_count: newJobs.length,
       });
     });
-    notification.show();
+    // On headless platforms (Pi / Xvfb) the native notifier may throw — don't let it block Pushover.
+    try {
+      notification.show();
+    } catch (err) {
+      this._logger.warn(`native notification failed (headless?): ${getExceptionMessage(err)}`);
+    }
     this._analytics.trackEvent('show_notification', {
       jobs_count: newJobs.length,
     });
+
+    // Fire Pushover in parallel if configured. Errors logged, not thrown.
+    if (this._settings.pushoverEnabled && this._settings.pushoverAppToken && this._settings.pushoverUserKey) {
+      const pushoverBody = `${firstJobsLabel}${otherJobsLabel} ${displatedJobs.length > 1 ? 'are' : 'is'} now available!`;
+      sendPushover({
+        appToken: this._settings.pushoverAppToken,
+        userKey: this._settings.pushoverUserKey,
+        title: 'Job Search Update',
+        message: pushoverBody,
+      }).catch((err) => this._logger.error(`pushover send failed: ${getExceptionMessage(err)}`));
+    }
   }
 
   /**
