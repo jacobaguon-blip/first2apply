@@ -7,6 +7,7 @@ import fs from 'fs';
 import { ScheduledTask, schedule } from 'node-cron';
 import path from 'path';
 
+import { ENV } from '../env';
 import { AVAILABLE_CRON_RULES, JobScannerSettings } from '../lib/types';
 import { installLinkedInDecorator } from './browserHelpers';
 import { chunk, promiseAllSequence, waitRandomBetween } from './helpers';
