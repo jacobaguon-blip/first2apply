@@ -359,7 +359,7 @@ export class JobScanner {
     try {
       notification.show();
     } catch (err) {
-      this._logger.warn(`native notification failed (headless?): ${getExceptionMessage(err)}`);
+      this._logger.info(`native notification failed (headless?): ${getExceptionMessage(err)}`);
     }
     this._analytics.trackEvent('show_notification', {
       jobs_count: newJobs.length,
