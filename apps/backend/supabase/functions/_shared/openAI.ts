@@ -2,7 +2,7 @@ import { parseEnv } from './env.ts';
 
 import { getExceptionMessage } from '@first2apply/core';
 import { SupabaseClient } from '@supabase/supabasefork';
-import { AzureOpenAI } from 'openai';
+import OpenAI from 'openai';
 
 import { ILogger } from './logger.ts';
 
@@ -16,40 +16,24 @@ type OpenAIResponse = {
 
 const env = parseEnv();
 
-// o3* classes seems to have been superseded by gpt-5* models.
-const SUPPORTED_MODELS = ['gpt-5.4', 'gpt-5-mini'] as const;
+const SUPPORTED_MODELS = ['gpt-4o', 'gpt-4o-mini'] as const;
 type SupportedModel = (typeof SUPPORTED_MODELS)[number];
 
 const COST_PER_MODEL: Record<SupportedModel, { input: number; output: number }> = {
-  'gpt-5.4': { input: 2.5, output: 15 },
-  // 'gpt-5.2': { input: 1.75, output: 14 },
-  'gpt-5-mini': { input: 0.25, output: 2 },
-  // 'gpt-5-nano': { input: 0.05, output: 0.4 },
-  // 'gpt-4o': { input: 2.5, output: 10 },
-  // 'gpt-4o-mini': { input: 0.15, output: 0.6 },
-  // 'o4-mini': { input: 1.1, output: 4.4 },
-  // o3: { input: 2.0, output: 8.0 },
-  // 'o3-mini': { input: 1.1, output: 4.4 },
-  // 'DeepSeek-R1-0528': { input: 1.35, output: 5.4 },
-  // '01': { input: 15, output: 60 },
+  'gpt-4o': { input: 2.5, output: 10 },
+  'gpt-4o-mini': { input: 0.15, output: 0.6 },
 };
 
-export type AzureFoundryConfig = {
-  apiEndpoint: string;
+export type OpenAiConfig = {
   apiKey: string;
 };
 
-/**
- * Build a new Azure OpenAI client.
- */
 export function buildOpenAiClient({ modelName }: { modelName?: SupportedModel }) {
-  const openAi = new AzureOpenAI({
-    apiKey: env.azureFoundryConfig.apiKey,
-    endpoint: env.azureFoundryConfig.apiEndpoint,
-    apiVersion: '2024-12-01-preview',
+  const openAi = new OpenAI({
+    apiKey: env.openAiConfig.apiKey,
   });
 
-  const model = modelName ?? 'gpt-5.4';
+  const model = modelName ?? 'gpt-4o';
   if (!(model in COST_PER_MODEL)) {
     throw new Error(`Unsupported model: ${model}`);
   }

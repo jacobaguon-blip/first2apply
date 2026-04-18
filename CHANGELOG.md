@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `17:12` -- **Updated** `apps/backend/supabase/functions/_shared/openAI.ts`
 - `17:01` -- **Added** `apps/backend/supabase/migrations/20260418000002_household_unlimited_trial.sql`
 - `16:48` -- **Added** `apps/backend/supabase/migrations/20260418000001_seed_sites.sql`
 - `16:42` -- **Updated** `apps/backend/supabase/migrations/20260418000000_initial_schema.sql`
