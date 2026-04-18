@@ -257,7 +257,7 @@ ${withAdvancedMatchingPreferences}
 
   const { userPrompt, htmlContent } = generateUserPrompt();
   const { openAi, llmConfig } = buildOpenAiClient({
-    modelName: 'gpt-5-mini',
+    modelName: 'gpt-4o-mini',
     ...context,
   });
 
