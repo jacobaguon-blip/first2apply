@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `16:30` -- **Updated** `apps/backend/supabase/config.toml`
 - `16:18` -- **Added** `apps/desktopProbe/README.pi.md`
 - `16:17` -- **Added** `apps/desktopProbe/.env.pi.example`
 - `16:17` -- **Added** `apps/desktopProbe/docker-compose.pi.yml`
