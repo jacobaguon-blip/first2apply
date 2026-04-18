@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `16:14` -- **Updated** `apps/desktopProbe/src/env.ts`
 - `16:04` -- **Updated** `apps/desktopProbe/src/pages/settings.tsx`
 - `16:02` -- **Updated** `apps/desktopProbe/src/pages/settings.tsx`
 - `16:02` -- **Updated** `apps/desktopProbe/src/server/jobScanner.ts`

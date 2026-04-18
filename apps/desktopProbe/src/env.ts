@@ -7,4 +7,8 @@ export const ENV = {
   },
   mezmoApiKey: process.env.MEZMO_API_KEY,
   amplitudeApiKey: process.env.AMPLITUDE_API_KEY,
+  pushover: {
+    appToken: process.env.PUSHOVER_APP_TOKEN,
+    userKey: process.env.PUSHOVER_USER_KEY,
+  },
 };
