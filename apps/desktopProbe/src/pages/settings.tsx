@@ -7,6 +7,8 @@ import { useSettings } from '@/hooks/settings';
 import { applyAppUpdate, logout, openExternalUrl } from '@/lib/electronMainSdk';
 import { JobScannerSettings } from '@/lib/types';
 import { Button } from '@first2apply/ui';
+import { Input } from '@first2apply/ui';
+import { Label } from '@first2apply/ui';
 import { Switch } from '@first2apply/ui';
 import * as luxon from 'luxon';
 
