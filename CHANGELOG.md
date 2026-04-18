@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `15:57` -- **Added** `apps/desktopProbe/src/server/pushover.ts`
 - `15:57` -- **Updated** `apps/desktopProbe/src/lib/types.ts`
 
 ## [2.4.0](https://github.com/beastx-ro/first2apply/compare/desktop-v2.3.0...2.4.0) (2025-12-01)
