@@ -68,11 +68,11 @@ export class OverlayBrowserView {
       this._mainWindow?.webContents.send('browser-view-url-changed', newUrl);
     };
     this._searchView.webContents.on('did-navigate', (_event, url) => {
-      logger.info('[OverlayBrowserView] did-navigate', { url });
+      logger.debug('[OverlayBrowserView] did-navigate', { url });
       sendUrlUpdate(url);
     });
     this._searchView.webContents.on('did-navigate-in-page', (_event, url) => {
-      logger.info('[OverlayBrowserView] did-navigate-in-page', { url });
+      logger.debug('[OverlayBrowserView] did-navigate-in-page', { url });
       sendUrlUpdate(url);
     });
     this._searchView.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
