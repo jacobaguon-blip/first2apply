@@ -89,6 +89,7 @@ export const LinksProvider = ({
       html: string
       webPageRuntimeData: WebPageRuntimeData
       force: boolean
+      scanFrequency?: "hourly" | "daily"
     }
   ) => {
     const createdLink = await sdk.createLink(newLink)
