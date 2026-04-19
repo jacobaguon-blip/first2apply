@@ -114,6 +114,7 @@ export interface First2ApplyApiSdk {
     html: string;
     webPageRuntimeData: WebPageRuntimeData;
     force: boolean;
+    scanFrequency?: 'hourly' | 'daily';
   }): Promise<Link>;
 
   /** Update an existing link */

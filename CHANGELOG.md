@@ -1,6 +1,7 @@
 
 
 ## 2026-04-19
+- `00:20` -- **Updated** `libraries/core/src/sdk.ts`
 - `00:19` -- **Updated** `libraries/core/src/types.ts`
 - `00:19` -- **Updated** `libraries/core/src/types.ts`
 - `00:18` -- **Added** `apps/backend/supabase/migrations/20260419000000_links_scan_frequency.sql`
