@@ -1,5 +1,8 @@
 
 
+## 2026-04-19
+- `00:18` -- **Added** `apps/backend/supabase/migrations/20260419000000_links_scan_frequency.sql`
+
 ## 2026-04-18
 - `23:13` -- **Updated** `apps/desktopProbe/src/server/logger.ts`
 - `23:12` -- **Updated** `apps/desktopProbe/src/server/overlayBrowserView.ts`
