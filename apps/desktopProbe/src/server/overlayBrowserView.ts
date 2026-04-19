@@ -67,8 +67,23 @@ export class OverlayBrowserView {
     const sendUrlUpdate = (_event: Event, newUrl: string) => {
       this._mainWindow?.webContents.send('browser-view-url-changed', newUrl);
     };
-    this._searchView.webContents.on('did-navigate', sendUrlUpdate);
-    this._searchView.webContents.on('did-navigate-in-page', sendUrlUpdate);
+    this._searchView.webContents.on('did-navigate', (event, url) => {
+      logger.info('[OverlayBrowserView] did-navigate', { url });
+      sendUrlUpdate(event, url);
+    });
+    this._searchView.webContents.on('did-navigate-in-page', (event, url) => {
+      logger.info('[OverlayBrowserView] did-navigate-in-page', { url });
+      sendUrlUpdate(event, url);
+    });
+    this._searchView.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+      logger.error('[OverlayBrowserView] did-fail-load', { errorCode, errorDescription, validatedURL });
+    });
+    this._searchView.webContents.on('did-finish-load', () => {
+      logger.info('[OverlayBrowserView] did-finish-load', { url: this._searchView?.webContents.getURL() });
+    });
+    this._searchView.webContents.on('render-process-gone', (_event, details) => {
+      logger.error('[OverlayBrowserView] render-process-gone', { reason: details.reason });
+    });
 
     this._mainWindow.contentView.addChildView(this._searchView);
 
