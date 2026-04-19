@@ -217,7 +217,10 @@ export class OverlayBrowserView {
       wc.executeJavaScript('document.documentElement.outerHTML'),
       10_000,
       'executeJavaScript(outerHTML)',
-    );
+    ).catch((err) => {
+      logger.error('[OverlayBrowserView.finish] outerHTML failed', { error: err?.message });
+      throw new Error('Page is still loading. Wait a moment and try Save again.');
+    });
     logger.info('[OverlayBrowserView.finish] outerHTML returned', { length: html?.length ?? 0 });
 
     logger.info('[OverlayBrowserView.finish] executing document.title...');
@@ -225,7 +228,10 @@ export class OverlayBrowserView {
       wc.executeJavaScript('document.title'),
       5_000,
       'executeJavaScript(title)',
-    );
+    ).catch((err) => {
+      logger.error('[OverlayBrowserView.finish] title failed', { error: err?.message });
+      throw new Error('Page is still loading. Wait a moment and try Save again.');
+    });
     logger.info('[OverlayBrowserView.finish] title returned', { title });
 
     const url = wc.getURL();
