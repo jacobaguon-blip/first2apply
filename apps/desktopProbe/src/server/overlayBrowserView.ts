@@ -186,6 +186,13 @@ export class OverlayBrowserView {
       isWaitingForResponse: wc.isWaitingForResponse(),
     });
 
+    // executeJavaScript suspends until page stops loading. Sites like LinkedIn
+    // keep a perpetual XHR stream, so we proactively stop any in-flight load.
+    if (wc.isLoading()) {
+      logger.info('[OverlayBrowserView.finish] page still loading — calling wc.stop() to unblock executeJavaScript');
+      wc.stop();
+    }
+
     logger.info('[OverlayBrowserView.finish] executing outerHTML...');
     const html = await withTimeout(
       wc.executeJavaScript('document.documentElement.outerHTML'),
