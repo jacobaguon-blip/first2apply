@@ -50,6 +50,8 @@ export type JobSite = {
   incognito_support: boolean;
 };
 
+export type LinkScanFrequency = 'hourly' | 'daily';
+
 export type Link = {
   id: number;
   url: string;
@@ -60,6 +62,7 @@ export type Link = {
   scrape_failure_count: number;
   last_scraped_at: string;
   scrape_failure_email_sent: boolean;
+  scan_frequency: LinkScanFrequency;
 };
 
 export type JobType = 'remote' | 'hybrid' | 'onsite';
