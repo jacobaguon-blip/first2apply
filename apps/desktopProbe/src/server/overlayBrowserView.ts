@@ -186,11 +186,30 @@ export class OverlayBrowserView {
       isWaitingForResponse: wc.isWaitingForResponse(),
     });
 
-    // executeJavaScript suspends until page stops loading. Sites like LinkedIn
-    // keep a perpetual XHR stream, so we proactively stop any in-flight load.
+    // executeJavaScript suspends until the page stops loading. Sites like LinkedIn
+    // keep a perpetual XHR stream, so we may need to stop any in-flight load.
+    // Give the page a short grace window first so we don't kill an in-flight
+    // top-level redirect and capture a blank/intermediate document.
     if (wc.isLoading()) {
-      logger.info('[OverlayBrowserView.finish] page still loading — calling wc.stop() to unblock executeJavaScript');
-      wc.stop();
+      logger.info('[OverlayBrowserView.finish] page loading — waiting 500ms grace window');
+      await new Promise((r) => setTimeout(r, 500));
+      const stillLoading = wc.isLoading();
+      const urlNow = wc.getURL();
+      if (stillLoading && urlNow === preUrl) {
+        logger.info('[OverlayBrowserView.finish] still loading same URL — calling wc.stop()');
+        wc.stop();
+      } else if (stillLoading) {
+        logger.info('[OverlayBrowserView.finish] URL changed during grace window, letting new load settle', {
+          from: preUrl,
+          to: urlNow,
+        });
+        // Give the new navigation up to 3s to settle, then stop if still loading.
+        await new Promise((r) => setTimeout(r, 3_000));
+        if (wc.isLoading()) {
+          logger.info('[OverlayBrowserView.finish] new URL still loading after 3s — calling wc.stop()');
+          wc.stop();
+        }
+      }
     }
 
     logger.info('[OverlayBrowserView.finish] executing outerHTML...');
