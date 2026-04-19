@@ -73,7 +73,7 @@ export function CreateLink() {
       setJobBoardModalResponse(jobSearchInfo);
       setIsConfirmationDialogOpen(true);
     } catch (error) {
-      handleError({ error, title: 'Error closing job board' });
+      handleError({ error, title: 'Could not save this search' });
     }
   };
 
