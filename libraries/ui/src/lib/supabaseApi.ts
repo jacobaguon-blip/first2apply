@@ -107,12 +107,14 @@ export class F2aSupabaseApi {
     html,
     webPageRuntimeData,
     force,
+    scanFrequency,
   }: {
     title: string
     url: string
     html: string
     webPageRuntimeData: WebPageRuntimeData
     force: boolean
+    scanFrequency?: "hourly" | "daily"
   }) {
     // for debugging, use a test.html file
     // const htmlFixture = fs.readFileSync(path.join(__dirname, '../../../test.html'), 'utf-8');
@@ -128,6 +130,7 @@ export class F2aSupabaseApi {
             html,
             webPageRuntimeData,
             force,
+            scanFrequency,
           },
         }
       )
