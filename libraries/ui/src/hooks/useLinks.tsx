@@ -16,6 +16,7 @@ type LinksContextType = {
       html: string
       webPageRuntimeData: WebPageRuntimeData
       force: boolean
+      scanFrequency?: "hourly" | "daily"
     }
   ) => Promise<Link>
   updateLink: (
