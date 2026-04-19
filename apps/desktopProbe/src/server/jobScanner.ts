@@ -87,7 +87,7 @@ export class JobScanner {
         ...this._settings,
         ...JSON.parse(fs.readFileSync(settingsPath, 'utf-8')),
       };
-      this._logger.info(`loadied settings from disk: ${JSON.stringify(settingsToApply)}`);
+      this._logger.info(`loaded settings from disk: ${JSON.stringify(redactSettings(settingsToApply))}`);
     } else {
       this._logger.info(`no settings found on disk, using defaults`);
       settingsToApply = DEFAULT_SETTINGS;

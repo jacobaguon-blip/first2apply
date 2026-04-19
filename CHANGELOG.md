@@ -1,6 +1,7 @@
 
 
 ## 2026-04-18
+- `23:03` -- **Updated** `apps/desktopProbe/src/server/jobScanner.ts`
 - `22:04` -- **Updated** `apps/desktopProbe/src/server/overlayBrowserView.ts`
 - `21:53` -- **Updated** `apps/desktopProbe/src/server/overlayBrowserView.ts`
 - `21:48` -- **Updated** `apps/desktopProbe/src/server/rendererIpcApi.ts`
