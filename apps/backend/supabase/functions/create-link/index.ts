@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
         url: cleanUrl,
         title,
         site_id: site.id,
+        scan_frequency: resolvedScanFrequency,
       })
       .select('*');
     if (error) throw error;
