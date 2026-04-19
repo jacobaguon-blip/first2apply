@@ -26,6 +26,11 @@ const DEFAULT_SETTINGS: JobScannerSettings = {
   inAppBrowserEnabled: true,
 };
 
+function redactSettings(s: JobScannerSettings): JobScannerSettings {
+  const redact = (v?: string) => (v && v.length > 0 ? `<redacted len=${v.length}>` : v);
+  return { ...s, pushoverAppToken: redact(s.pushoverAppToken), pushoverUserKey: redact(s.pushoverUserKey) } as JobScannerSettings;
+}
+
 /**
  * Class used to manage a cron job that periodically scans links.
  */
