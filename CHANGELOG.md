@@ -1,6 +1,7 @@
 
 
 ## 2026-04-19
+- `00:27` -- **Updated** `apps/desktopProbe/src/server/jobScanner.ts`
 - `00:26` -- **Updated** `libraries/ui/src/hooks/useLinks.tsx`
 - `00:26` -- **Updated** `libraries/ui/src/hooks/useLinks.tsx`
 - `00:25` -- **Updated** `apps/desktopProbe/src/server/rendererIpcApi.ts`

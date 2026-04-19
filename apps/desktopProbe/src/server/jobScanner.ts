@@ -119,8 +119,20 @@ export class JobScanner {
     }
 
     // fetch all links from the database
-    const links = (await this._supabaseApi.listLinks()) ?? [];
-    this._logger.info(`found ${links?.length} links`);
+    const allLinks = (await this._supabaseApi.listLinks()) ?? [];
+
+    // Throttle: daily-frequency links (company target pages) are skipped if
+    // they were last scraped less than 24h ago. Manual scanLinks()/scanLink()
+    // calls bypass this — the filter only runs on the cron path.
+    const nowMs = Date.now();
+    const DAILY_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+    const links = allLinks.filter((link) => {
+      if (link.scan_frequency !== 'daily') return true;
+      const lastMs = link.last_scraped_at ? new Date(link.last_scraped_at).getTime() : 0;
+      return nowMs - lastMs >= DAILY_MIN_INTERVAL_MS;
+    });
+    const skipped = allLinks.length - links.length;
+    this._logger.info(`found ${allLinks.length} links (skipping ${skipped} daily links within 24h window)`);
 
     // start the scan
     return this.scanLinks({ links });
