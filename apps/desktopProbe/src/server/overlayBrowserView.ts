@@ -64,16 +64,16 @@ export class OverlayBrowserView {
     this._mainWindow.on('resize', this._resizeListener);
 
     // Listen for navigation events and send the new URL to the renderer
-    const sendUrlUpdate = (_event: Event, newUrl: string) => {
+    const sendUrlUpdate = (newUrl: string) => {
       this._mainWindow?.webContents.send('browser-view-url-changed', newUrl);
     };
-    this._searchView.webContents.on('did-navigate', (event, url) => {
+    this._searchView.webContents.on('did-navigate', (_event, url) => {
       logger.info('[OverlayBrowserView] did-navigate', { url });
-      sendUrlUpdate(event, url);
+      sendUrlUpdate(url);
     });
-    this._searchView.webContents.on('did-navigate-in-page', (event, url) => {
+    this._searchView.webContents.on('did-navigate-in-page', (_event, url) => {
       logger.info('[OverlayBrowserView] did-navigate-in-page', { url });
-      sendUrlUpdate(event, url);
+      sendUrlUpdate(url);
     });
     this._searchView.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
       logger.error('[OverlayBrowserView] did-fail-load', { errorCode, errorDescription, validatedURL });
