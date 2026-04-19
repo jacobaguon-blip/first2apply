@@ -155,18 +155,46 @@ export class OverlayBrowserView {
    * Get the html content, title, and URL of the current page and close the modal.
    */
   async finish(): Promise<OverlayBrowserViewResult> {
+    logger.info('[OverlayBrowserView.finish] called');
     if (!this._searchView) {
+      logger.error('[OverlayBrowserView.finish] _searchView is undefined');
       throw new Error('Search view is not set');
     }
 
-    const html = await this._searchView.webContents.executeJavaScript('document.documentElement.outerHTML');
-    const title = await this._searchView.webContents.executeJavaScript('document.title');
-    const url = this._searchView.webContents.getURL();
+    const wc = this._searchView.webContents;
+    const preUrl = wc.getURL();
+    logger.info('[OverlayBrowserView.finish] webContents state', {
+      url: preUrl,
+      isLoading: wc.isLoading(),
+      isCrashed: wc.isCrashed(),
+      isDestroyed: wc.isDestroyed(),
+      isWaitingForResponse: wc.isWaitingForResponse(),
+    });
+
+    logger.info('[OverlayBrowserView.finish] executing outerHTML...');
+    const html = await withTimeout(
+      wc.executeJavaScript('document.documentElement.outerHTML'),
+      10_000,
+      'executeJavaScript(outerHTML)',
+    );
+    logger.info('[OverlayBrowserView.finish] outerHTML returned', { length: html?.length ?? 0 });
+
+    logger.info('[OverlayBrowserView.finish] executing document.title...');
+    const title = await withTimeout(
+      wc.executeJavaScript('document.title'),
+      5_000,
+      'executeJavaScript(title)',
+    );
+    logger.info('[OverlayBrowserView.finish] title returned', { title });
+
+    const url = wc.getURL();
+    logger.info('[OverlayBrowserView.finish] final getURL', { url });
 
     // Read runtime data captured by the protocol handler (stored in main-process memory)
     const webPageRuntimeData: WebPageRuntimeData = consumeRuntimeData(url);
 
     this.close();
+    logger.info('[OverlayBrowserView.finish] returning result');
 
     return {
       url,
