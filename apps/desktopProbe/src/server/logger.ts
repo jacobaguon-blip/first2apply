@@ -13,11 +13,25 @@ export interface ILogger {
   flush(): void;
 }
 
+const MAX_LOG_BYTES = 5 * 1024 * 1024; // 5 MB
+const ROTATED_SUFFIX = '.1';
+
 function openLogFile(): fs.WriteStream | null {
   try {
     const logsDir = app.getPath('logs');
     fs.mkdirSync(logsDir, { recursive: true });
     const logPath = path.join(logsDir, 'main.log');
+    // Rotate once at startup if the existing log is over the threshold.
+    try {
+      const stat = fs.statSync(logPath);
+      if (stat.size > MAX_LOG_BYTES) {
+        const rotated = logPath + ROTATED_SUFFIX;
+        fs.rmSync(rotated, { force: true });
+        fs.renameSync(logPath, rotated);
+      }
+    } catch {
+      // file does not exist yet, no rotation needed
+    }
     const stream = fs.createWriteStream(logPath, { flags: 'a' });
     stream.write(`\n===== ${new Date().toISOString()} app start (v${app.getVersion()}) =====\n`);
     return stream;
