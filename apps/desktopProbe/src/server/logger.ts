@@ -65,7 +65,7 @@ class Logger implements ILogger {
 
   debug(message: string, data?: Record<string, any>) {
     console.log(message, data);
-    writeToFile('DEBUG', message, data);
+    // debug is intentionally not written to file to limit disk growth; console + Mezmo only
     this._logger?.debug(message, { meta: data });
   }
 
