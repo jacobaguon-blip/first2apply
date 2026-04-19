@@ -96,12 +96,14 @@ export async function createLink({
   html,
   webPageRuntimeData,
   force,
+  scanFrequency,
 }: {
   title: string;
   url: string;
   html: string;
   webPageRuntimeData: WebPageRuntimeData;
   force: boolean;
+  scanFrequency?: 'hourly' | 'daily';
 }): Promise<Link> {
   const { link } = await _mainProcessApiCall<{ link: Link }>('create-link', {
     title,
@@ -109,6 +111,7 @@ export async function createLink({
     html,
     webPageRuntimeData,
     force,
+    scanFrequency,
   });
   return link;
 }
