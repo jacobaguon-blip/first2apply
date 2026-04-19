@@ -1,6 +1,7 @@
 
 
 ## 2026-04-19
+- `00:30` -- **Updated** `apps/desktopProbe/src/pages/links.tsx`
 - `00:29` -- **Added** `apps/desktopProbe/src/components/createCompanyTarget.tsx`
 - `00:27` -- **Updated** `apps/desktopProbe/src/server/jobScanner.ts`
 - `00:26` -- **Updated** `libraries/ui/src/hooks/useLinks.tsx`

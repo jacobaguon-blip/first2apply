@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { BrowserWindow, BrowserWindowHandle } from '@/components/browserWindow';
+import { CreateCompanyTarget } from '@/components/createCompanyTarget';
 import { CreateLink } from '@/components/createLink';
 import { LinksList } from '@/components/linksList';
 import { LinksListSkeleton } from '@/components/skeletons/linksListSkeleton';
