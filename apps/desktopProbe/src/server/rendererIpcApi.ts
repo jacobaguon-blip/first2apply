@@ -292,7 +292,13 @@ export function initRendererIpcApi({
     return _apiCall(async () => overlayBrowserView.goForward());
   });
   ipcMain.handle('finish-overlay-browser-view', async () => {
-    return _apiCall(async () => overlayBrowserView.finish());
+    logger.info('[IPC] finish-overlay-browser-view invoked');
+    const result = await _apiCall(async () => overlayBrowserView.finish());
+    logger.info('[IPC] finish-overlay-browser-view returning', {
+      hasData: 'data' in result,
+      hasError: 'error' in result,
+    });
+    return result;
   });
   ipcMain.handle('overlay-browser-view-navigate', async (event, { url }) => {
     return _apiCall(async () => overlayBrowserView.navigate(url));
