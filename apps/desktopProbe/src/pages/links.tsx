@@ -89,6 +89,9 @@ export function LinksPage() {
     );
   }
 
+  const hourlyLinks = links.filter((link) => link.scan_frequency !== 'daily');
+  const dailyLinks = links.filter((link) => link.scan_frequency === 'daily');
+
   return (
     <DefaultLayout className="p-6 md:p-10">
       <div className="flex justify-between">
@@ -113,14 +116,39 @@ export function LinksPage() {
         </div>
       )}
 
-      {links.length > 0 && (
+      {hourlyLinks.length > 0 && (
         <LinksList
-          links={links}
+          links={hourlyLinks}
           onDeleteLink={handleDeleteLink}
           onDebugLink={handleDebugLink}
           onUpdateLink={handleUpdateLink}
         />
       )}
+
+      <section className="mt-12">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="text-2xl font-medium tracking-wide">Target Company Pages</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Company career pages crawled once per day (e.g. <span className="font-mono">anthropic.com/careers</span>).
+            </p>
+          </div>
+          <CreateCompanyTarget />
+        </div>
+
+        {dailyLinks.length > 0 ? (
+          <LinksList
+            links={dailyLinks}
+            onDeleteLink={handleDeleteLink}
+            onDebugLink={handleDebugLink}
+            onUpdateLink={handleUpdateLink}
+          />
+        ) : (
+          <p className="mt-6 text-sm text-muted-foreground">
+            No target pages yet. Paste a company career URL to have it scanned once per day.
+          </p>
+        )}
+      </section>
 
       <BrowserWindow
         ref={browserWindowRef}
