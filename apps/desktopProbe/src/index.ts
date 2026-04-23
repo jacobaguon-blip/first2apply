@@ -46,7 +46,6 @@ if (process.defaultApp) {
 }
 
 let mainWindow: BrowserWindow | null = null;
-let trayIconNotificationShown = false;
 const createMainWindow = () => {
   // Create the browser window.
   if (mainWindow) return;
