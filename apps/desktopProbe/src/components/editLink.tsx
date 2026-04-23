@@ -24,7 +24,7 @@ export function EditLink({
 }: {
   isOpen: boolean;
   link: Link;
-  onUpdateLink: (data: { linkId: number; title: string }) => Promise<void>;
+  onUpdateLink: (data: { linkId: number; title: string; url: string }) => Promise<void>;
   onCancel: () => void;
 }) {
   if (!isOpen) {
