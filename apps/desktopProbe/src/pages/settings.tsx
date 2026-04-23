@@ -19,6 +19,8 @@ import { Input } from '@first2apply/ui';
 import { Label } from '@first2apply/ui';
 import { Switch } from '@first2apply/ui';
 
+import { useEffect, useState } from 'react';
+
 import { DefaultLayout } from './defaultLayout';
 
 export function SettingsPage() {
