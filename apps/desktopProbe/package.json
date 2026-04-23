@@ -12,7 +12,7 @@
     "build": "tsc --noEmit",
     "prettier": "prettier --check \"src/**/*.{ts,tsx}\"",
     "package": "electron-forge package",
-    "make": "electron-forge make --arch x64",
+    "make": "electron-forge make --arch=arm64",
     "release": "npx release-it --ci"
   },
   "keywords": [],
