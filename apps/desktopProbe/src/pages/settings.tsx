@@ -192,32 +192,6 @@ export function SettingsPage() {
         />
       </div>
 
-      {/* subscription */}
-      <div className="flex flex-row items-center justify-between gap-6 rounded-lg border p-6">
-        <div className="space-y-1">
-          <h2 className="text-lg">
-            {profile.subscription_tier.toUpperCase()} subscription
-            {profile.is_trial && ' (Trial)'}
-          </h2>
-          <p className="text-sm font-light">
-            Your subscription ends on{' '}
-            <span className="underline">
-              {luxon.DateTime.fromISO(profile.subscription_end_date).toFormat('dd LLLL yyyy')}
-            </span>
-            .{!profile.is_trial && ' You can cancel or upgrade your subscription at any time.'}
-          </p>
-        </div>
-        {!profile.is_trial && (
-          <Button
-            className="w-fit"
-            variant="secondary"
-            onClick={() => openExternalUrl(stripeConfig.customerPortalLink)}
-          >
-            Manage Subscription
-          </Button>
-        )}
-      </div>
-
       <div className="flex justify-end pt-4">
         <Button className="w-fit" variant="destructive" onClick={onLogout}>
           Logout
