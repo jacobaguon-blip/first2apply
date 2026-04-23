@@ -1,7 +1,7 @@
 import { getExceptionMessage } from '@first2apply/core';
 import { Job } from '@first2apply/core';
 import { F2aSupabaseApi } from '@first2apply/ui';
-import { dialog, ipcMain, shell } from 'electron';
+import { app, dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import { json2csv } from 'json-2-csv';
 import os from 'os';
