@@ -4,7 +4,15 @@ import { useAppState } from '@/hooks/appState';
 import { useError } from '@/hooks/error';
 import { useSession } from '@/hooks/session';
 import { useSettings } from '@/hooks/settings';
-import { applyAppUpdate, logout, openExternalUrl } from '@/lib/electronMainSdk';
+import {
+  applyAppUpdate,
+  getSupabaseConfig,
+  logout,
+  openExternalUrl,
+  setSupabaseConfig,
+  SupabaseConfigInfo,
+  testSupabaseConnection,
+} from '@/lib/electronMainSdk';
 import { JobScannerSettings } from '@/lib/types';
 import { Button } from '@first2apply/ui';
 import { Input } from '@first2apply/ui';
