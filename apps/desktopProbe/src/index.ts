@@ -151,7 +151,7 @@ const analytics = new AmplitudeAnalyticsClient();
 const autoUpdater = new F2aAutoUpdater(logger, quit, analytics);
 const supabaseConfig = getSupabaseConfig();
 if (supabaseConfig.source === 'none') {
-  logger.warn('no Supabase URL/key configured — configure in Settings → Backend');
+  logger.info('no Supabase URL/key configured — configure in Settings → Backend');
 }
 const supabase = createClient<DbSchema>(supabaseConfig.url, supabaseConfig.key);
 const supabaseApi = new F2aSupabaseApi(supabase);
