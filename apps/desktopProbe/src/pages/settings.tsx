@@ -10,7 +10,6 @@ import { Button } from '@first2apply/ui';
 import { Input } from '@first2apply/ui';
 import { Label } from '@first2apply/ui';
 import { Switch } from '@first2apply/ui';
-import * as luxon from 'luxon';
 
 import { DefaultLayout } from './defaultLayout';
 
