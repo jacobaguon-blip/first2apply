@@ -21,7 +21,7 @@ export function LinksList({
   links: Link[];
   onDeleteLink: (linkId: number) => void;
   onDebugLink: (linkId: number) => void;
-  onUpdateLink: (data: { linkId: number; title: string }) => Promise<void>;
+  onUpdateLink: (data: { linkId: number; title: string; url: string }) => Promise<void>;
 }) {
   const { siteLogos, sites } = useSites();
   const sitesMap = useMemo(() => new Map(sites.map((s) => [s.id, s])), [sites]);
