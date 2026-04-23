@@ -61,6 +61,50 @@ export function SettingsPage() {
     }
   };
 
+  // Backend (Supabase) config
+  const [backendConfig, setBackendConfig] = useState<SupabaseConfigInfo | null>(null);
+  const [backendUrl, setBackendUrl] = useState('');
+  const [backendKey, setBackendKey] = useState('');
+  const [backendTesting, setBackendTesting] = useState(false);
+  const [backendSaving, setBackendSaving] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+
+  useEffect(() => {
+    getSupabaseConfig()
+      .then((cfg) => {
+        setBackendConfig(cfg);
+        setBackendUrl(cfg.url);
+        setBackendKey(cfg.key);
+      })
+      .catch((error) => handleError({ error, title: 'Failed to load backend config' }));
+  }, []);
+
+  const onTestBackend = async () => {
+    setBackendStatus(null);
+    setBackendTesting(true);
+    try {
+      await testSupabaseConnection({ url: backendUrl, key: backendKey });
+      setBackendStatus({ kind: 'ok', msg: 'Connection successful' });
+    } catch (error) {
+      setBackendStatus({ kind: 'err', msg: error instanceof Error ? error.message : String(error) });
+    } finally {
+      setBackendTesting(false);
+    }
+  };
+
+  const onSaveBackend = async () => {
+    if (!confirm('Saving will restart the app. Continue?')) return;
+    setBackendSaving(true);
+    setBackendStatus(null);
+    try {
+      await setSupabaseConfig({ url: backendUrl, key: backendKey });
+      // app will relaunch; nothing more to do here
+    } catch (error) {
+      setBackendSaving(false);
+      setBackendStatus({ kind: 'err', msg: error instanceof Error ? error.message : String(error) });
+    }
+  };
+
   const onApplyUpdate = async () => {
     try {
       await applyAppUpdate();
