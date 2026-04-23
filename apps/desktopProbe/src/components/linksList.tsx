@@ -158,7 +158,7 @@ export function LinksList({
             return;
           }
 
-          await onUpdateLink({ linkId: editedLink.id, title: data.title });
+          await onUpdateLink({ linkId: editedLink.id, title: data.title, url: data.url });
           setEditedLink(null);
         }}
         onCancel={() => {
