@@ -149,7 +149,11 @@ function onHideToSystemTray() {
 // globals
 const analytics = new AmplitudeAnalyticsClient();
 const autoUpdater = new F2aAutoUpdater(logger, quit, analytics);
-const supabase = createClient<DbSchema>(ENV.supabase.url, ENV.supabase.key);
+const supabaseConfig = getSupabaseConfig();
+if (supabaseConfig.source === 'none') {
+  logger.warn('no Supabase URL/key configured — configure in Settings → Backend');
+}
+const supabase = createClient<DbSchema>(supabaseConfig.url, supabaseConfig.key);
 const supabaseApi = new F2aSupabaseApi(supabase);
 const htmlDownloaders = [
   new HtmlDownloader({
