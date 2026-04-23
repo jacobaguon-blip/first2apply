@@ -48,12 +48,13 @@ export function EditLink({
     },
   });
 
-  const onSubmit = async (data: { title: string }) => {
+  const onSubmit = async (data: { title: string; url: string }) => {
     setIsSubmitting(true);
     try {
       await onUpdateLink({
         linkId: link.id,
         title: data.title,
+        url: data.url,
       });
       toast({
         title: 'Job search updated',
