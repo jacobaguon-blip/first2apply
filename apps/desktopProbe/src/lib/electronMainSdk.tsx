@@ -538,5 +538,23 @@ export class ElectronApiSdk implements First2ApplyApiSdk {
   updateAdvancedMatchingConfig = updateAdvancedMatchingConfig;
 }
 
+export type SupabaseConfigInfo = {
+  url: string;
+  key: string;
+  source: 'user' | 'env' | 'none';
+};
+
+export async function getSupabaseConfig(): Promise<SupabaseConfigInfo> {
+  return _mainProcessApiCall<SupabaseConfigInfo>('get-supabase-config');
+}
+
+export async function testSupabaseConnection({ url, key }: { url: string; key: string }): Promise<void> {
+  await _mainProcessApiCall('test-supabase-connection', { url, key });
+}
+
+export async function setSupabaseConfig({ url, key }: { url: string; key: string }): Promise<void> {
+  await _mainProcessApiCall('set-supabase-config', { url, key });
+}
+
 /** Singleton instance of the Electron API SDK */
 export const electronApiSdk = new ElectronApiSdk();
