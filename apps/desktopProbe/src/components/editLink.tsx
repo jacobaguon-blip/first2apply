@@ -117,7 +117,7 @@ export function EditLink({
                   <FormItem className="w-full">
                     <FormLabel>URL</FormLabel>
                     <FormControl>
-                      <Input id="url" type="url" disabled={true} {...field} />
+                      <Input id="url" type="url" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
