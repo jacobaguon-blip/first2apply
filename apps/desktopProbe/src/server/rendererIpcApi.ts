@@ -12,6 +12,7 @@ import { JobScanner } from './jobScanner';
 import { logger } from './logger';
 import { OverlayBrowserView } from './overlayBrowserView';
 import { getStripeConfig } from './stripeConfig';
+import { getSupabaseConfig, setSupabaseConfig, testSupabaseConnection } from './supabaseConfig';
 
 /**
  * Helper methods used to centralize error handling.
