@@ -306,4 +306,27 @@ export function initRendererIpcApi({
   ipcMain.handle('overlay-browser-view-navigate', async (event, { url }) => {
     return _apiCall(async () => overlayBrowserView.navigate(url));
   });
+
+  ipcMain.handle('get-supabase-config', async () =>
+    _apiCall(async () => getSupabaseConfig()),
+  );
+
+  ipcMain.handle('test-supabase-connection', async (_event, { url, key }) =>
+    _apiCall(async () => {
+      await testSupabaseConnection({ url, key });
+      return { ok: true };
+    }),
+  );
+
+  ipcMain.handle('set-supabase-config', async (_event, { url, key }) =>
+    _apiCall(async () => {
+      await testSupabaseConnection({ url, key });
+      setSupabaseConfig({ url, key });
+      setTimeout(() => {
+        app.relaunch();
+        app.exit(0);
+      }, 150);
+      return { ok: true };
+    }),
+  );
 }
