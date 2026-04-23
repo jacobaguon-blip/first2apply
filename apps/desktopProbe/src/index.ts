@@ -133,28 +133,17 @@ function onActivate() {
   mainWindow?.focus();
 }
 function onHideToSystemTray() {
+  // household fork: keep the dock icon visible so closing the window
+  // behaves like a normal Mac app. Click the dock icon to reopen.
   mainWindow?.hide();
 
-  // hide the dock icon on macOS and hide the taskbar icon on Windows
-  if (process.platform === 'darwin') {
-    app.dock.hide();
-  } else if (process.platform === 'win32') {
+  if (process.platform === 'win32') {
     mainWindow?.setSkipTaskbar(true);
   }
 
   // dirty hack to fix navigating to the right tab in home page
   // when closing we navigate to help page
   mainWindow?.webContents.send('navigate', { path: '/help' });
-
-  // send notification to inform the user that the app is still running
-  if (!trayIconNotificationShown) {
-    trayIconNotificationShown = true;
-    const notification = new Notification({
-      title: 'See you soon!',
-      body: 'First 2 Apply is still checking for new jobs in the background. Click the paper airplane icon in your system tray to open the app.',
-    });
-    notification.show();
-  }
 }
 
 // globals
