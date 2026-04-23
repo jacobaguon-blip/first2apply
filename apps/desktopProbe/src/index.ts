@@ -3,7 +3,7 @@ import { ENV } from './env';
 import { DbSchema, getExceptionMessage } from '@first2apply/core';
 import { F2aSupabaseApi } from '@first2apply/ui';
 import { createClient } from '@supabase/supabase-js';
-import { BrowserWindow, Notification, app, dialog, nativeTheme, safeStorage, shell } from 'electron';
+import { BrowserWindow, app, dialog, nativeTheme, safeStorage, shell } from 'electron';
 import Storage from 'electron-store';
 import fs from 'fs';
 import path from 'path';
