@@ -1,6 +1,7 @@
 
 
 ## 2026-04-23
+- `17:56` -- **Added** `apps/desktopProbe/packagers/household/update.sh`
 - `17:56` -- **Updated** `apps/desktopProbe/src/lib/electronMainSdk.tsx`
 - `17:55` -- **Updated** `apps/desktopProbe/package.json`
 - `17:54` -- **Updated** `apps/desktopProbe/src/server/rendererIpcApi.ts`
