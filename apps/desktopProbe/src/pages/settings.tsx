@@ -80,11 +80,9 @@ export function SettingsPage() {
             </h2>
             <p className="text-sm font-light">{newUpdate.message}</p>
           </div>
-          {!profile.is_trial && (
-            <Button className="w-fit" onClick={() => onApplyUpdate()}>
-              Update
-            </Button>
-          )}
+          <Button className="w-fit" onClick={() => onApplyUpdate()}>
+            Update
+          </Button>
         </div>
       )}
 
