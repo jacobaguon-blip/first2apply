@@ -243,6 +243,68 @@ export function SettingsPage() {
         />
       </div>
 
+      {/* Backend (Supabase) config */}
+      <div className="space-y-4 rounded-lg border p-6">
+        <div className="space-y-1">
+          <h2 className="text-lg">Backend (Supabase)</h2>
+          <p className="text-sm font-light">
+            Point the app at a Supabase project. Saving restarts the app.
+            {backendConfig && (
+              <>
+                {' '}
+                Currently using{' '}
+                <span className="font-medium">
+                  {backendConfig.source === 'user'
+                    ? 'custom setting'
+                    : backendConfig.source === 'env'
+                    ? 'build-time default'
+                    : 'no config'}
+                </span>
+                .
+              </>
+            )}
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="supabase-url">Project URL</Label>
+            <Input
+              id="supabase-url"
+              autoComplete="off"
+              spellCheck={false}
+              value={backendUrl}
+              onChange={(e) => setBackendUrl(e.target.value)}
+              placeholder="https://xxxx.supabase.co"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="supabase-key">Anon key</Label>
+            <Input
+              id="supabase-key"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={backendKey}
+              onChange={(e) => setBackendKey(e.target.value)}
+              placeholder="eyJhbGciOi..."
+            />
+          </div>
+        </div>
+        {backendStatus && (
+          <p className={`text-sm ${backendStatus.kind === 'ok' ? 'text-green-600' : 'text-destructive'}`}>
+            {backendStatus.msg}
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onTestBackend} disabled={backendTesting || backendSaving}>
+            {backendTesting ? 'Testing…' : 'Test connection'}
+          </Button>
+          <Button onClick={onSaveBackend} disabled={backendTesting || backendSaving}>
+            {backendSaving ? 'Saving…' : 'Save & restart'}
+          </Button>
+        </div>
+      </div>
+
       <div className="flex justify-end pt-4">
         <Button className="w-fit" variant="destructive" onClick={onLogout}>
           Logout
