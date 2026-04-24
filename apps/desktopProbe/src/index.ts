@@ -5,6 +5,7 @@ import { F2aSupabaseApi } from '@first2apply/ui';
 import { createClient } from '@supabase/supabase-js';
 import { BrowserWindow, app, dialog, nativeTheme, safeStorage, shell } from 'electron';
 import Storage from 'electron-store';
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
