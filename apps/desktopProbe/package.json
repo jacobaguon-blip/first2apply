@@ -53,7 +53,10 @@
     "@electron-forge/publisher-s3": "^7.10.2",
     "@electron-forge/shared-types": "^7.10.2",
     "@electron/fuses": "^1.8.0",
-    "electron": "39.0.0"
+    "@types/jest": "^30.0.0",
+    "electron": "39.0.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6"
   },
   "dependencies": {
     "@first2apply/core": "workspace:*",
