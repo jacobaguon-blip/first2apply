@@ -54,6 +54,21 @@ test('windowEndFor returns current window end in local tz', () => {
   expect(DateTime.fromJSDate(end).setZone(tz).toFormat("yyyy-MM-dd'T'HH:mm")).toBe('2026-04-22T17:00');
 });
 
+test('windowStartFor returns the start of the current window (midnight-spanning)', () => {
+  const sched = schedWith({ mon: { enabled: true, start: '22:00', end: '07:00' } });
+  // Tue 03:00 local is still inside Mon's window
+  const now = DateTime.fromISO('2026-04-21T03:00', { zone: tz }).toJSDate();
+  const start = windowStartFor(now, sched, tz)!;
+  expect(start).not.toBeNull();
+  expect(DateTime.fromJSDate(start).setZone(tz).toFormat("yyyy-MM-dd'T'HH:mm")).toBe('2026-04-20T22:00');
+});
+
+test('windowStartFor returns null when outside any window', () => {
+  const sched = schedWith({ wed: { enabled: true, start: '09:00', end: '17:00' } });
+  const now = DateTime.fromISO('2026-04-22T18:00', { zone: tz }).toJSDate();
+  expect(windowStartFor(now, sched, tz)).toBeNull();
+});
+
 test('mostRecentWindowEnd returns the last ended window before now', () => {
   const sched = schedWith({ wed: { enabled: true, start: '09:00', end: '17:00' } });
   const now = DateTime.fromISO('2026-04-22T20:00', { zone: tz }).toJSDate();
