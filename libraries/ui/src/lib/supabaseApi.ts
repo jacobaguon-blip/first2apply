@@ -152,15 +152,24 @@ export class F2aSupabaseApi {
     linkId,
     title,
     url,
+    ...rest
   }: {
     linkId: number
-    title: string
-    url: string
+    title?: string
+    url?: string
+    filter_profile_id?: number | null
   }): Promise<Link> {
+    const payload: Record<string, unknown> = {}
+    if (title !== undefined) payload.title = title
+    if (url !== undefined) payload.url = url
+    if ("filter_profile_id" in rest) {
+      payload.filter_profile_id = rest.filter_profile_id
+    }
+
     const updatedLink = await this._supabaseApiCall(async () =>
       this._supabase
         .from("links")
-        .update({ title, url })
+        .update(payload)
         .eq("id", linkId)
         .select("*")
         .single()
