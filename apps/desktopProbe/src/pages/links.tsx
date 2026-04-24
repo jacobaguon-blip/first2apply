@@ -130,6 +130,7 @@ export function LinksPage() {
           links={hourlyLinks}
           onDeleteLink={handleDeleteLink}
           onDebugLink={handleDebugLink}
+          onScanLink={handleScanLinkNow}
           onUpdateLink={handleUpdateLink}
         />
       )}
