@@ -14,6 +14,10 @@ APP_NAME="First 2 Apply"
 cd "$APP_DIR"
 VERSION=$(node -p "require('./package.json').version")
 
+# Kill any dev session before building — otherwise the dev Electron holds the
+# user-data-dir and the freshly-installed .app fails to launch.
+bash "$APP_DIR/scripts/kill-dev.sh"
+
 echo "Building $APP_NAME $VERSION (arm64)..."
 yarn make
 
