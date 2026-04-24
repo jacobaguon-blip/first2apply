@@ -43,6 +43,18 @@ export function LinksPage() {
     }
   };
 
+  const handleScanLinkNow = async (linkId: number) => {
+    try {
+      await scanLink(linkId);
+      toast({
+        title: 'Scanning URL in background ...',
+        description: 'The link will be scanned in the background. You will be notified if there are new jobs.',
+      });
+    } catch (error) {
+      handleError({ error });
+    }
+  };
+
   const handleDebugLink = async (linkId: number) => {
     try {
       await browserWindowRef.current?.open(links.find((l) => l.id === linkId)?.url ?? throwError('Link not found'));
