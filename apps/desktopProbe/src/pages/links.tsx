@@ -151,6 +151,7 @@ export function LinksPage() {
             links={dailyLinks}
             onDeleteLink={handleDeleteLink}
             onDebugLink={handleDebugLink}
+            onScanLink={handleScanLinkNow}
             onUpdateLink={handleUpdateLink}
           />
         ) : (
