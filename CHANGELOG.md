@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `14:13` -- **Updated** `libraries/core/src/sdk.ts`
 - `14:12` -- **Updated** `libraries/ui/src/lib/supabaseApi.ts`
 - `14:11` -- **Updated** `libraries/ui/src/lib/supabaseApi.ts`
 - `14:10` -- **Updated** `libraries/ui/src/lib/supabaseApi.ts`

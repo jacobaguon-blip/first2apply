@@ -1,7 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 
 import type {
-  AdvancedMatchingConfig,
+  AiFilterProfile,
   Job,
   JobLabel,
   JobSite,
