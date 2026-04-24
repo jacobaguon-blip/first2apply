@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `15:05` -- **Added** `apps/desktopProbe/tests/quietHours/settingsStore.test.ts`
 - `14:58` -- **Added** `apps/desktopProbe/src/server/quietHours/aggregate.ts`
 - `14:57` -- **Added** `apps/desktopProbe/tests/quietHours/aggregate.test.ts`
 - `14:56` -- **Added** `apps/desktopProbe/src/server/quietHours/predicate.ts`
