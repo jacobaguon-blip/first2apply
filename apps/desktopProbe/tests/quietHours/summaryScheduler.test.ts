@@ -30,7 +30,7 @@ function makeSb(claimReturns: number[]) {
           }),
         }),
       }),
-      update: () => ({ eq: () => ({ is: async () => ({ data: null, error: null, count: 1 }) }) }),
+      update: () => ({ eq: () => ({ is: () => ({ in: async () => ({ data: null, error: null, count: 1 }) }) }) }),
     }),
     _calls: calls,
   };
