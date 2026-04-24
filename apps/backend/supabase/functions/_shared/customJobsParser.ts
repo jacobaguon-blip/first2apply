@@ -256,7 +256,7 @@ export async function parseCustomJobDescription({
     stripNodes(document.documentElement, nodesToRemove);
     stripAttributes(document.documentElement, /^(class|style|aria-.*|role)$/);
     const htmlContent = turndownService.turndown(document.documentElement?.outerHTML ?? '');
-    const withAdvancedMatchingPreferences = `Here are my job search preferences: ${advancedMatchingRecord?.chatgpt_prompt ?? 'nothing specific for the moment'}.`;
+    const withAdvancedMatchingPreferences = `Here are my job search preferences: ${filterProfile?.chatgpt_prompt || 'nothing specific for the moment'}.`;
 
     const userPrompt = `Extract the job description from the HTML page below. Return the result as a JSON object matching the provided schema.
 Here is the HTML page turned into markdown:
