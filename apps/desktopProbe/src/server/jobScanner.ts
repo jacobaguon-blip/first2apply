@@ -24,6 +24,8 @@ import { PushoverSummaryScheduler } from './quietHours/summaryScheduler';
 
 const userDataPath = app.getPath('userData');
 const settingsPath = path.join(userDataPath, 'settings.json');
+const quietHoursSettingsPath = path.join(userDataPath, 'quiet-hours-settings.json');
+const deviceId = createHash('sha256').update(userDataPath).digest('hex');
 
 const DEFAULT_SETTINGS: JobScannerSettings = {
   cronRule: AVAILABLE_CRON_RULES[1].value, // every 1h
