@@ -211,7 +211,24 @@ async function bootstrap() {
     // do not allow multiple instances on Windows
     const gotTheLock = app.requestSingleInstanceLock();
     if (!gotTheLock) {
-      app.quit();
+      // A dev session (electron-forge start) holds the same user-data-dir lock,
+      // which causes the packaged app from /Applications to silently quit.
+      // In the packaged build, kill the dev session and relaunch so the user
+      // never has to think about it.
+      if (app.isPackaged && process.platform === 'darwin') {
+        try {
+          execSync("pkill -f 'electron-forge start'");
+        } catch {
+          /* no dev process — fall through */
+        }
+        try {
+          execSync("pkill -f 'first2apply/node_modules/electron/dist/Electron'");
+        } catch {
+          /* ignore */
+        }
+        app.relaunch();
+      }
+      app.exit(0);
       return;
     }
 
