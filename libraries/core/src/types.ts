@@ -189,7 +189,8 @@ export type DbSchema = {
       };
       links: {
         Row: Link;
-        Insert: Pick<Link, 'url' | 'title' | 'site_id'> & Partial<Pick<Link, 'scan_frequency'>>;
+        Insert: Pick<Link, 'url' | 'title' | 'site_id'> &
+          Partial<Pick<Link, 'scan_frequency' | 'filter_profile_id'>>;
         Update: {
           title?: string;
           url?: string;
@@ -197,6 +198,7 @@ export type DbSchema = {
           last_scraped_at?: Date;
           scrape_failure_email_sent?: boolean;
           scan_frequency?: LinkScanFrequency;
+          filter_profile_id?: number | null;
         };
         Relationships: [];
       };
