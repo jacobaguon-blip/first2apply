@@ -249,7 +249,14 @@ export class JobScanner {
 
       // fire a notification if there are new jobs
       if (!this._isRunning) return;
-      if (sendNotification) this.showNewJobsNotification({ newJobs });
+      if (sendNotification) await this.showNewJobsNotification({ newJobs });
+
+      // run quiet hours scheduler tick at end of every scan cycle
+      if (sendNotification) {
+        await this._quietHoursTick().catch((err) => {
+          this._logger.error(`quiet hours tick failed: ${getExceptionMessage(err)}`);
+        });
+      }
 
       const end = new Date().getTime();
       const took = (end - start) / 1000;
