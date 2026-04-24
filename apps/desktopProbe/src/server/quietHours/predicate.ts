@@ -41,6 +41,15 @@ export function windowEndFor(now: Date, sched: QuietHoursSchedule, tz: string): 
   return null;
 }
 
+/** Start of the currently-active quiet hours window at `now`, or null if not inside. */
+export function windowStartFor(now: Date, sched: QuietHoursSchedule, tz: string): Date | null {
+  const dt = DateTime.fromJSDate(now).setZone(tz);
+  for (const w of candidateWindows(dt, sched)) {
+    if (dt >= w.start && dt < w.end) return w.start.toJSDate();
+  }
+  return null;
+}
+
 export function mostRecentWindowEnd(now: Date, sched: QuietHoursSchedule, tz: string): Date | null {
   const dt = DateTime.fromJSDate(now).setZone(tz);
   // Check up to 8 days back to cover any schedule.
