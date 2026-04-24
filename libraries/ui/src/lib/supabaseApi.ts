@@ -1,5 +1,4 @@
 import {
-  AdvancedMatchingConfig,
   AiFilterProfile,
   DbSchema,
   Job,
