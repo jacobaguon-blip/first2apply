@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `13:26` -- **Added** `docs/superpowers/specs/2026-04-24-quiet-hours-design.md`
 - `13:09` -- **Updated** `BACKLOG.md`
 - `12:48` -- **Added** `docs/plans/2026-04-24-ai-filter-profiles.md`
 - `11:58` -- **Updated** `BACKLOG.md`
