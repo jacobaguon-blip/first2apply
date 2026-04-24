@@ -61,9 +61,7 @@ export async function parseCustomJobs({
     let htmlContent = turndownService.turndown(document.documentElement?.outerHTML ?? '');
     const MAX_CONTENT_CHARS = 120_000;
     if (htmlContent.length > MAX_CONTENT_CHARS) {
-      logger.info(
-        `markdown content ${htmlContent.length} chars exceeds cap, truncating to ${MAX_CONTENT_CHARS} (first ${Math.min(30, PARSE_JOBS_PAGE_SCHEMA.shape.jobs._def.maxLength?.value ?? 30)} jobs target)`,
-      );
+      logger.info(`markdown content ${htmlContent.length} chars exceeds cap, truncating to ${MAX_CONTENT_CHARS}`);
       htmlContent = htmlContent.slice(0, MAX_CONTENT_CHARS);
     }
     logger.info(`custom parser content size: ${htmlContent.length} chars (markdown)`);
