@@ -2,18 +2,25 @@ import { IAnalyticsClient } from '@/lib/analytics';
 import { getExceptionMessage, throwError } from '@first2apply/core';
 import { Job, Link } from '@first2apply/core';
 import { F2aSupabaseApi } from '@first2apply/ui';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createHash } from 'crypto';
 import { Notification, app, powerSaveBlocker } from 'electron';
 import fs from 'fs';
 import { ScheduledTask, schedule } from 'node-cron';
 import path from 'path';
 
 import { ENV } from '../env';
-import { AVAILABLE_CRON_RULES, JobScannerSettings } from '../lib/types';
+import { AVAILABLE_CRON_RULES, JobScannerSettings, QuietHoursSettings } from '../lib/types';
 import { installLinkedInDecorator } from './browserHelpers';
 import { chunk, promiseAllSequence, waitRandomBetween } from './helpers';
 import { HtmlDownloader } from './htmlDownloader';
 import { ILogger } from './logger';
 import { sendPushover } from './pushover';
+import { aggregateBySource, formatSummaryBody, formatSummaryTitle } from './quietHours/aggregate';
+import { DesktopSummaryTracker } from './quietHours/desktopSummary';
+import { isInQuietHours, windowStartFor } from './quietHours/predicate';
+import { QuietHoursSettingsStore } from './quietHours/settingsStore';
+import { PushoverSummaryScheduler } from './quietHours/summaryScheduler';
 
 const userDataPath = app.getPath('userData');
 const settingsPath = path.join(userDataPath, 'settings.json');
