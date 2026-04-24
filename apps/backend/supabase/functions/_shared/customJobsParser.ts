@@ -51,12 +51,24 @@ export async function parseCustomJobs({
     );
 
     // strip away nodes that are not relevant to the LLM
-    const nodesToRemove = ['head', 'script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe'];
+    const nodesToRemove = ['head', 'script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe', 'img', 'form'];
     stripNodes(document.documentElement, nodesToRemove);
     stripAttributes(document.documentElement, /^(class|style|aria-.*|role)$/);
-    const htmlContent = document.documentElement?.outerHTML ?? '';
 
-    return `Extract the jobs listing from the HTML page below. Return the result as a JSON object matching the provided schema. If no jobs are found, return an empty array for the jobs field.
+    // Convert HTML -> markdown to keep the prompt under model TPM limits.
+    // Raw HTML for job-board indexes (e.g. anthropic.com/careers/jobs, ~450 listings)
+    // can exceed 60k tokens and trigger OpenAI 429 TPM errors.
+    let htmlContent = turndownService.turndown(document.documentElement?.outerHTML ?? '');
+    const MAX_CONTENT_CHARS = 120_000;
+    if (htmlContent.length > MAX_CONTENT_CHARS) {
+      logger.info(
+        `markdown content ${htmlContent.length} chars exceeds cap, truncating to ${MAX_CONTENT_CHARS} (first ${Math.min(30, PARSE_JOBS_PAGE_SCHEMA.shape.jobs._def.maxLength?.value ?? 30)} jobs target)`,
+      );
+      htmlContent = htmlContent.slice(0, MAX_CONTENT_CHARS);
+    }
+    logger.info(`custom parser content size: ${htmlContent.length} chars (markdown)`);
+
+    return `Extract the jobs listing from the page content below. Return the result as a JSON object matching the provided schema. If no jobs are found, return an empty array for the jobs field.
 Here are some rules for the required output:
 - The externalId field should be a unique identifier for the job, preferably from the job site.
   Try to extract it from the job URL or any data attributes. 
