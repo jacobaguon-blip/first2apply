@@ -16,11 +16,13 @@ export function LinksList({
   links,
   onDeleteLink,
   onDebugLink,
+  onScanLink,
   onUpdateLink,
 }: {
   links: Link[];
   onDeleteLink: (linkId: number) => void;
   onDebugLink: (linkId: number) => void;
+  onScanLink: (linkId: number) => void;
   onUpdateLink: (data: { linkId: number; title: string; url: string }) => Promise<void>;
 }) {
   const { siteLogos, sites } = useSites();
