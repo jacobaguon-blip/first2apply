@@ -6,6 +6,7 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import turndown from 'turndown';
 import { z } from 'zod';
 
+import { resolveFilterProfileForJob } from './advancedMatching.ts';
 import { denoHashString } from './deno.ts';
 import { JobDescriptionUpdates } from './jobDescriptionParser.ts';
 import { ILogger } from './logger.ts';
