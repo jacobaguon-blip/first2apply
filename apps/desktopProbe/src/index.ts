@@ -251,6 +251,7 @@ async function bootstrap() {
     jobScanner = new JobScanner({
       logger,
       supabaseApi,
+      supabase,
       normalHtmlDownloader,
       incognitoHtmlDownloader,
       onNavigate: navigate,
