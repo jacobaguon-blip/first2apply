@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `13:51` -- **Added** `apps/backend/supabase/migrations/20260424000000_ai_filter_profiles.sql`
 - `13:49` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`
 - `13:48` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`
 - `13:47` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`
