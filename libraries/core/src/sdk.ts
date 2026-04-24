@@ -115,10 +115,16 @@ export interface First2ApplyApiSdk {
     webPageRuntimeData: WebPageRuntimeData;
     force: boolean;
     scanFrequency?: 'hourly' | 'daily';
+    filter_profile_id?: number | null;
   }): Promise<Link>;
 
   /** Update an existing link */
-  updateLink(_: { linkId: number; title: string; url: string }): Promise<Link>;
+  updateLink(_: {
+    linkId: number;
+    title?: string;
+    url?: string;
+    filter_profile_id?: number | null;
+  }): Promise<Link>;
 
   /** Delete a link */
   deleteLink(linkId: number): Promise<void>;
