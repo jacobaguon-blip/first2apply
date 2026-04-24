@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `15:15` -- **Added** `apps/backend/supabase/migrations/20260424000001_claim_summary_send.sql`
 - `15:14` -- **Added** `apps/desktopProbe/tests/quietHours/summaryScheduler.test.ts`
 - `15:13` -- **Added** `apps/desktopProbe/src/server/quietHours/desktopSummary.ts`
 - `15:12` -- **Added** `apps/desktopProbe/tests/quietHours/desktopSummary.test.ts`
