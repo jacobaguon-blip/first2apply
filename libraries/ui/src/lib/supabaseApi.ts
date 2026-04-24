@@ -623,37 +623,93 @@ export class F2aSupabaseApi {
     )
   }
 
-  /**
-   * Get the advanced matching configuration for the current user.
-   */
-  async getAdvancedMatchingConfig() {
-    const [config] = await this._supabaseApiCall(
-      async () => await this._supabase.from("advanced_matching").select("*")
+  /** List the user's AI filter profiles, ordered oldest-first. */
+  async listFilterProfiles(): Promise<AiFilterProfile[]> {
+    const data = await this._supabaseApiCall(
+      async () =>
+        await this._supabase
+          .from("ai_filter_profiles")
+          .select("*")
+          .order("created_at", { ascending: true })
     )
-
-    return config
+    return data ?? []
   }
 
-  /**
-   * Update the advanced matching configuration for the current user.
-   */
-  async updateAdvancedMatchingConfig(
-    config: Pick<
-      AdvancedMatchingConfig,
-      "chatgpt_prompt" | "blacklisted_companies"
+  /** Create a new filter profile. */
+  async createFilterProfile(input: {
+    name: string
+    chatgpt_prompt?: string
+    blacklisted_companies?: string[]
+    is_default?: boolean
+  }): Promise<AiFilterProfile> {
+    const [row] = await this._supabaseApiCall(
+      async () =>
+        await this._supabase
+          .from("ai_filter_profiles")
+          .insert(input)
+          .select("*")
+    )
+    return row
+  }
+
+  /** Update an existing filter profile. Does NOT toggle default — use setDefaultFilterProfile for that. */
+  async updateFilterProfile(
+    id: number,
+    patch: Partial<
+      Pick<AiFilterProfile, "name" | "chatgpt_prompt" | "blacklisted_companies">
     >
-  ) {
-    const [updatedConfig] = await this._supabaseApiCall(
+  ): Promise<AiFilterProfile> {
+    const [row] = await this._supabaseApiCall(
+      async () =>
+        await this._supabase
+          .from("ai_filter_profiles")
+          .update(patch)
+          .eq("id", id)
+          .select("*")
+    )
+    return row
+  }
+
+  /** Mark a profile as the user's default, clearing any other default in the same transaction. */
+  async setDefaultFilterProfile(id: number): Promise<void> {
+    await this._supabaseApiCall(
+      async () =>
+        await this._supabase.rpc("set_default_filter_profile", { p_id: id })
+    )
+  }
+
+  /** Delete a profile. Associated links.filter_profile_id is SET NULL by FK. */
+  async deleteFilterProfile(id: number): Promise<void> {
+    await this._supabaseApiCall(
+      async () =>
+        await this._supabase.from("ai_filter_profiles").delete().eq("id", id)
+    )
+  }
+
+  /** Get the user's GLOBAL blacklist (stored on advanced_matching). Returns [] if no row exists yet. */
+  async getGlobalBlacklist(): Promise<string[]> {
+    const data = await this._supabaseApiCall(
       async () =>
         await this._supabase
           .from("advanced_matching")
-          .upsert(config, {
-            onConflict: "user_id",
-          })
-          .select("*")
+          .select("blacklisted_companies")
     )
+    return data?.[0]?.blacklisted_companies ?? []
+  }
 
-    return updatedConfig
+  /** Update the global blacklist. Upserts on user_id so the row is created if missing. */
+  async updateGlobalBlacklist(companies: string[]): Promise<string[]> {
+    const [row] = await this._supabaseApiCall(
+      async () =>
+        await this._supabase
+          .from("advanced_matching")
+          .upsert(
+            { blacklisted_companies: companies },
+            { onConflict: "user_id" }
+          )
+          .select("blacklisted_companies")
+    )
+    return row.blacklisted_companies
   }
 
   /**
