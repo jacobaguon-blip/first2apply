@@ -5,7 +5,9 @@
   "description": "First 2 Apply - Job Alert App | Instant Notifications for New Job Listings",
   "main": ".webpack/main",
   "scripts": {
+    "prestart": "bash scripts/kill-dev.sh",
     "start": "electron-forge start",
+    "kill-dev": "bash scripts/kill-dev.sh",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
