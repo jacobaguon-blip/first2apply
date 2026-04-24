@@ -171,6 +171,6 @@ export interface First2ApplyApiSdk {
 
   /** Update the advanced matching configuration */
   updateAdvancedMatchingConfig(
-    config: Pick<AdvancedMatchingConfig, 'chatgpt_prompt' | 'blacklisted_companies'>,
+    config: Pick<AdvancedMatchingConfig, 'blacklisted_companies'>,
   ): Promise<AdvancedMatchingConfig>;
 }

@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `14:05` -- **Updated** `libraries/core/src/sdk.ts`
 - `14:04` -- **Updated** `apps/desktopProbe/src/pages/links.tsx`
 - `14:03` -- **Updated** `apps/desktopProbe/src/pages/links.tsx`
 - `14:03` -- **Updated** `apps/desktopProbe/src/components/linksList.tsx`
