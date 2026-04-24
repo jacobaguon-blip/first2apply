@@ -63,6 +63,7 @@ export type Link = {
   last_scraped_at: string;
   scrape_failure_email_sent: boolean;
   scan_frequency: LinkScanFrequency;
+  filter_profile_id: number | null;
 };
 
 export type JobType = 'remote' | 'hybrid' | 'onsite';
