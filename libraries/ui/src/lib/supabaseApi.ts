@@ -109,6 +109,7 @@ export class F2aSupabaseApi {
     webPageRuntimeData,
     force,
     scanFrequency,
+    filter_profile_id,
   }: {
     title: string
     url: string
@@ -116,24 +117,28 @@ export class F2aSupabaseApi {
     webPageRuntimeData: WebPageRuntimeData
     force: boolean
     scanFrequency?: "hourly" | "daily"
+    filter_profile_id?: number | null
   }) {
     // for debugging, use a test.html file
     // const htmlFixture = fs.readFileSync(path.join(__dirname, '../../../test.html'), 'utf-8');
     // html = htmlFixture;
 
+    const body: Record<string, unknown> = {
+      title,
+      url,
+      html,
+      webPageRuntimeData,
+      force,
+      scanFrequency,
+    }
+    if (filter_profile_id !== undefined) {
+      body.filter_profile_id = filter_profile_id
+    }
+
     const { link, newJobs } = await this._supabaseApiCall(() =>
       this._supabase.functions.invoke<{ link: Link; newJobs: Job[] }>(
         "create-link",
-        {
-          body: {
-            title,
-            url,
-            html,
-            webPageRuntimeData,
-            force,
-            scanFrequency,
-          },
-        }
+        { body }
       )
     )
 
