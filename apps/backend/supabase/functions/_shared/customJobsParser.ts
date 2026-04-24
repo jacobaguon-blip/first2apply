@@ -231,15 +231,19 @@ export async function parseCustomJobDescription({
   const document = new DOMParser().parseFromString(html, 'text/html');
   if (!document) throw new Error('Could not parse html');
 
-  const { data: advancedMatchingRecord, error: getAdvancedMatchingRecordError } = await context.supabaseAdminClient
-    .from('advanced_matching')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  if (getAdvancedMatchingRecordError) {
-    context.logger.error(
-      `Failed to load advanced matching config for user ${user.id}: ${getAdvancedMatchingRecordError.message}`,
+  // Resolve the AI filter profile for this job (via its source link, or the user's default).
+  // Used to personalize the job-description summary prompt.
+  const filterProfile = await resolveFilterProfileForJob({
+    logger: context.logger,
+    supabaseClient: context.supabaseAdminClient,
+    job,
+  });
+  if (filterProfile) {
+    context.logger.info(
+      `custom jd parser using ai filter profile id=${filterProfile.id} name="${filterProfile.name}" for job ${job.id}`,
     );
+  } else {
+    context.logger.info(`custom jd parser: no ai filter profile for job ${job.id}`);
   }
 
   // helper methods
