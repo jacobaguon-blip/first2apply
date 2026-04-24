@@ -64,9 +64,16 @@ export class JobScanner {
   private _notificationsMap: Map<string, Notification> = new Map();
   private _runningScansCount = 0;
 
+  private _supabase: SupabaseClient;
+  private _cachedUserId: string | null = null;
+  private _quietHoursStore: QuietHoursSettingsStore | null = null;
+  private _desktopSummary: DesktopSummaryTracker | null = null;
+  private _pushoverSummaryScheduler: PushoverSummaryScheduler | null = null;
+
   constructor({
     logger,
     supabaseApi,
+    supabase,
     normalHtmlDownloader,
     incognitoHtmlDownloader,
     onNavigate,
@@ -74,6 +81,7 @@ export class JobScanner {
   }: {
     logger: ILogger;
     supabaseApi: F2aSupabaseApi;
+    supabase: SupabaseClient;
     normalHtmlDownloader: HtmlDownloader;
     incognitoHtmlDownloader: HtmlDownloader;
     onNavigate: (_: { path: string }) => void;
@@ -81,6 +89,7 @@ export class JobScanner {
   }) {
     this._logger = logger;
     this._supabaseApi = supabaseApi;
+    this._supabase = supabase;
     this._normalHtmlDownloader = normalHtmlDownloader;
     this._incognitoHtmlDownloader = incognitoHtmlDownloader;
     this._onNavigate = onNavigate;
