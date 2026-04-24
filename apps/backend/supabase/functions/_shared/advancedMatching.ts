@@ -33,7 +33,17 @@ export async function applyAdvancedMatchingFilters({
     return { newStatus: 'new' };
   }
 
-  // load the advanced matching config for this user
+  // resolve the filter profile for this job:
+  //  1. if the job's source link has filter_profile_id set -> load that profile
+  //  2. else -> load the user's default profile (is_default = true)
+  const filterProfile = await resolveFilterProfileForJob({
+    logger,
+    supabaseClient,
+    job,
+  });
+
+  // load the user's GLOBAL blacklist from advanced_matching.blacklisted_companies
+  // (advanced_matching.chatgpt_prompt was dropped; blacklisted_companies is now the global list)
   const { data: advancedMatchingArr, error: getAdvancedMatchingErr } = await supabaseClient
     .from('advanced_matching')
     .select('*')
@@ -41,14 +51,14 @@ export async function applyAdvancedMatchingFilters({
   if (getAdvancedMatchingErr) {
     throw getAdvancedMatchingErr;
   }
-  const advancedMatching: AdvancedMatchingConfig = advancedMatchingArr?.[0];
-  if (!advancedMatching) {
-    logger.info(`advanced matching config not found for user ${job.user_id}`);
-    return { newStatus: 'new' };
-  }
+  const globalBlacklist: string[] = advancedMatchingArr?.[0]?.blacklisted_companies ?? [];
+
+  // union of global blacklist + profile-specific blacklist (deduped, case-insensitive)
+  const profileBlacklist = filterProfile?.blacklisted_companies ?? [];
+  const mergedBlacklist = dedupeCaseInsensitive([...globalBlacklist, ...profileBlacklist]);
 
   // exclude jobs from specific companies if it fully matches the entire company name
-  if (isExcludedCompany({ companyName: job.companyName, advancedMatching })) {
+  if (isExcludedCompanyByList({ companyName: job.companyName, blacklist: mergedBlacklist })) {
     logger.info(`job excluded due to company name: ${job.companyName}`);
     return {
       newStatus: 'excluded_by_advanced_matching',
@@ -56,12 +66,22 @@ export async function applyAdvancedMatchingFilters({
     };
   }
 
+  // if no filter profile at all -> skip AI filtering entirely (job stays 'new')
+  if (!filterProfile) {
+    logger.info(`no ai filter profile for job ${job.id} (link_id=${job.link_id ?? 'null'}); skipping AI filter`);
+    return { newStatus: 'new' };
+  }
+
+  logger.info(
+    `using ai filter profile for job ${job.id}: profile_id=${filterProfile.id} name="${filterProfile.name}" is_default=${filterProfile.is_default}`,
+  );
+
   // prompt OpenAI to determine if the job should be excluded
-  if (job.description && advancedMatching.chatgpt_prompt) {
+  if (job.description && filterProfile.chatgpt_prompt) {
     logger.info('prompting OpenAI to determine if the job should be excluded ...');
 
     const { exclusionDecision } = await promptOpenAI({
-      prompt: advancedMatching.chatgpt_prompt,
+      prompt: filterProfile.chatgpt_prompt,
       job,
       logger,
       supabaseAdminClient,
@@ -78,6 +98,76 @@ export async function applyAdvancedMatchingFilters({
 
   logger.info('job passed all advanced matching filters');
   return { newStatus: 'new' };
+}
+
+/**
+ * Resolve which AiFilterProfile applies to the given job.
+ * - Prefer the profile set on the job's source link (links.filter_profile_id).
+ * - Otherwise, fall back to the user's default profile (is_default = true).
+ * - Returns null if neither exists.
+ */
+export async function resolveFilterProfileForJob({
+  logger,
+  supabaseClient,
+  job,
+}: {
+  logger: ILogger;
+  supabaseClient: SupabaseClient<DbSchema, 'public'>;
+  job: Pick<Job, 'id' | 'user_id' | 'link_id'>;
+}): Promise<AiFilterProfile | null> {
+  let linkFilterProfileId: number | null = null;
+  if (job.link_id) {
+    const { data: linkRow, error: linkErr } = await supabaseClient
+      .from('links')
+      .select('filter_profile_id')
+      .eq('id', job.link_id)
+      .maybeSingle();
+    if (linkErr) {
+      logger.error(`failed to load link ${job.link_id} for job ${job.id}: ${linkErr.message}`);
+    } else {
+      linkFilterProfileId = linkRow?.filter_profile_id ?? null;
+    }
+  }
+
+  // Fetch both candidates in a single query: the link's explicit profile and the user's default.
+  const orFilter = linkFilterProfileId
+    ? `id.eq.${linkFilterProfileId},and(user_id.eq.${job.user_id},is_default.eq.true)`
+    : `and(user_id.eq.${job.user_id},is_default.eq.true)`;
+  const { data: profiles, error: profilesErr } = await supabaseClient
+    .from('ai_filter_profiles')
+    .select('*')
+    .or(orFilter);
+  if (profilesErr) {
+    logger.error(`failed to load ai_filter_profiles for job ${job.id}: ${profilesErr.message}`);
+    return null;
+  }
+
+  if (!profiles || profiles.length === 0) return null;
+
+  // Prefer the link's explicit profile if we have it.
+  if (linkFilterProfileId) {
+    const linked = profiles.find((p) => p.id === linkFilterProfileId);
+    if (linked) return linked as AiFilterProfile;
+  }
+  const fallback = profiles.find((p) => p.user_id === job.user_id && p.is_default);
+  return (fallback as AiFilterProfile) ?? null;
+}
+
+function dedupeCaseInsensitive(values: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const v of values) {
+    const key = v.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(v);
+  }
+  return out;
+}
+
+function isExcludedCompanyByList({ companyName, blacklist }: { companyName: string; blacklist: string[] }): boolean {
+  const lower = companyName.toLowerCase();
+  return blacklist.some((c) => c.toLowerCase() === lower);
 }
 
 /**
