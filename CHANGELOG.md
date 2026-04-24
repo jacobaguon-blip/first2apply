@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `14:34` -- **Added** `apps/backend/supabase/migrations/20260424000000_quiet_hours.sql`
 - `14:30` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`
 - `14:30` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`
 - `14:29` -- **Updated** `apps/backend/supabase/functions/_shared/customJobsParser.ts`
