@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `14:53` -- **Added** `apps/desktopProbe/jest.config.ts`
 - `14:51` -- **Added** `apps/desktopProbe/jest.config.ts`
 - `14:47` -- **Added** `apps/desktopProbe/src/server/quietHours/schedule.ts`
 - `14:45` -- **Added** `apps/desktopProbe/tests/quietHours/schedule.test.ts`

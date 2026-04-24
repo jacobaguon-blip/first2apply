@@ -7,8 +7,11 @@ const config: Config = {
   testMatch: ['**/*.test.ts'],
   moduleFileExtensions: ['ts', 'tsx', 'js'],
   moduleNameMapper: {
-    '^@first2apply/core$': '<rootDir>/node_modules/@first2apply/core/build/index.js',
-    '^@first2apply/ui$': '<rootDir>/node_modules/@first2apply/ui/build/index.js',
+    '^@first2apply/core$': '<rootDir>/node_modules/@first2apply/core/src/index.ts',
+    '^@first2apply/ui(.*)$': '<rootDir>/node_modules/@first2apply/ui/src$1',
+  },
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { isolatedModules: true }],
   },
 };
 
