@@ -1,5 +1,5 @@
 import { DateTime } from 'luxon';
-import { isInQuietHours, windowEndFor, mostRecentWindowEnd } from '../../src/server/quietHours/predicate';
+import { isInQuietHours, windowEndFor, windowStartFor, mostRecentWindowEnd } from '../../src/server/quietHours/predicate';
 import { DEFAULT_QUIET_HOURS } from '../../src/lib/types';
 
 const tz = 'America/Los_Angeles';
