@@ -1,6 +1,7 @@
 
 
 ## 2026-04-24
+- `14:21` -- **Added** `docs/superpowers/plans/2026-04-24-quiet-hours.md`
 - `14:14` -- **Updated** `libraries/core/src/sdk.ts`
 - `14:13` -- **Updated** `libraries/core/src/sdk.ts`
 - `14:13` -- **Updated** `libraries/core/src/sdk.ts`
