@@ -152,11 +152,20 @@ export type AdvancedMatchingConfig = {
   id: number;
   user_id: string;
   blacklisted_companies: string[];
-  chatgpt_prompt: string;
   ai_api_cost: number;
   ai_api_input_tokens_used: number;
   ai_api_output_tokens_used: number;
 };
+
+export interface AiFilterProfile {
+  id: number;
+  created_at: string;
+  user_id: string;
+  name: string;
+  chatgpt_prompt: string;
+  blacklisted_companies: string[];
+  is_default: boolean;
+}
 
 export type WebPageRuntimeData = Partial<Record<SiteProvider, ProviderRuntimeData>>;
 export type LinkedinRuntimeData = {
