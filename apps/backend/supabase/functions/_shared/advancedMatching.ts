@@ -171,21 +171,6 @@ function isExcludedCompanyByList({ companyName, blacklist }: { companyName: stri
 }
 
 /**
- * Check if the company name is excluded by the advanced matching filters.
- */
-export function isExcludedCompany({
-  companyName,
-  advancedMatching,
-}: {
-  companyName: string;
-  advancedMatching: AdvancedMatchingConfig;
-}): boolean {
-  const excludedCompanies = advancedMatching.blacklisted_companies.map((c) => c.toLowerCase());
-  const lowerCaseCompanyName = companyName.toLowerCase();
-  return excludedCompanies.some((c) => lowerCaseCompanyName === c);
-}
-
-/**
  * Prompt the OpenAI API to interogate if a job matches the user prompt.
  * Returns true if the job should be excluded, false otherwise.
  */
