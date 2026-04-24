@@ -15,7 +15,8 @@
     "prettier": "prettier --check \"src/**/*.{ts,tsx}\"",
     "package": "electron-forge package",
     "make": "electron-forge make --arch=arm64",
-    "release": "npx release-it --ci"
+    "release": "npx release-it --ci",
+    "test": "jest"
   },
   "keywords": [],
   "author": "BeastX Industries",
