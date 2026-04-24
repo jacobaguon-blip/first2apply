@@ -370,8 +370,23 @@ export class JobScanner {
   /**
    * Display a notfication for new jobs.
    */
-  showNewJobsNotification({ newJobs }: { newJobs: Job[] }) {
+  async showNewJobsNotification({ newJobs }: { newJobs: Job[] }) {
     if (newJobs.length === 0) return;
+
+    // Determine quiet hours / ownership state
+    let inside = false;
+    let isOwner = true;
+    try {
+      const settings = await this._loadQuietHoursSettings();
+      if (settings) {
+        inside =
+          settings.enabled &&
+          isInQuietHours(new Date(), settings.schedule, settings.timezone, settings.graceMinutes);
+        isOwner = settings.pushoverOwnerDeviceId === deviceId;
+      }
+    } catch (err) {
+      this._logger.error(`failed to load quiet hours settings: ${getExceptionMessage(err)}`);
+    }
 
     // Create a new notification
     const maxDisplayedJobs = 3;
@@ -381,46 +396,181 @@ export class JobScanner {
     const firstJobsLabel = displatedJobs.map((job: Job) => `${job.title} at ${job.companyName}`).join(', ');
     const plural = otherJobsCount > 1 ? 's' : '';
     const otherJobsLabel = otherJobsCount > 0 ? ` and ${otherJobsCount} other${plural}` : '';
-    const notification = new Notification({
-      title: 'Job Search Update',
-      body: `${firstJobsLabel}${otherJobsLabel} ${displatedJobs.length > 1 ? 'are' : 'is'} now available!`,
-      // sound: "Submarine",
-      silent: !this._settings.useSound,
-    });
 
-    // Show the notification
-    const notificationId = new Date().getTime().toString();
-    this._notificationsMap.set(notificationId, notification);
-    notification.on('click', () => {
-      this._onNavigate({ path: '/?status=new' });
-      this._notificationsMap.delete(notificationId);
-      this._analytics.trackEvent('notification_click', {
+    if (!inside) {
+      const notification = new Notification({
+        title: 'Job Search Update',
+        body: `${firstJobsLabel}${otherJobsLabel} ${displatedJobs.length > 1 ? 'are' : 'is'} now available!`,
+        // sound: "Submarine",
+        silent: !this._settings.useSound,
+      });
+
+      // Show the notification
+      const notificationId = new Date().getTime().toString();
+      this._notificationsMap.set(notificationId, notification);
+      notification.on('click', () => {
+        this._onNavigate({ path: '/?status=new' });
+        this._notificationsMap.delete(notificationId);
+        this._analytics.trackEvent('notification_click', {
+          jobs_count: newJobs.length,
+        });
+      });
+      // On headless platforms (Pi / Xvfb) the native notifier may throw — don't let it block Pushover.
+      try {
+        notification.show();
+      } catch (err) {
+        this._logger.info(`native notification failed (headless?): ${getExceptionMessage(err)}`);
+      }
+      this._analytics.trackEvent('show_notification', {
         jobs_count: newJobs.length,
       });
-    });
-    // On headless platforms (Pi / Xvfb) the native notifier may throw — don't let it block Pushover.
-    try {
-      notification.show();
-    } catch (err) {
-      this._logger.info(`native notification failed (headless?): ${getExceptionMessage(err)}`);
+    } else {
+      this._logger.info(`suppressing desktop notification: inside quiet hours window`);
     }
-    this._analytics.trackEvent('show_notification', {
-      jobs_count: newJobs.length,
-    });
 
     // Fire Pushover in parallel if configured. Env vars win over settings (for headless deploys).
     const appToken = ENV.pushover.appToken || this._settings.pushoverAppToken;
     const userKey = ENV.pushover.userKey || this._settings.pushoverUserKey;
     const pushoverEnabled = !!(ENV.pushover.appToken && ENV.pushover.userKey) || this._settings.pushoverEnabled;
-    if (pushoverEnabled && appToken && userKey) {
+    const shouldSendPushover = pushoverEnabled && appToken && userKey && !inside && isOwner;
+    if (shouldSendPushover) {
       const pushoverBody = `${firstJobsLabel}${otherJobsLabel} ${displatedJobs.length > 1 ? 'are' : 'is'} now available!`;
       sendPushover({
         appToken,
         userKey,
         title: 'Job Search Update',
         message: pushoverBody,
-      }).catch((err) => this._logger.error(`pushover send failed: ${getExceptionMessage(err)}`));
+      })
+        .then(async () => {
+          // Stamp notified_pushover_at so the summary scheduler doesn't double-notify these jobs
+          try {
+            const userId = await this._getUserId();
+            if (!userId) return;
+            const ids = newJobs.map((j) => j.id);
+            await this._supabase
+              .from('jobs')
+              .update({ notified_pushover_at: new Date().toISOString() })
+              .in('id', ids);
+          } catch (err) {
+            this._logger.error(`failed to stamp notified_pushover_at: ${getExceptionMessage(err)}`);
+          }
+        })
+        .catch((err) => this._logger.error(`pushover send failed: ${getExceptionMessage(err)}`));
+    } else if (pushoverEnabled && appToken && userKey) {
+      this._logger.info(
+        `suppressing pushover send: ${inside ? 'inside quiet hours' : ''}${inside && !isOwner ? ', ' : ''}${!isOwner ? 'not owner device' : ''}`,
+      );
     }
+  }
+
+  /**
+   * Lazily-resolve the current authenticated user id.
+   */
+  private async _getUserId(): Promise<string | null> {
+    if (this._cachedUserId) return this._cachedUserId;
+    try {
+      const { data } = await this._supabase.auth.getUser();
+      this._cachedUserId = data.user?.id ?? null;
+      return this._cachedUserId;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Build (lazily) the quiet hours store and load settings.
+   */
+  private async _loadQuietHoursSettings(): Promise<QuietHoursSettings | null> {
+    const userId = await this._getUserId();
+    if (!userId) return null;
+    if (!this._quietHoursStore) {
+      this._quietHoursStore = new QuietHoursSettingsStore({
+        filePath: quietHoursSettingsPath,
+        userId,
+        supabase: this._supabase,
+      });
+    }
+    return this._quietHoursStore.load();
+  }
+
+  /**
+   * Build (lazily) the summary tracker + pushover scheduler.
+   */
+  private _ensureSummaryComponents(userId: string) {
+    if (!this._desktopSummary) {
+      this._desktopSummary = new DesktopSummaryTracker({
+        notify: (total, groups) => {
+          try {
+            const n = new Notification({
+              title: formatSummaryTitle(total),
+              body: formatSummaryBody(groups),
+              silent: !this._settings.useSound,
+            });
+            n.on('click', () => this._onNavigate({ path: '/?status=new' }));
+            try {
+              n.show();
+            } catch (err) {
+              this._logger.info(`native notification failed (headless?): ${getExceptionMessage(err)}`);
+            }
+          } catch (err) {
+            this._logger.error(`desktop summary notify failed: ${getExceptionMessage(err)}`);
+          }
+        },
+        loadJobsBetween: async (start, end) => {
+          const { data, error } = await this._supabase
+            .from('jobs')
+            .select('siteName, searchTitle')
+            .eq('user_id', userId)
+            .gte('created_at', start.toISOString())
+            .lt('created_at', end.toISOString());
+          if (error) {
+            this._logger.error(`loadJobsBetween failed: ${error.message}`);
+            return [];
+          }
+          return ((data as any[]) ?? []).map((r) => ({
+            siteName: r.siteName ?? r.site_name ?? '',
+            searchTitle: r.searchTitle ?? r.search_title ?? '',
+          }));
+        },
+      });
+    }
+
+    if (!this._pushoverSummaryScheduler) {
+      this._pushoverSummaryScheduler = new PushoverSummaryScheduler({
+        supabase: this._supabase,
+        userId,
+        deviceId,
+        sendPushover: async (title, body) => {
+          const appToken = ENV.pushover.appToken || this._settings.pushoverAppToken;
+          const userKey = ENV.pushover.userKey || this._settings.pushoverUserKey;
+          if (!appToken || !userKey) {
+            this._logger.info('skipping pushover summary: no credentials configured');
+            return;
+          }
+          await sendPushover({ appToken, userKey, title, message: body });
+        },
+      });
+    }
+  }
+
+  /**
+   * End-of-scan tick for quiet hours: drives desktop summary + pushover summary scheduler.
+   */
+  private async _quietHoursTick(): Promise<void> {
+    const userId = await this._getUserId();
+    if (!userId) return;
+    const settings = await this._loadQuietHoursSettings();
+    if (!settings) return;
+
+    this._ensureSummaryComponents(userId);
+
+    const now = new Date();
+    const inside =
+      settings.enabled && isInQuietHours(now, settings.schedule, settings.timezone, settings.graceMinutes);
+    const windowStart = inside ? windowStartFor(now, settings.schedule, settings.timezone) : null;
+
+    await this._desktopSummary!.tick({ isInside: inside, windowStart, now });
+    await this._pushoverSummaryScheduler!.tick({ now, settings });
   }
 
   /**
