@@ -91,7 +91,7 @@ Try to extract all or as many jobs from the page as possible. And preserve the o
 Here is the page header info:
 ${JSON.stringify(headerInfo)}
 
-Here is the HTML page:
+Here is the page content (HTML converted to markdown):
 """
 ${htmlContent}
 """`;
