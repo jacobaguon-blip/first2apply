@@ -251,8 +251,19 @@ export type DbSchema = {
       };
       advanced_matching: {
         Row: AdvancedMatchingConfig;
-        Insert: Pick<AdvancedMatchingConfig, 'blacklisted_companies' | 'chatgpt_prompt'>;
-        Update: Partial<Pick<AdvancedMatchingConfig, 'blacklisted_companies' | 'chatgpt_prompt'>>;
+        Insert: Pick<AdvancedMatchingConfig, 'blacklisted_companies'>;
+        Update: Partial<Pick<AdvancedMatchingConfig, 'blacklisted_companies'>>;
+        Relationships: [];
+      };
+      ai_filter_profiles: {
+        Row: AiFilterProfile;
+        Insert: { name: string } & Partial<
+          Pick<
+            AiFilterProfile,
+            'id' | 'created_at' | 'user_id' | 'chatgpt_prompt' | 'blacklisted_companies' | 'is_default'
+          >
+        >;
+        Update: Partial<AiFilterProfile>;
         Relationships: [];
       };
     };
