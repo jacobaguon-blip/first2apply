@@ -93,6 +93,27 @@ export function LinksList({
                     </Button>
                   )}
 
+                  {/* Scan now */}
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="default"
+                          className="ml-2 rounded-full bg-secondary/50 px-[9px] py-2 text-sm transition-colors duration-200 ease-in-out hover:bg-secondary focus:bg-secondary"
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            onScanLink(link.id);
+                          }}
+                        >
+                          <ReloadIcon className="h-[18px] w-[18px]" />
+                        </Button>
+                      </TooltipTrigger>
+
+                      <TooltipContent side="left">Scan now</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
                   {/* Copy URL */}
                   <TooltipProvider delayDuration={200}>
                     <Tooltip>
