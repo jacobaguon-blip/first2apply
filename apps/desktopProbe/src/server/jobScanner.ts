@@ -589,6 +589,37 @@ export class JobScanner {
   }
 
   /**
+   * Return the device id derived from this installation's userDataPath.
+   */
+  getDeviceId(): string {
+    return deviceId;
+  }
+
+  /**
+   * Get current quiet-hours settings (loads from disk + reconciles with cloud).
+   */
+  async getQuietHoursSettings(): Promise<QuietHoursSettings> {
+    const loaded = await this._loadQuietHoursSettings();
+    return loaded ?? { ...DEFAULT_QUIET_HOURS };
+  }
+
+  /**
+   * Save a patch to quiet-hours settings (cloud + local).
+   */
+  async saveQuietHoursSettings(patch: Partial<QuietHoursSettings>): Promise<QuietHoursSettings> {
+    const userId = await this._getUserId();
+    if (!userId) throw new Error('not signed in');
+    if (!this._quietHoursStore) {
+      this._quietHoursStore = new QuietHoursSettingsStore({
+        filePath: quietHoursSettingsPath,
+        userId,
+        supabase: this._supabase,
+      });
+    }
+    return this._quietHoursStore.save(patch);
+  }
+
+  /**
    * Close the scanner.
    */
   close() {
