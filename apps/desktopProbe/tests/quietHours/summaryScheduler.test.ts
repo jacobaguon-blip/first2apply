@@ -23,14 +23,14 @@ function makeSb(claimReturns: number[]) {
           is: () => ({
             gte: () => ({
               lt: async () => ({
-                data: [{ siteName: 'LinkedIn', searchTitle: 'Frontend' }],
+                data: [{ id: 1, site: { name: 'LinkedIn' }, link: { title: 'Frontend' } }],
                 error: null,
               }),
             }),
           }),
         }),
       }),
-      update: () => ({ eq: () => ({ is: () => ({ in: async () => ({ data: null, error: null, count: 1 }) }) }) }),
+      update: () => ({ eq: () => ({ in: async () => ({ data: null, error: null, count: 1 }) }) }),
     }),
     _calls: calls,
   };
