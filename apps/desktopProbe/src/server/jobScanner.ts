@@ -450,6 +450,7 @@ export class JobScanner {
             await this._supabase
               .from('jobs')
               .update({ notified_pushover_at: new Date().toISOString() })
+              .eq('user_id', userId)
               .in('id', ids);
           } catch (err) {
             this._logger.error(`failed to stamp notified_pushover_at: ${getExceptionMessage(err)}`);
