@@ -232,6 +232,9 @@ export function SettingsPage() {
         )}
       </div>
 
+      {/* Quiet hours */}
+      <QuietHoursSettings />
+
       {/* in-app browser settings */}
       <div className="flex flex-row items-center justify-between gap-6 rounded-lg border p-6">
         <div className="space-y-1">
