@@ -556,5 +556,17 @@ export async function setSupabaseConfig({ url, key }: { url: string; key: string
   await _mainProcessApiCall('set-supabase-config', { url, key });
 }
 
+export async function getQuietHoursSettings(): Promise<QuietHoursSettings> {
+  return _mainProcessApiCall<QuietHoursSettings>('quiet-hours:get');
+}
+
+export async function saveQuietHoursSettings(patch: Partial<QuietHoursSettings>): Promise<QuietHoursSettings> {
+  return _mainProcessApiCall<QuietHoursSettings>('quiet-hours:save', { patch });
+}
+
+export async function getQuietHoursDeviceId(): Promise<string> {
+  return _mainProcessApiCall<string>('quiet-hours:get-device-id');
+}
+
 /** Singleton instance of the Electron API SDK */
 export const electronApiSdk = new ElectronApiSdk();
