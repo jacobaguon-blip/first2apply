@@ -21,6 +21,7 @@ import { Switch } from '@first2apply/ui';
 
 import { useEffect, useState } from 'react';
 
+import { QuietHoursSettings } from './components/quietHoursSettings';
 import { DefaultLayout } from './defaultLayout';
 
 export function SettingsPage() {
