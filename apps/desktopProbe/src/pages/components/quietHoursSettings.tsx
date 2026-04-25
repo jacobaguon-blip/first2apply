@@ -59,11 +59,8 @@ function pickTemplateDay(schedule: QuietHoursSchedule): QuietHoursDay {
 
 function safeSupportedTimezones(): string[] {
   try {
-    // @ts-expect-error - supportedValuesOf may not be in all lib targets
-    if (typeof Intl.supportedValuesOf === 'function') {
-      // @ts-expect-error - same
-      return Intl.supportedValuesOf('timeZone') as string[];
-    }
+    const fn = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
+    if (typeof fn === 'function') return fn('timeZone');
   } catch {
     /* ignore */
   }
