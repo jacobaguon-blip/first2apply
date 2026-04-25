@@ -517,9 +517,11 @@ export class JobScanner {
           }
         },
         loadJobsBetween: async (start, end) => {
+          const userId = await this._getUserId();
+          if (!userId) return [];
           const { data, error } = await this._supabase
             .from('jobs')
-            .select('siteName, searchTitle')
+            .select('site:sites(name), link:links(title)')
             .eq('user_id', userId)
             .gte('created_at', start.toISOString())
             .lt('created_at', end.toISOString());
@@ -528,8 +530,8 @@ export class JobScanner {
             return [];
           }
           return ((data as any[]) ?? []).map((r) => ({
-            siteName: r.siteName ?? r.site_name ?? '',
-            searchTitle: r.searchTitle ?? r.search_title ?? '',
+            siteName: r.site?.name ?? '',
+            searchTitle: r.link?.title ?? '',
           }));
         },
       });
