@@ -10,7 +10,7 @@ import { ScheduledTask, schedule } from 'node-cron';
 import path from 'path';
 
 import { ENV } from '../env';
-import { AVAILABLE_CRON_RULES, JobScannerSettings, QuietHoursSettings } from '../lib/types';
+import { AVAILABLE_CRON_RULES, DEFAULT_QUIET_HOURS, JobScannerSettings, QuietHoursSettings } from '../lib/types';
 import { installLinkedInDecorator } from './browserHelpers';
 import { chunk, promiseAllSequence, waitRandomBetween } from './helpers';
 import { HtmlDownloader } from './htmlDownloader';
