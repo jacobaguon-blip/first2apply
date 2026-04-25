@@ -307,6 +307,18 @@ export function initRendererIpcApi({
     return _apiCall(async () => overlayBrowserView.navigate(url));
   });
 
+  ipcMain.handle('quiet-hours:get', async () =>
+    _apiCall(async () => jobScanner.getQuietHoursSettings()),
+  );
+
+  ipcMain.handle('quiet-hours:save', async (_event, { patch }) =>
+    _apiCall(async () => jobScanner.saveQuietHoursSettings(patch)),
+  );
+
+  ipcMain.handle('quiet-hours:get-device-id', async () =>
+    _apiCall(async () => jobScanner.getDeviceId()),
+  );
+
   ipcMain.handle('get-supabase-config', async () =>
     _apiCall(async () => getSupabaseConfig()),
   );
