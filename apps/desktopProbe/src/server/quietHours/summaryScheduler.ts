@@ -30,7 +30,7 @@ export class PushoverSummaryScheduler {
 
     const { data: jobs } = await this.deps.supabase
       .from('jobs')
-      .select('siteName, searchTitle, id')
+      .select('id, site:sites(name), link:links(title)')
       .eq('user_id', this.deps.userId)
       .is('notified_pushover_at', null)
       .gte('created_at', windowStart.toISOString())
@@ -38,14 +38,14 @@ export class PushoverSummaryScheduler {
     const rows = (jobs as any[] | null) ?? [];
     if (rows.length === 0) return;
 
-    const groups = aggregateBySource(rows);
+    const flat = rows.map((r: any) => ({ siteName: r.site?.name ?? '', searchTitle: r.link?.title ?? '' }));
+    const groups = aggregateBySource(flat);
     await this.deps.sendPushover(formatSummaryTitle(rows.length), formatSummaryBody(groups));
 
     await this.deps.supabase
       .from('jobs')
       .update({ notified_pushover_at: new Date().toISOString() })
       .eq('user_id', this.deps.userId)
-      .is('notified_pushover_at', null)
       .in('id', rows.map((r: any) => r.id));
   }
 
