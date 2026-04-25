@@ -16,7 +16,7 @@ import {
 } from '@first2apply/core';
 import { User } from '@supabase/supabase-js';
 
-import { JobScannerSettings, NewAppVersion, OverlayBrowserViewResult } from './types';
+import { JobScannerSettings, NewAppVersion, OverlayBrowserViewResult, QuietHoursSettings } from './types';
 
 async function _mainProcessApiCall<T>(channel: string, params?: object): Promise<T> {
   // @ts-expect-error Electron preload injects window.electron
