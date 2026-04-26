@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "name": "Jane Doe",
+  "headline": "Senior Software Engineer",
+  "contact": {
+    "email": "jane.doe@example.com",
+    "phone": "+1-555-0100",
+    "location": "San Francisco, CA",
+    "links": [
+      { "label": "linkedin", "url": "https://linkedin.com/in/janedoe-fixture" },
+      { "label": "github", "url": "https://github.com/janedoe-fixture" }
+    ]
+  },
+  "summary": "Backend engineer with 8 years building distributed systems in TypeScript and Go. Comfortable with Postgres, Kafka, and Kubernetes. Loves small teams shipping frequently.",
+  "experience": [
+    {
+      "company": "Acme Cloud",
+      "title": "Staff Engineer",
+      "start": "2022-03",
+      "end": "present",
+      "bullets": [
+        "Led migration of billing service from monolith to event-sourced microservices, cutting p99 latency 60%.",
+        "Mentored 4 engineers; ran the on-call rotation health initiative."
+      ]
+    },
+    {
+      "company": "Globex",
+      "title": "Senior Engineer",
+      "start": "2018-06",
+      "end": "2022-02",
+      "bullets": [
+        "Built the multi-region replication layer for the search index.",
+        "Owned developer-experience tooling — internal CLI used by 200+ engineers."
+      ]
+    }
+  ],
+  "education": [
+    { "school": "State University", "degree": "BS Computer Science", "year": "2016" }
+  ],
+  "skills": ["TypeScript", "Go", "Postgres", "Kafka", "Kubernetes", "AWS", "Distributed systems"]
+}
