@@ -1,0 +1,27 @@
+# Cold-standby Supabase stack. Postgres-only this weekend (per spec §9.1).
+# All images pinned. Profile 'standby' keeps services off unless explicitly
+# requested: `docker compose --profile standby up -d`.
+name: f2a-standby
+
+services:
+  postgres:
+    image: supabase/postgres:15.6.1.135
+    container_name: f2a-standby-postgres
+    profiles: [standby]
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - f2a-standby-pg:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:54322:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  f2a-standby-pg:
+    name: f2a-standby-pg

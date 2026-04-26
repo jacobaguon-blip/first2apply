@@ -1,0 +1,23 @@
+[Unit]
+Description=first2apply server probe (headless)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=first2apply
+Group=first2apply
+WorkingDirectory=/opt/first2apply
+EnvironmentFile=/opt/first2apply/.env
+ExecStart=/usr/bin/node /opt/first2apply/builds/server-probe/main.js
+Restart=on-failure
+RestartSec=10
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/first2apply
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

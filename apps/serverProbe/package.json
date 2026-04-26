@@ -1,0 +1,19 @@
+{
+  "name": "first2apply-server-probe",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Headless server-side probe (Electron main-only) for running first2apply on a Pi/server.",
+  "main": "dist/main.js",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "lint": "echo 'lint: noop (serverProbe scaffold)'",
+    "test": "echo 'test: noop (serverProbe scaffold)'",
+    "start": "node dist/main.js",
+    "probe-once": "node dist/main.js --probe-once"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

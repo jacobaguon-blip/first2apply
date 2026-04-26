@@ -1,0 +1,12 @@
+[Unit]
+Description=first2apply nightly pg_dump
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=first2apply
+Group=first2apply
+EnvironmentFile=/opt/first2apply/.env
+Environment=F2A_PI_APPLY=1
+ExecStart=/usr/bin/bash /opt/first2apply/deploy/pg_dump.sh

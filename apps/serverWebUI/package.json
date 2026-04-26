@@ -1,0 +1,17 @@
+{
+  "name": "first2apply-server-web-ui",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Server-side web UI for first2apply (Next.js 15 + Tailwind + shadcn/ui).",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "echo 'build: scaffold-only — Next.js install deferred to Monday'",
+    "dev": "echo 'dev: scaffold-only — run pnpm install with deps unpinned to start dev server'",
+    "lint": "echo 'lint: noop (serverWebUI scaffold)'",
+    "test": "echo 'test: noop (serverWebUI scaffold)'"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
