@@ -1,0 +1,16 @@
+{
+  "Acme Cloud":          { "linkedin_url": "https://www.linkedin.com/company/acme-cloud", "website_url": "https://acmecloud.example.com" },
+  "Globex":              { "linkedin_url": "https://www.linkedin.com/company/globex", "website_url": "https://globex.example.com" },
+  "Initech":             { "linkedin_url": "https://www.linkedin.com/company/initech", "website_url": "https://initech.example.com" },
+  "Umbrella Corp":       { "linkedin_url": "https://www.linkedin.com/company/umbrella-corp", "website_url": "https://umbrella.example.com" },
+  "Hooli":               { "linkedin_url": "https://www.linkedin.com/company/hooli", "website_url": "https://hooli.example.com" },
+  "Pied Piper":          { "linkedin_url": "https://www.linkedin.com/company/pied-piper", "website_url": "https://piedpiper.example.com" },
+  "Stark Industries":    { "linkedin_url": "https://www.linkedin.com/company/stark-industries", "website_url": "https://stark.example.com" },
+  "Wayne Enterprises":   { "linkedin_url": "https://www.linkedin.com/company/wayne-enterprises", "website_url": "https://wayne.example.com" },
+  "Cyberdyne":           { "linkedin_url": "https://www.linkedin.com/company/cyberdyne", "website_url": "https://cyberdyne.example.com" },
+  "Tyrell Corp":         { "linkedin_url": "https://www.linkedin.com/company/tyrell-corp", "website_url": "https://tyrell.example.com" },
+  "Soylent":             { "linkedin_url": "https://www.linkedin.com/company/soylent", "website_url": "https://soylent.example.com" },
+  "Vandelay Industries": { "linkedin_url": "https://www.linkedin.com/company/vandelay", "website_url": "https://vandelay.example.com" },
+  "Massive Dynamic":     { "linkedin_url": "https://www.linkedin.com/company/massive-dynamic", "website_url": "https://massive.example.com" },
+  "Oscorp":              { "linkedin_url": "https://www.linkedin.com/company/oscorp", "website_url": "https://oscorp.example.com" }
+}
