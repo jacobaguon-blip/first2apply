@@ -15,4 +15,6 @@
 
 ## Bugs
 
-- **`status='deleted'` writes target a value not in the cloud `"Job Status"` enum.** Three call sites (`apps/webapp/src/app/jobs/list/[status]/ListJobsFeed.tsx:99`, `apps/desktopProbe/src/components/home/jobTabs.tsx:100`, `jobTabsContent.tsx:351`) write `status='deleted'`. The cloud enum (`apps/backend/supabase/migrations/20260418000000_initial_schema.sql:33`) only has `new|applied|archived|processing|excluded_by_advanced_matching`. The hand-rolled `DbSchema` hid this because its `JobStatus` type included `'deleted'`. At runtime the UPDATE either errors with `22P02 invalid input value for enum` or is silently rejected. Discovered 2026-04-27 while auditing the parked `DbSchema → Database` migration. Resolution options: (A) add the enum value via `ALTER TYPE`, (B) refactor sites to use `'archived'`, (C) hard-delete the row instead. Choice depends on the intended UX distinction between "deleted" and "archived" tabs.
+_None currently logged. Resolved bugs:_
+
+- ~~**`status='deleted'` writes target a value not in the cloud `"Job Status"` enum.**~~ Fixed by migration `20260427120000_add_deleted_to_job_status.sql` (option A). The UI distinguishes Archive (visible in archived tab) from Delete (permanently dismissed); soft-delete is the right primitive because `scan-urls` upserts on `(user_id, externalId)` with `ignoreDuplicates=true`, so hard-delete would let the next scrape recreate the job.
