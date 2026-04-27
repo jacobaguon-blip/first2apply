@@ -99,3 +99,20 @@ Notes:
 - Approval-token files (lib/approval-token*, app/api/approve/) were assigned to backlog/11 per spec §5 ownership; backlog/04 carries only the serverWebUI scaffolding (package.json, tsconfig, README, page.tsx).
 
 ---
+
+---
+
+## 2026-04-27T19:30-07:00 — Autonomous pipeline kickoff
+
+User instruction: own server-probe project end-to-end. Pipeline:
+1. Devils-advocate loop until zero new issues against design + PR 1 plan
+2. Code review on final spec
+3. plan-builder to produce execution plan
+4. Build (parallel where possible, retry on failure)
+5. Dry-run verify
+
+Rules: no permission gates, fix-and-continue, log to terminal + decisions.md.
+
+**Initial state:** Branch `feat/server-probe-design`, PR #17 open with design doc, PR 1 plan uncommitted at `docs/plans/2026-04-27-pr1-regression-net.md`. Untracked: `.merge-train-log.md`, `recon-build-notes.md` (legacy artifacts, ignored for now).
+
+**Decision:** First commit the PR 1 plan to the same branch + PR (PR #17 expands to "design + PR 1 plan"). Then begin devil's advocate loop.
