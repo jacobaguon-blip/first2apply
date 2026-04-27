@@ -7,12 +7,15 @@ import { useSettings } from '@/hooks/settings';
 import {
   applyAppUpdate,
   getSupabaseConfig,
+  getUserSettings,
   logout,
   openExternalUrl,
   setSupabaseConfig,
   SupabaseConfigInfo,
   testSupabaseConnection,
+  upsertUserSettings,
 } from '@/lib/electronMainSdk';
+import type { QuietHoursDay, QuietHoursSchedule, UserSettings } from '@first2apply/core';
 import { JobScannerSettings } from '@/lib/types';
 import { Button } from '@first2apply/ui';
 import { Input } from '@first2apply/ui';
@@ -103,6 +106,102 @@ export function SettingsPage() {
       setBackendSaving(false);
       setBackendStatus({ kind: 'err', msg: error instanceof Error ? error.message : String(error) });
     }
+  };
+
+  // Quiet hours state
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [qhLoaded, setQhLoaded] = useState(false);
+  const [qhSaving, setQhSaving] = useState(false);
+  const [qhStatus, setQhStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+
+  const tzOptions: string[] = (() => {
+    // Intl.supportedValuesOf is available on Node 18+/modern Electron.
+    const fn = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf;
+    if (typeof fn === 'function') {
+      try {
+        return fn('timeZone');
+      } catch {
+        // fall through
+      }
+    }
+    return [
+      'UTC',
+      'America/Los_Angeles',
+      'America/Denver',
+      'America/Chicago',
+      'America/New_York',
+      'Europe/London',
+      'Europe/Berlin',
+      'Europe/Paris',
+      'Asia/Tokyo',
+      'Asia/Singapore',
+      'Australia/Sydney',
+    ];
+  })();
+
+  useEffect(() => {
+    getUserSettings()
+      .then((s) => {
+        setUserSettings(s);
+        setQhLoaded(true);
+      })
+      .catch((error) => {
+        setQhLoaded(true);
+        handleError({ error, title: 'Failed to load quiet-hours settings' });
+      });
+  }, []);
+
+  const qhEnabled = !!userSettings?.quiet_hours_enabled;
+  const qhTimezone = userSettings?.quiet_hours_timezone ?? 'UTC';
+  const qhSchedule: QuietHoursSchedule = userSettings?.quiet_hours_schedule ?? {};
+  const qhGrace = userSettings?.quiet_hours_grace_minutes ?? 0;
+
+  const updateQuietHours = async (
+    patch: Partial<
+      Pick<
+        UserSettings,
+        | 'quiet_hours_enabled'
+        | 'quiet_hours_timezone'
+        | 'quiet_hours_schedule'
+        | 'quiet_hours_grace_minutes'
+      >
+    >,
+  ) => {
+    setQhSaving(true);
+    setQhStatus(null);
+    try {
+      const next = await upsertUserSettings({
+        quiet_hours_enabled: patch.quiet_hours_enabled ?? qhEnabled,
+        quiet_hours_timezone: patch.quiet_hours_timezone ?? qhTimezone,
+        quiet_hours_schedule: patch.quiet_hours_schedule ?? qhSchedule,
+        quiet_hours_grace_minutes: patch.quiet_hours_grace_minutes ?? qhGrace,
+      });
+      setUserSettings(next);
+      setQhStatus({ kind: 'ok', msg: 'Saved' });
+    } catch (error) {
+      setQhStatus({
+        kind: 'err',
+        msg: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setQhSaving(false);
+    }
+  };
+
+  const setDayWindow = async (
+    day: QuietHoursDay,
+    field: 'start' | 'end' | 'off',
+    value: string | boolean,
+  ) => {
+    const nextSchedule: QuietHoursSchedule = { ...qhSchedule };
+    if (field === 'off') {
+      if (value === true) delete nextSchedule[day];
+      else nextSchedule[day] = nextSchedule[day] ?? { start: '22:00', end: '07:00' };
+    } else {
+      const current = nextSchedule[day] ?? { start: '22:00', end: '07:00' };
+      nextSchedule[day] = { ...current, [field]: String(value) };
+    }
+    await updateQuietHours({ quiet_hours_schedule: nextSchedule });
   };
 
   const onApplyUpdate = async () => {
@@ -239,6 +338,122 @@ export function SettingsPage() {
                 placeholder="uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
               />
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Quiet hours */}
+      <div className="space-y-4 rounded-lg border p-6">
+        <div className="flex flex-row items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h2 className="text-lg">Quiet hours</h2>
+            <p className="text-sm font-light">
+              Suppress Pushover summaries during configured local-time windows. Jobs found
+              during a window are deferred until it ends — no notifications are lost.
+            </p>
+          </div>
+          <Switch
+            checked={qhEnabled}
+            disabled={!qhLoaded || qhSaving}
+            onCheckedChange={(checked) => updateQuietHours({ quiet_hours_enabled: checked })}
+          />
+        </div>
+        {qhEnabled && (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="qh-timezone">Timezone</Label>
+                <select
+                  id="qh-timezone"
+                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm"
+                  value={qhTimezone}
+                  disabled={qhSaving}
+                  onChange={(e) => updateQuietHours({ quiet_hours_timezone: e.target.value })}
+                >
+                  {tzOptions.map((tz) => (
+                    <option key={tz} value={tz}>
+                      {tz}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="qh-grace">Grace period: {qhGrace} min</Label>
+                <input
+                  id="qh-grace"
+                  type="range"
+                  min={0}
+                  max={60}
+                  step={5}
+                  value={qhGrace}
+                  disabled={qhSaving}
+                  onChange={(e) =>
+                    updateQuietHours({ quiet_hours_grace_minutes: parseInt(e.target.value, 10) })
+                  }
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {(
+                [
+                  'monday',
+                  'tuesday',
+                  'wednesday',
+                  'thursday',
+                  'friday',
+                  'saturday',
+                  'sunday',
+                ] as QuietHoursDay[]
+              ).map((day) => {
+                const win = qhSchedule[day];
+                const off = !win;
+                return (
+                  <div key={day} className="grid grid-cols-12 items-center gap-2">
+                    <Label className="col-span-3 capitalize">{day}</Label>
+                    <div className="col-span-2 flex items-center gap-2">
+                      <Switch
+                        checked={!off}
+                        disabled={qhSaving}
+                        onCheckedChange={(checked) => setDayWindow(day, 'off', !checked)}
+                      />
+                      <span className="text-xs">{off ? 'off' : 'on'}</span>
+                    </div>
+                    <Input
+                      type="time"
+                      className="col-span-3"
+                      disabled={off || qhSaving}
+                      value={win?.start ?? '22:00'}
+                      onChange={(e) => setDayWindow(day, 'start', e.target.value)}
+                    />
+                    <Input
+                      type="time"
+                      className="col-span-3"
+                      disabled={off || qhSaving}
+                      value={win?.end ?? '07:00'}
+                      onChange={(e) => setDayWindow(day, 'end', e.target.value)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+
+            {qhStatus && (
+              <p
+                className={`text-sm ${
+                  qhStatus.kind === 'ok' ? 'text-green-600' : 'text-destructive'
+                }`}
+              >
+                {qhStatus.msg}
+              </p>
+            )}
+
+            {userSettings?.last_summary_sent_at && (
+              <p className="text-muted-foreground text-xs">
+                Last summary sent: {new Date(userSettings.last_summary_sent_at).toLocaleString()}
+              </p>
+            )}
           </div>
         )}
       </div>

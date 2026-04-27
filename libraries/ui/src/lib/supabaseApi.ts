@@ -5,6 +5,8 @@ import {
   JobLabel,
   JobStatus,
   Link,
+  UserSettings,
+  UserSettingsUpsert,
   WebPageRuntimeData,
 } from "@first2apply/core"
 import {
@@ -728,5 +730,36 @@ export class F2aSupabaseApi {
         .update({ scrape_failure_count: failures })
         .eq("id", linkId)
     )
+  }
+
+  /**
+   * Fetch the current user's quiet-hours settings. Returns null if no row exists yet.
+   */
+  async getUserSettings(): Promise<UserSettings | null> {
+    const { data, error } = await this._supabase
+      .from("user_settings")
+      .select("*")
+      .maybeSingle()
+    if (error) throw error
+    return (data as UserSettings | null) ?? null
+  }
+
+  /**
+   * Upsert the current user's quiet-hours settings. Caller does not need to
+   * supply user_id — RLS scopes the row to auth.uid().
+   */
+  async upsertUserSettings(patch: UserSettingsUpsert): Promise<UserSettings> {
+    const { data: userData, error: userErr } =
+      await this._supabase.auth.getUser()
+    if (userErr) throw userErr
+    if (!userData.user) throw new Error("not authenticated")
+    const row: UserSettingsUpsert = { ...patch, user_id: userData.user.id }
+    const { data, error } = await this._supabase
+      .from("user_settings")
+      .upsert(row, { onConflict: "user_id" })
+      .select("*")
+      .single()
+    if (error) throw error
+    return data as UserSettings
   }
 }

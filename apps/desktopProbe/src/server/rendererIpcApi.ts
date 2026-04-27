@@ -247,6 +247,20 @@ export function initRendererIpcApi({
     }),
   );
 
+  ipcMain.handle('get-user-settings', async () =>
+    _apiCall(async () => {
+      const settings = await supabaseApi.getUserSettings();
+      return { settings };
+    }),
+  );
+
+  ipcMain.handle('upsert-user-settings', async (event, { patch }) =>
+    _apiCall(async () => {
+      const settings = await supabaseApi.upsertUserSettings(patch);
+      return { settings };
+    }),
+  );
+
   ipcMain.handle('create-note', async (event, { job_id, text, files }) => {
     const res = await _apiCall(() => supabaseApi.createNote({ job_id, text, files }));
     analytics.trackEvent('note_created', { job_id: job_id, note_id: (res as any)?.data?.id });

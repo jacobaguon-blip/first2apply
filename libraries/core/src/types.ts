@@ -167,6 +167,39 @@ export interface AiFilterProfile {
   is_default: boolean;
 }
 
+export type QuietHoursWindow = { start: string; end: string };
+export type QuietHoursDay =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+export type QuietHoursSchedule = Partial<Record<QuietHoursDay, QuietHoursWindow>>;
+
+export type UserSettings = {
+  user_id: string;
+  quiet_hours_enabled: boolean;
+  quiet_hours_timezone: string;
+  quiet_hours_schedule: QuietHoursSchedule;
+  quiet_hours_grace_minutes: number;
+  pushover_owner_device_id: string | null;
+  last_summary_sent_at: string | null;
+  updated_at: string;
+};
+
+export type UserSettingsUpsert = Partial<
+  Pick<
+    UserSettings,
+    | 'quiet_hours_enabled'
+    | 'quiet_hours_timezone'
+    | 'quiet_hours_schedule'
+    | 'quiet_hours_grace_minutes'
+    | 'pushover_owner_device_id'
+  >
+> & { user_id?: string };
+
 export type WebPageRuntimeData = Partial<Record<SiteProvider, ProviderRuntimeData>>;
 export type LinkedinRuntimeData = {
   type: SiteProvider.linkedin;
@@ -266,6 +299,12 @@ export type DbSchema = {
         Update: Partial<AiFilterProfile>;
         Relationships: [];
       };
+      user_settings: {
+        Row: UserSettings;
+        Insert: UserSettingsUpsert;
+        Update: UserSettingsUpsert;
+        Relationships: [];
+      };
     };
     Views: {};
     Functions: {
@@ -295,6 +334,14 @@ export type DbSchema = {
       get_user_id_by_email: {
         Args: { email: string };
         Returns: { id: string };
+      };
+      claim_summary_send: {
+        Params: {
+          p_user_id: string;
+          p_window_end: string;
+        };
+        Args: {};
+        Returns: number;
       };
       count_chatgpt_usage: {
         Args: {
