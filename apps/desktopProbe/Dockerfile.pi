@@ -1,0 +1,69 @@
+# Headless Electron probe for Raspberry Pi (linux/arm64).
+# Runs the desktop app under Xvfb so Electron's Chromium has a virtual display,
+# while Pushover handles actual notifications to phones.
+FROM --platform=linux/arm64 node:22-trixie
+
+# System deps: Xvfb (virtual display) + Chromium runtime libs Electron needs.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xvfb \
+    libnss3 \
+    libgbm1 \
+    libxss1 \
+    libasound2 \
+    libgtk-3-0 \
+    libcups2 \
+    libdrm2 \
+    libxkbcommon0 \
+    libpango-1.0-0 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libnotify4 \
+    fonts-liberation \
+    ca-certificates \
+    dumb-init \
+  && rm -rf /var/lib/apt/lists/*
+
+# pnpm matches the repo's packageManager field.
+RUN npm install -g pnpm@10.32.1
+
+WORKDIR /first2apply
+
+# Copy manifests first for better layer caching on dep installs.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc nx.json tsconfig.base.json ./
+COPY apps/desktopProbe/package.json ./apps/desktopProbe/
+COPY libraries/core/package.json ./libraries/core/
+COPY libraries/ui/package.json ./libraries/ui/
+# Add other workspace manifests if needed by nx graph resolution
+COPY apps/backend/package.json ./apps/backend/
+COPY apps/blog/package.json ./apps/blog/
+COPY apps/invoiceDownloader/package.json ./apps/invoiceDownloader/
+COPY apps/landingPage/package.json ./apps/landingPage/
+COPY apps/nodeBackend/package.json ./apps/nodeBackend/
+COPY apps/webapp/package.json ./apps/webapp/
+
+RUN pnpm install --frozen-lockfile
+
+# Now bring in the rest of the source.
+COPY libraries ./libraries
+COPY apps/desktopProbe ./apps/desktopProbe
+
+# Build the workspace libraries so the probe can resolve their types + JS.
+RUN pnpm nx run-many -t build --projects=@first2apply/core,@first2apply/ui
+
+# Electron userData goes under $HOME/.config — persist via volume mount.
+ENV HOME=/data
+RUN mkdir -p /data && chmod 700 /data
+VOLUME ["/data"]
+
+# Electron sandbox needs CAP_SYS_ADMIN which Docker drops by default.
+ENV ELECTRON_DISABLE_SANDBOX=1
+# Hint for some Electron apps to skip setuid-sandbox lookup.
+ENV ELECTRON_RUN_AS_NODE=0
+
+# Reasonable default virtual display size.
+ENV XVFB_SCREEN=1280x720x24
+
+# dumb-init handles PID 1 signal forwarding; xvfb-run provides the display server.
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["sh", "-c", "xvfb-run -a --server-args=\"-screen 0 ${XVFB_SCREEN}\" pnpm nx start first2apply-desktop"]

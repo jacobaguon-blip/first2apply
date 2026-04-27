@@ -1,0 +1,33 @@
+name: first2apply-pi
+
+services:
+  probe:
+    build:
+      context: ../..
+      dockerfile: apps/desktopProbe/Dockerfile.pi
+    image: first2apply-probe:latest
+    container_name: first2apply-probe
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env.pi
+    volumes:
+      # Persistent Electron userData (settings.json, Supabase session, cron state).
+      - ./data:/data
+      # Optional: share ~/.cache with host to avoid re-downloading Electron on rebuild.
+      # - ./cache:/root/.cache
+    # Uncomment if you want to peek at the virtual display via VNC during first-run login.
+    # ports:
+    #   - '5900:5900'
+    # command:
+    #   - sh
+    #   - -c
+    #   - |
+    #     Xvfb :99 -screen 0 ${XVFB_SCREEN:-1280x720x24} &
+    #     x11vnc -display :99 -forever -nopw -rfbport 5900 &
+    #     DISPLAY=:99 pnpm nx start first2apply-desktop
+    networks:
+      - default
+
+# No custom network needed; using default bridge. Add a `networks` block here if you want to
+# put the probe on the same docker network as a self-hosted Supabase later.
