@@ -1,5 +1,5 @@
 import {
-  AdvancedMatchingConfig,
+  AiFilterProfile,
   DbSchema,
   Job,
   JobLabel,
@@ -107,29 +107,37 @@ export class F2aSupabaseApi {
     html,
     webPageRuntimeData,
     force,
+    scanFrequency,
+    filter_profile_id,
   }: {
     title: string
     url: string
     html: string
     webPageRuntimeData: WebPageRuntimeData
     force: boolean
+    scanFrequency?: "hourly" | "daily"
+    filter_profile_id?: number | null
   }) {
     // for debugging, use a test.html file
     // const htmlFixture = fs.readFileSync(path.join(__dirname, '../../../test.html'), 'utf-8');
     // html = htmlFixture;
 
+    const body: Record<string, unknown> = {
+      title,
+      url,
+      html,
+      webPageRuntimeData,
+      force,
+      scanFrequency,
+    }
+    if (filter_profile_id !== undefined) {
+      body.filter_profile_id = filter_profile_id
+    }
+
     const { link, newJobs } = await this._supabaseApiCall(() =>
       this._supabase.functions.invoke<{ link: Link; newJobs: Job[] }>(
         "create-link",
-        {
-          body: {
-            title,
-            url,
-            html,
-            webPageRuntimeData,
-            force,
-          },
-        }
+        { body }
       )
     )
 
@@ -143,15 +151,24 @@ export class F2aSupabaseApi {
     linkId,
     title,
     url,
+    ...rest
   }: {
     linkId: number
-    title: string
-    url: string
+    title?: string
+    url?: string
+    filter_profile_id?: number | null
   }): Promise<Link> {
+    const payload: Record<string, unknown> = {}
+    if (title !== undefined) payload.title = title
+    if (url !== undefined) payload.url = url
+    if ("filter_profile_id" in rest) {
+      payload.filter_profile_id = rest.filter_profile_id
+    }
+
     const updatedLink = await this._supabaseApiCall(async () =>
       this._supabase
         .from("links")
-        .update({ title, url })
+        .update(payload)
         .eq("id", linkId)
         .select("*")
         .single()
@@ -191,14 +208,15 @@ export class F2aSupabaseApi {
     }[]
   ) {
     return this._supabaseApiCall(() =>
-      this._supabase.functions.invoke<{ newJobs: Job[]; parseFailed: boolean }>(
-        "scan-urls",
-        {
-          body: {
-            htmls,
-          },
-        }
-      )
+      this._supabase.functions.invoke<{
+        newJobs: Job[]
+        parseFailed: boolean
+        parseErrors?: Array<{ linkId: number; message: string }>
+      }>("scan-urls", {
+        body: {
+          htmls,
+        },
+      })
     )
   }
 
@@ -605,37 +623,93 @@ export class F2aSupabaseApi {
     )
   }
 
-  /**
-   * Get the advanced matching configuration for the current user.
-   */
-  async getAdvancedMatchingConfig() {
-    const [config] = await this._supabaseApiCall(
-      async () => await this._supabase.from("advanced_matching").select("*")
+  /** List the user's AI filter profiles, ordered oldest-first. */
+  async listFilterProfiles(): Promise<AiFilterProfile[]> {
+    const data = await this._supabaseApiCall(
+      async () =>
+        await this._supabase
+          .from("ai_filter_profiles")
+          .select("*")
+          .order("created_at", { ascending: true })
     )
-
-    return config
+    return data ?? []
   }
 
-  /**
-   * Update the advanced matching configuration for the current user.
-   */
-  async updateAdvancedMatchingConfig(
-    config: Pick<
-      AdvancedMatchingConfig,
-      "chatgpt_prompt" | "blacklisted_companies"
+  /** Create a new filter profile. */
+  async createFilterProfile(input: {
+    name: string
+    chatgpt_prompt?: string
+    blacklisted_companies?: string[]
+    is_default?: boolean
+  }): Promise<AiFilterProfile> {
+    const [row] = await this._supabaseApiCall(
+      async () =>
+        await this._supabase
+          .from("ai_filter_profiles")
+          .insert(input)
+          .select("*")
+    )
+    return row
+  }
+
+  /** Update an existing filter profile. Does NOT toggle default — use setDefaultFilterProfile for that. */
+  async updateFilterProfile(
+    id: number,
+    patch: Partial<
+      Pick<AiFilterProfile, "name" | "chatgpt_prompt" | "blacklisted_companies">
     >
-  ) {
-    const [updatedConfig] = await this._supabaseApiCall(
+  ): Promise<AiFilterProfile> {
+    const [row] = await this._supabaseApiCall(
+      async () =>
+        await this._supabase
+          .from("ai_filter_profiles")
+          .update(patch)
+          .eq("id", id)
+          .select("*")
+    )
+    return row
+  }
+
+  /** Mark a profile as the user's default, clearing any other default in the same transaction. */
+  async setDefaultFilterProfile(id: number): Promise<void> {
+    await this._supabaseApiCall(
+      async () =>
+        await this._supabase.rpc("set_default_filter_profile", { p_id: id })
+    )
+  }
+
+  /** Delete a profile. Associated links.filter_profile_id is SET NULL by FK. */
+  async deleteFilterProfile(id: number): Promise<void> {
+    await this._supabaseApiCall(
+      async () =>
+        await this._supabase.from("ai_filter_profiles").delete().eq("id", id)
+    )
+  }
+
+  /** Get the user's GLOBAL blacklist (stored on advanced_matching). Returns [] if no row exists yet. */
+  async getGlobalBlacklist(): Promise<string[]> {
+    const data = await this._supabaseApiCall(
       async () =>
         await this._supabase
           .from("advanced_matching")
-          .upsert(config, {
-            onConflict: "user_id",
-          })
-          .select("*")
+          .select("blacklisted_companies")
     )
+    return data?.[0]?.blacklisted_companies ?? []
+  }
 
-    return updatedConfig
+  /** Update the global blacklist. Upserts on user_id so the row is created if missing. */
+  async updateGlobalBlacklist(companies: string[]): Promise<string[]> {
+    const [row] = await this._supabaseApiCall(
+      async () =>
+        await this._supabase
+          .from("advanced_matching")
+          .upsert(
+            { blacklisted_companies: companies },
+            { onConflict: "user_id" }
+          )
+          .select("blacklisted_companies")
+    )
+    return row.blacklisted_companies
   }
 
   /**

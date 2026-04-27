@@ -4,11 +4,22 @@ import { useAppState } from '@/hooks/appState';
 import { useError } from '@/hooks/error';
 import { useSession } from '@/hooks/session';
 import { useSettings } from '@/hooks/settings';
-import { applyAppUpdate, logout, openExternalUrl } from '@/lib/electronMainSdk';
+import {
+  applyAppUpdate,
+  getSupabaseConfig,
+  logout,
+  openExternalUrl,
+  setSupabaseConfig,
+  SupabaseConfigInfo,
+  testSupabaseConnection,
+} from '@/lib/electronMainSdk';
 import { JobScannerSettings } from '@/lib/types';
 import { Button } from '@first2apply/ui';
+import { Input } from '@first2apply/ui';
+import { Label } from '@first2apply/ui';
 import { Switch } from '@first2apply/ui';
-import * as luxon from 'luxon';
+
+import { useEffect, useState } from 'react';
 
 import { DefaultLayout } from './defaultLayout';
 
@@ -50,6 +61,50 @@ export function SettingsPage() {
     }
   };
 
+  // Backend (Supabase) config
+  const [backendConfig, setBackendConfig] = useState<SupabaseConfigInfo | null>(null);
+  const [backendUrl, setBackendUrl] = useState('');
+  const [backendKey, setBackendKey] = useState('');
+  const [backendTesting, setBackendTesting] = useState(false);
+  const [backendSaving, setBackendSaving] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
+
+  useEffect(() => {
+    getSupabaseConfig()
+      .then((cfg) => {
+        setBackendConfig(cfg);
+        setBackendUrl(cfg.url);
+        setBackendKey(cfg.key);
+      })
+      .catch((error) => handleError({ error, title: 'Failed to load backend config' }));
+  }, []);
+
+  const onTestBackend = async () => {
+    setBackendStatus(null);
+    setBackendTesting(true);
+    try {
+      await testSupabaseConnection({ url: backendUrl, key: backendKey });
+      setBackendStatus({ kind: 'ok', msg: 'Connection successful' });
+    } catch (error) {
+      setBackendStatus({ kind: 'err', msg: error instanceof Error ? error.message : String(error) });
+    } finally {
+      setBackendTesting(false);
+    }
+  };
+
+  const onSaveBackend = async () => {
+    if (!confirm('Saving will restart the app. Continue?')) return;
+    setBackendSaving(true);
+    setBackendStatus(null);
+    try {
+      await setSupabaseConfig({ url: backendUrl, key: backendKey });
+      // app will relaunch; nothing more to do here
+    } catch (error) {
+      setBackendSaving(false);
+      setBackendStatus({ kind: 'err', msg: error instanceof Error ? error.message : String(error) });
+    }
+  };
+
   const onApplyUpdate = async () => {
     try {
       await applyAppUpdate();
@@ -79,13 +134,23 @@ export function SettingsPage() {
             </h2>
             <p className="text-sm font-light">{newUpdate.message}</p>
           </div>
-          {!profile.is_trial && (
-            <Button className="w-fit" onClick={() => onApplyUpdate()}>
-              Update
-            </Button>
-          )}
+          <Button className="w-fit" onClick={() => onApplyUpdate()}>
+            Update
+          </Button>
         </div>
       )}
+
+      {/* pause scanning */}
+      <div className="flex flex-row items-center justify-between gap-6 rounded-lg border p-6">
+        <div className="space-y-1">
+          <h2 className="text-lg">Pause scanning {settings.isPaused && <span className="ml-2 rounded bg-yellow-500/20 px-2 py-0.5 text-xs font-medium text-yellow-700 dark:text-yellow-400">PAUSED</span>}</h2>
+          <p className="text-sm font-light">Stop all scheduled and manual scans. Useful during development to avoid rebuild-triggered scans.</p>
+        </div>
+        <Switch
+          checked={!!settings.isPaused}
+          onCheckedChange={(checked) => onUpdatedSettings({ ...settings, isPaused: checked })}
+        />
+      </div>
 
       {/* cron settings */}
       <CronSchedule cronRule={settings.cronRule} onCronRuleChange={onCronRuleChange} />
@@ -126,6 +191,58 @@ export function SettingsPage() {
         />
       </div>
 
+      {/* Pushover notifications */}
+      <div className="space-y-4 rounded-lg border p-6">
+        <div className="flex flex-row items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h2 className="text-lg">Pushover notifications</h2>
+            <p className="text-sm font-light">
+              Send push notifications to your phone via{' '}
+              <button
+                type="button"
+                className="underline"
+                onClick={() => openExternalUrl('https://pushover.net/')}
+              >
+                Pushover
+              </button>
+              . Create an app there to get an app token; your user key is on your Pushover dashboard.
+            </p>
+          </div>
+          <Switch
+            checked={!!settings.pushoverEnabled}
+            onCheckedChange={(checked) => onUpdatedSettings({ ...settings, pushoverEnabled: checked })}
+          />
+        </div>
+        {settings.pushoverEnabled && (
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="pushover-app-token">App token</Label>
+              <Input
+                id="pushover-app-token"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={settings.pushoverAppToken ?? ''}
+                onChange={(e) => onUpdatedSettings({ ...settings, pushoverAppToken: e.target.value })}
+                placeholder="axxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="pushover-user-key">User key</Label>
+              <Input
+                id="pushover-user-key"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={settings.pushoverUserKey ?? ''}
+                onChange={(e) => onUpdatedSettings({ ...settings, pushoverUserKey: e.target.value })}
+                placeholder="uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* in-app browser settings */}
       <div className="flex flex-row items-center justify-between gap-6 rounded-lg border p-6">
         <div className="space-y-1">
@@ -138,30 +255,66 @@ export function SettingsPage() {
         />
       </div>
 
-      {/* subscription */}
-      <div className="flex flex-row items-center justify-between gap-6 rounded-lg border p-6">
+      {/* Backend (Supabase) config */}
+      <div className="space-y-4 rounded-lg border p-6">
         <div className="space-y-1">
-          <h2 className="text-lg">
-            {profile.subscription_tier.toUpperCase()} subscription
-            {profile.is_trial && ' (Trial)'}
-          </h2>
+          <h2 className="text-lg">Backend (Supabase)</h2>
           <p className="text-sm font-light">
-            Your subscription ends on{' '}
-            <span className="underline">
-              {luxon.DateTime.fromISO(profile.subscription_end_date).toFormat('dd LLLL yyyy')}
-            </span>
-            .{!profile.is_trial && ' You can cancel or upgrade your subscription at any time.'}
+            Point the app at a Supabase project. Saving restarts the app.
+            {backendConfig && (
+              <>
+                {' '}
+                Currently using{' '}
+                <span className="font-medium">
+                  {backendConfig.source === 'user'
+                    ? 'custom setting'
+                    : backendConfig.source === 'env'
+                    ? 'build-time default'
+                    : 'no config'}
+                </span>
+                .
+              </>
+            )}
           </p>
         </div>
-        {!profile.is_trial && (
-          <Button
-            className="w-fit"
-            variant="secondary"
-            onClick={() => openExternalUrl(stripeConfig.customerPortalLink)}
-          >
-            Manage Subscription
-          </Button>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="supabase-url">Project URL</Label>
+            <Input
+              id="supabase-url"
+              autoComplete="off"
+              spellCheck={false}
+              value={backendUrl}
+              onChange={(e) => setBackendUrl(e.target.value)}
+              placeholder="https://xxxx.supabase.co"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="supabase-key">Anon key</Label>
+            <Input
+              id="supabase-key"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={backendKey}
+              onChange={(e) => setBackendKey(e.target.value)}
+              placeholder="eyJhbGciOi..."
+            />
+          </div>
+        </div>
+        {backendStatus && (
+          <p className={`text-sm ${backendStatus.kind === 'ok' ? 'text-green-600' : 'text-destructive'}`}>
+            {backendStatus.msg}
+          </p>
         )}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onTestBackend} disabled={backendTesting || backendSaving}>
+            {backendTesting ? 'Testing…' : 'Test connection'}
+          </Button>
+          <Button onClick={onSaveBackend} disabled={backendTesting || backendSaving}>
+            {backendSaving ? 'Saving…' : 'Save & restart'}
+          </Button>
+        </div>
       </div>
 
       <div className="flex justify-end pt-4">

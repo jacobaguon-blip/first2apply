@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 
 import { useError } from '@/hooks/error';
 import { OverlayBrowserViewResult } from '@/lib/types';
-import { JobSite, Link, getExceptionMessage } from '@first2apply/core';
+import { AiFilterProfile, JobSite, Link, getExceptionMessage } from '@first2apply/core';
 import { useForm } from '@first2apply/ui';
 import { useSites } from '@first2apply/ui';
 import { useLinks } from '@first2apply/ui';
@@ -22,13 +22,15 @@ import { Badge } from '@first2apply/ui';
 import { Button } from '@first2apply/ui';
 import { Form, FormControl, FormField, FormItem, FormLabel } from '@first2apply/ui';
 import { Input } from '@first2apply/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@first2apply/ui';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@first2apply/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
 import { BrowserWindow, BrowserWindowHandle } from './browserWindow';
 import { Icons } from './icons';
 
-export function CreateLink() {
+export function CreateLink({ profiles = [] }: { profiles?: AiFilterProfile[] }) {
   const [jobBoardModalResponse, setJobBoardModalResponse] = useState<OverlayBrowserViewResult>();
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
   const browserWindowRef = useRef<BrowserWindowHandle>(null);
@@ -73,7 +75,7 @@ export function CreateLink() {
       setJobBoardModalResponse(jobSearchInfo);
       setIsConfirmationDialogOpen(true);
     } catch (error) {
-      handleError({ error, title: 'Error closing job board' });
+      handleError({ error, title: 'Could not save this search' });
     }
   };
 
@@ -89,7 +91,15 @@ export function CreateLink() {
     }
   };
 
-  const onSaveSearch = async ({ title, force }: { title: string; force: boolean }) => {
+  const onSaveSearch = async ({
+    title,
+    force,
+    filterProfileId,
+  }: {
+    title: string;
+    force: boolean;
+    filterProfileId: number | null;
+  }) => {
     if (!jobBoardModalResponse) {
       handleError({ error: new Error('No job search data'), title: 'Error saving job search' });
       return;
@@ -101,6 +111,7 @@ export function CreateLink() {
       html: jobBoardModalResponse.html,
       webPageRuntimeData: jobBoardModalResponse.webPageRuntimeData,
       force,
+      filter_profile_id: filterProfileId,
     });
     toast({
       title: 'Link created',
@@ -178,6 +189,7 @@ export function CreateLink() {
         isOpen={isConfirmationDialogOpen}
         title={jobBoardModalResponse?.title ?? ''}
         url={jobBoardModalResponse?.url ?? ''}
+        profiles={profiles}
         onCancel={onCancelSave}
         onSaveJobSearch={onSaveSearch}
       />
@@ -189,13 +201,15 @@ const JobSearchSubmitDialog = ({
   title,
   url,
   isOpen,
+  profiles,
   onSaveJobSearch,
   onCancel,
 }: {
   title: string;
   url: string;
   isOpen: boolean;
-  onSaveJobSearch: (data: { title: string; force: boolean }) => Promise<Link>;
+  profiles: AiFilterProfile[];
+  onSaveJobSearch: (data: { title: string; force: boolean; filterProfileId: number | null }) => Promise<Link>;
   onCancel: () => void;
 }) => {
   if (!isOpen) {
@@ -205,6 +219,12 @@ const JobSearchSubmitDialog = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
+
+  const defaultProfile = profiles.find((p) => p.is_default) ?? null;
+  const NULL_SENTINEL = '__null__';
+  const [filterProfileValue, setFilterProfileValue] = useState<string>(
+    defaultProfile ? String(defaultProfile.id) : NULL_SENTINEL,
+  );
 
   const formSchema = z.object({
     title: z.string().min(1, 'Title is required'),
@@ -222,7 +242,9 @@ const JobSearchSubmitDialog = ({
   const onSubmit = async (data: { title: string }) => {
     setIsSubmitting(true);
     try {
-      await onSaveJobSearch({ title: data.title, force: !!errorMessage });
+      const filterProfileId =
+        filterProfileValue === NULL_SENTINEL ? null : Number(filterProfileValue);
+      await onSaveJobSearch({ title: data.title, force: !!errorMessage, filterProfileId });
       toast({
         title: 'Job search created',
         description: `Job search ${data.title} created successfully`,
@@ -294,6 +316,49 @@ const JobSearchSubmitDialog = ({
                   </FormItem>
                 )}
               />
+
+              {/* Filter profile field */}
+              <FormItem className="w-full">
+                <FormLabel className="flex items-center gap-1.5">
+                  Filter profile
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-flex cursor-help items-center">
+                          <InfoCircledIcon className="h-4 w-4 text-muted-foreground" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-xs text-sm">
+                        Searches with no profile selected fall back to your default profile. If no default is set, AI
+                        filtering is skipped for those searches.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </FormLabel>
+                <Select value={filterProfileValue} onValueChange={setFilterProfileValue}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {defaultProfile ? (
+                      <SelectItem value={NULL_SENTINEL}>
+                        <span>— Default — </span>
+                        <span className="text-muted-foreground">({defaultProfile.name})</span>
+                      </SelectItem>
+                    ) : (
+                      <SelectItem value={NULL_SENTINEL}>
+                        — No profile — <span className="text-muted-foreground">(AI filtering skipped)</span>
+                      </SelectItem>
+                    )}
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                        {p.is_default ? ' (default)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormItem>
             </div>
 
             <div className="flex flex-row items-center justify-between pt-3">

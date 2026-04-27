@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import type {
-  AdvancedMatchingConfig,
+  AiFilterProfile,
   First2ApplyApiSdk,
   Job,
   JobLabel,
@@ -142,13 +142,36 @@ export class WebappApiSdk implements First2ApplyApiSdk {
     return throwError('updateReview not implemented');
   }
 
-  // Advanced Matching
-  async getAdvancedMatchingConfig(): Promise<AdvancedMatchingConfig | null> {
-    return throwError('getAdvancedMatchingConfig not implemented');
+  // AI Filter Profiles
+  async listFilterProfiles(): Promise<AiFilterProfile[]> {
+    return throwError('listFilterProfiles not implemented');
   }
-  async updateAdvancedMatchingConfig(
-    _: Pick<AdvancedMatchingConfig, 'chatgpt_prompt' | 'blacklisted_companies'>,
-  ): Promise<AdvancedMatchingConfig> {
-    return throwError('updateAdvancedMatchingConfig not implemented');
+  async createFilterProfile(_: {
+    name: string;
+    chatgpt_prompt?: string;
+    blacklisted_companies?: string[];
+    is_default?: boolean;
+  }): Promise<AiFilterProfile> {
+    return throwError('createFilterProfile not implemented');
+  }
+  async updateFilterProfile(
+    _id: number,
+    _patch: Partial<Pick<AiFilterProfile, 'name' | 'chatgpt_prompt' | 'blacklisted_companies'>>,
+  ): Promise<AiFilterProfile> {
+    return throwError('updateFilterProfile not implemented');
+  }
+  async setDefaultFilterProfile(_id: number): Promise<void> {
+    return throwError('setDefaultFilterProfile not implemented');
+  }
+  async deleteFilterProfile(_id: number): Promise<void> {
+    return throwError('deleteFilterProfile not implemented');
+  }
+
+  // Global Blacklist
+  async getGlobalBlacklist(): Promise<string[]> {
+    return throwError('getGlobalBlacklist not implemented');
+  }
+  async updateGlobalBlacklist(_: string[]): Promise<string[]> {
+    return throwError('updateGlobalBlacklist not implemented');
   }
 }

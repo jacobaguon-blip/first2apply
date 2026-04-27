@@ -16,11 +16,13 @@ type LinksContextType = {
       html: string
       webPageRuntimeData: WebPageRuntimeData
       force: boolean
+      scanFrequency?: "hourly" | "daily"
+      filter_profile_id?: number | null
     }
   ) => Promise<Link>
   updateLink: (
     linkId: number,
-    data: { title: string; url: string }
+    data: { title?: string; url?: string; filter_profile_id?: number | null }
   ) => Promise<void>
   removeLink: (linkId: number) => Promise<void>
   reloadLinks: () => Promise<void>
@@ -88,6 +90,8 @@ export const LinksProvider = ({
       html: string
       webPageRuntimeData: WebPageRuntimeData
       force: boolean
+      scanFrequency?: "hourly" | "daily"
+      filter_profile_id?: number | null
     }
   ) => {
     const createdLink = await sdk.createLink(newLink)
@@ -98,12 +102,13 @@ export const LinksProvider = ({
   // Update an existing link
   const onUpdateLink = async (
     linkId: number,
-    data: { title: string; url: string }
+    data: { title?: string; url?: string; filter_profile_id?: number | null }
   ) => {
     const updatedLink = await sdk.updateLink({
       linkId,
       title: data.title,
       url: data.url,
+      filter_profile_id: data.filter_profile_id,
     })
     setLinks((currentLinks) =>
       currentLinks.map((link) =>

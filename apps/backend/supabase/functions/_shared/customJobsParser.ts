@@ -6,10 +6,12 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import turndown from 'turndown';
 import { z } from 'zod';
 
+import { resolveFilterProfileForJob } from './advancedMatching.ts';
 import { denoHashString } from './deno.ts';
 import { JobDescriptionUpdates } from './jobDescriptionParser.ts';
 import { ILogger } from './logger.ts';
 import { buildOpenAiClient, logAiUsage } from './openAI.ts';
+import { detectGreenhouse, fetchGreenhouseJobs } from './parsers/greenhouseAts.ts';
 import { JobSiteParseResult, ParsedJob } from './parsers/parserTypes.ts';
 
 /**
@@ -34,8 +36,16 @@ export async function parseCustomJobs({
 }): Promise<JobSiteParseResult> {
   const { logger } = context;
 
+  // Fast-path: if this URL or its HTML reveals a known ATS (e.g. Greenhouse),
+  // fetch the structured jobs feed directly instead of paying for LLM extraction.
+  const greenhouse = detectGreenhouse({ html, url });
+  if (greenhouse) {
+    logger.info(`[custom-parser] detected Greenhouse ATS, slug=${greenhouse.slug}`);
+    return fetchGreenhouseJobs({ siteId, slug: greenhouse.slug, logger });
+  }
+
   const { openAi, llmConfig } = buildOpenAiClient({
-    modelName: 'gpt-5.4',
+    modelName: 'gpt-4o',
     ...context,
   });
 
@@ -51,12 +61,22 @@ export async function parseCustomJobs({
     );
 
     // strip away nodes that are not relevant to the LLM
-    const nodesToRemove = ['head', 'script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe'];
+    const nodesToRemove = ['head', 'script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe', 'img', 'form'];
     stripNodes(document.documentElement, nodesToRemove);
     stripAttributes(document.documentElement, /^(class|style|aria-.*|role)$/);
-    const htmlContent = document.documentElement?.outerHTML ?? '';
 
-    return `Extract the jobs listing from the HTML page below. Return the result as a JSON object matching the provided schema. If no jobs are found, return an empty array for the jobs field.
+    // Convert HTML -> markdown to keep the prompt under model TPM limits.
+    // Raw HTML for job-board indexes (e.g. anthropic.com/careers/jobs, ~450 listings)
+    // can exceed 60k tokens and trigger OpenAI 429 TPM errors.
+    let htmlContent = turndownService.turndown(document.documentElement?.outerHTML ?? '');
+    const MAX_CONTENT_CHARS = 120_000;
+    if (htmlContent.length > MAX_CONTENT_CHARS) {
+      logger.info(`markdown content ${htmlContent.length} chars exceeds cap, truncating to ${MAX_CONTENT_CHARS}`);
+      htmlContent = htmlContent.slice(0, MAX_CONTENT_CHARS);
+    }
+    logger.info(`custom parser content size: ${htmlContent.length} chars (markdown)`);
+
+    return `Extract the jobs listing from the page content below. Return the result as a JSON object matching the provided schema. If no jobs are found, return an empty array for the jobs field.
 Here are some rules for the required output:
 - The externalId field should be a unique identifier for the job, preferably from the job site.
   Try to extract it from the job URL or any data attributes. 
@@ -79,7 +99,7 @@ Try to extract all or as many jobs from the page as possible. And preserve the o
 Here is the page header info:
 ${JSON.stringify(headerInfo)}
 
-Here is the HTML page:
+Here is the page content (HTML converted to markdown):
 """
 ${htmlContent}
 """`;
@@ -97,7 +117,7 @@ ${htmlContent}
         content: generateUserPrompt(),
       },
     ],
-    max_completion_tokens: 50_000,
+    max_completion_tokens: 16_000,
     response_format: zodResponseFormat(PARSE_JOBS_PAGE_SCHEMA, 'ParseJobsPageResponse'),
   });
 
@@ -220,15 +240,19 @@ export async function parseCustomJobDescription({
   const document = new DOMParser().parseFromString(html, 'text/html');
   if (!document) throw new Error('Could not parse html');
 
-  const { data: advancedMatchingRecord, error: getAdvancedMatchingRecordError } = await context.supabaseAdminClient
-    .from('advanced_matching')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  if (getAdvancedMatchingRecordError) {
-    context.logger.error(
-      `Failed to load advanced matching config for user ${user.id}: ${getAdvancedMatchingRecordError.message}`,
+  // Resolve the AI filter profile for this job (via its source link, or the user's default).
+  // Used to personalize the job-description summary prompt.
+  const filterProfile = await resolveFilterProfileForJob({
+    logger: context.logger,
+    supabaseClient: context.supabaseAdminClient,
+    job,
+  });
+  if (filterProfile) {
+    context.logger.info(
+      `custom jd parser using ai filter profile id=${filterProfile.id} name="${filterProfile.name}" for job ${job.id}`,
     );
+  } else {
+    context.logger.info(`custom jd parser: no ai filter profile for job ${job.id}`);
   }
 
   // helper methods
@@ -241,7 +265,7 @@ export async function parseCustomJobDescription({
     stripNodes(document.documentElement, nodesToRemove);
     stripAttributes(document.documentElement, /^(class|style|aria-.*|role)$/);
     const htmlContent = turndownService.turndown(document.documentElement?.outerHTML ?? '');
-    const withAdvancedMatchingPreferences = `Here are my job search preferences: ${advancedMatchingRecord?.chatgpt_prompt ?? 'nothing specific for the moment'}.`;
+    const withAdvancedMatchingPreferences = `Here are my job search preferences: ${filterProfile?.chatgpt_prompt || 'nothing specific for the moment'}.`;
 
     const userPrompt = `Extract the job description from the HTML page below. Return the result as a JSON object matching the provided schema.
 Here is the HTML page turned into markdown:
@@ -257,7 +281,7 @@ ${withAdvancedMatchingPreferences}
 
   const { userPrompt, htmlContent } = generateUserPrompt();
   const { openAi, llmConfig } = buildOpenAiClient({
-    modelName: 'gpt-5-mini',
+    modelName: 'gpt-4o-mini',
     ...context,
   });
 

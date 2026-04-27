@@ -7,11 +7,13 @@ import fs from 'fs';
 import { ScheduledTask, schedule } from 'node-cron';
 import path from 'path';
 
+import { ENV } from '../env';
 import { AVAILABLE_CRON_RULES, JobScannerSettings } from '../lib/types';
 import { installLinkedInDecorator } from './browserHelpers';
 import { chunk, promiseAllSequence, waitRandomBetween } from './helpers';
 import { HtmlDownloader } from './htmlDownloader';
 import { ILogger } from './logger';
+import { sendPushover } from './pushover';
 
 const userDataPath = app.getPath('userData');
 const settingsPath = path.join(userDataPath, 'settings.json');
@@ -23,6 +25,11 @@ const DEFAULT_SETTINGS: JobScannerSettings = {
   areEmailAlertsEnabled: true,
   inAppBrowserEnabled: true,
 };
+
+function redactSettings(s: JobScannerSettings): JobScannerSettings {
+  const redact = (v?: string) => (v && v.length > 0 ? `<redacted len=${v.length}>` : v);
+  return { ...s, pushoverAppToken: redact(s.pushoverAppToken), pushoverUserKey: redact(s.pushoverUserKey) } as JobScannerSettings;
+}
 
 /**
  * Class used to manage a cron job that periodically scans links.
@@ -85,7 +92,7 @@ export class JobScanner {
         ...this._settings,
         ...JSON.parse(fs.readFileSync(settingsPath, 'utf-8')),
       };
-      this._logger.info(`loadied settings from disk: ${JSON.stringify(settingsToApply)}`);
+      this._logger.info(`loaded settings from disk: ${JSON.stringify(redactSettings(settingsToApply))}`);
     } else {
       this._logger.info(`no settings found on disk, using defaults`);
       settingsToApply = DEFAULT_SETTINGS;
@@ -102,9 +109,21 @@ export class JobScanner {
   }
 
   /**
+   * Whether scanning is currently paused (either via env var or settings).
+   */
+  isPaused() {
+    return ENV.pauseScans || !!this._settings.isPaused;
+  }
+
+  /**
    * Scan all links for the current user.
    */
   async scanAllLinks() {
+    if (this.isPaused()) {
+      this._logger.info(`skipping scheduled scan: scanner is paused${ENV.pauseScans ? ' (F2A_PAUSE_SCANS)' : ''}`);
+      this._analytics.trackEvent('scan_skipped_paused', { source: 'scheduled' });
+      return;
+    }
     // if the scanner hasn't finished scanning the previous links, skip this scan
     if (this.isScanning()) {
       this._logger.info('skipping scheduled scan because the scanner is processing other links');
@@ -112,8 +131,20 @@ export class JobScanner {
     }
 
     // fetch all links from the database
-    const links = (await this._supabaseApi.listLinks()) ?? [];
-    this._logger.info(`found ${links?.length} links`);
+    const allLinks = (await this._supabaseApi.listLinks()) ?? [];
+
+    // Throttle: daily-frequency links (company target pages) are skipped if
+    // they were last scraped less than 24h ago. Manual scanLinks()/scanLink()
+    // calls bypass this — the filter only runs on the cron path.
+    const nowMs = Date.now();
+    const DAILY_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+    const links = allLinks.filter((link) => {
+      if (link.scan_frequency !== 'daily') return true;
+      const lastMs = link.last_scraped_at ? new Date(link.last_scraped_at).getTime() : 0;
+      return nowMs - lastMs >= DAILY_MIN_INTERVAL_MS;
+    });
+    const skipped = allLinks.length - links.length;
+    this._logger.info(`found ${allLinks.length} links (skipping ${skipped} daily links within 24h window)`);
 
     // start the scan
     return this.scanLinks({ links });
@@ -123,6 +154,11 @@ export class JobScanner {
    * Perform a scan of a list links.
    */
   async scanLinks({ links, sendNotification = true }: { links: Link[]; sendNotification?: boolean }) {
+    if (this.isPaused()) {
+      this._logger.info(`skipping scan: scanner is paused${ENV.pauseScans ? ' (F2A_PAUSE_SCANS)' : ''}`);
+      this._analytics.trackEvent('scan_skipped_paused', { source: 'manual', links_count: links.length });
+      return;
+    }
     try {
       this._logger.info('scanning links ...');
       this._analytics.trackEvent('scan_links_start', {
@@ -140,9 +176,17 @@ export class JobScanner {
               callback: async ({ html, webPageRuntimeData, maxRetries, retryCount }) => {
                 if (!this._isRunning) return []; // stop if the scanner is closed
 
-                const { newJobs, parseFailed } = await this._supabaseApi.scanHtmls([
+                const { newJobs, parseFailed, parseErrors } = (await this._supabaseApi.scanHtmls([
                   { linkId: link.id, content: html, webPageRuntimeData, maxRetries, retryCount },
-                ]);
+                ])) as { newJobs: Job[]; parseFailed: boolean; parseErrors?: Array<{ linkId: number; message: string }> };
+
+                if (parseErrors?.length) {
+                  for (const pe of parseErrors) {
+                    this._logger.error(`[edge] parse error for link ${link.title} (${pe.linkId}): ${pe.message}`, {
+                      linkId: pe.linkId,
+                    });
+                  }
+                }
 
                 if (parseFailed) {
                   this._logger.debug(`failed to parse html for link ${link.title}`, {
@@ -235,8 +279,8 @@ export class JobScanner {
     this._logger.info(`scanning ${jobs.length} jobs descriptions...`);
 
     // figure out which jobs can be scanned in incognito mode
-    const sites = await this._supabaseApi.listSites();
-    const sitesMap = new Map(sites.map((site) => [site.id, site]));
+    const sites = (await this._supabaseApi.listSites()) as any[];
+    const sitesMap = new Map<number, any>(sites.map((site) => [site.id, site]));
     const incognitoJobsToScan = jobs.filter((job) => sitesMap.get(job.siteId)?.incognito_support);
     const normalJobsToScan = jobs.filter((job) => !sitesMap.get(job.siteId)?.incognito_support);
 
@@ -354,10 +398,29 @@ export class JobScanner {
         jobs_count: newJobs.length,
       });
     });
-    notification.show();
+    // On headless platforms (Pi / Xvfb) the native notifier may throw — don't let it block Pushover.
+    try {
+      notification.show();
+    } catch (err) {
+      this._logger.info(`native notification failed (headless?): ${getExceptionMessage(err)}`);
+    }
     this._analytics.trackEvent('show_notification', {
       jobs_count: newJobs.length,
     });
+
+    // Fire Pushover in parallel if configured. Env vars win over settings (for headless deploys).
+    const appToken = ENV.pushover.appToken || this._settings.pushoverAppToken;
+    const userKey = ENV.pushover.userKey || this._settings.pushoverUserKey;
+    const pushoverEnabled = !!(ENV.pushover.appToken && ENV.pushover.userKey) || this._settings.pushoverEnabled;
+    if (pushoverEnabled && appToken && userKey) {
+      const pushoverBody = `${firstJobsLabel}${otherJobsLabel} ${displatedJobs.length > 1 ? 'are' : 'is'} now available!`;
+      sendPushover({
+        appToken,
+        userKey,
+        title: 'Job Search Update',
+        message: pushoverBody,
+      }).catch((err) => this._logger.error(`pushover send failed: ${getExceptionMessage(err)}`));
+    }
   }
 
   /**

@@ -136,3 +136,8 @@ build/
 .pnpm-store/
 
 ssl
+# Obsidian vault config (per-user)
+.obsidian/
+
+# Weekend AI budget tracker (local-only)
+.f2a-ai-spend.json

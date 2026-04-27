@@ -1,5 +1,5 @@
 import {
-  AdvancedMatchingConfig,
+  AiFilterProfile,
   First2ApplyApiSdk,
   Job,
   JobLabel,
@@ -96,12 +96,16 @@ export async function createLink({
   html,
   webPageRuntimeData,
   force,
+  scanFrequency,
+  filter_profile_id,
 }: {
   title: string;
   url: string;
   html: string;
   webPageRuntimeData: WebPageRuntimeData;
   force: boolean;
+  scanFrequency?: 'hourly' | 'daily';
+  filter_profile_id?: number | null;
 }): Promise<Link> {
   const { link } = await _mainProcessApiCall<{ link: Link }>('create-link', {
     title,
@@ -109,6 +113,8 @@ export async function createLink({
     html,
     webPageRuntimeData,
     force,
+    scanFrequency,
+    filter_profile_id,
   });
   return link;
 }
@@ -120,15 +126,18 @@ export async function updateLink({
   linkId,
   title,
   url,
+  filter_profile_id,
 }: {
   linkId: number;
-  title: string;
-  url: string;
+  title?: string;
+  url?: string;
+  filter_profile_id?: number | null;
 }): Promise<Link> {
   const link = await _mainProcessApiCall<Link>('update-link', {
     linkId,
     title,
     url,
+    filter_profile_id,
   });
   return link;
 }
@@ -386,21 +395,60 @@ export async function deleteNote(noteId: number): Promise<void> {
 }
 
 /**
- * Get the advanced matching configuration for the current user.
+ * List the user's AI filter profiles.
  */
-export async function getAdvancedMatchingConfig(): Promise<AdvancedMatchingConfig | null> {
-  return await _mainProcessApiCall('get-advanced-matching-config', {});
+export async function listFilterProfiles(): Promise<AiFilterProfile[]> {
+  return await _mainProcessApiCall<AiFilterProfile[]>('list-filter-profiles', {});
 }
 
 /**
- * Update the advanced matching configuration for the current user.
+ * Create a new AI filter profile.
  */
-export async function updateAdvancedMatchingConfig(
-  config: Pick<AdvancedMatchingConfig, 'chatgpt_prompt' | 'blacklisted_companies'>,
-) {
-  return await _mainProcessApiCall<AdvancedMatchingConfig>('update-advanced-matching-config', {
-    config,
-  });
+export async function createFilterProfile(input: {
+  name: string;
+  chatgpt_prompt?: string;
+  blacklisted_companies?: string[];
+  is_default?: boolean;
+}): Promise<AiFilterProfile> {
+  return await _mainProcessApiCall<AiFilterProfile>('create-filter-profile', { input });
+}
+
+/**
+ * Update an existing AI filter profile.
+ */
+export async function updateFilterProfile(
+  id: number,
+  patch: Partial<Pick<AiFilterProfile, 'name' | 'chatgpt_prompt' | 'blacklisted_companies'>>,
+): Promise<AiFilterProfile> {
+  return await _mainProcessApiCall<AiFilterProfile>('update-filter-profile', { id, patch });
+}
+
+/**
+ * Mark an AI filter profile as the user's default.
+ */
+export async function setDefaultFilterProfile(id: number): Promise<void> {
+  await _mainProcessApiCall('set-default-filter-profile', { id });
+}
+
+/**
+ * Delete an AI filter profile.
+ */
+export async function deleteFilterProfile(id: number): Promise<void> {
+  await _mainProcessApiCall('delete-filter-profile', { id });
+}
+
+/**
+ * Get the user's global company blacklist.
+ */
+export async function getGlobalBlacklist(): Promise<string[]> {
+  return await _mainProcessApiCall<string[]>('get-global-blacklist', {});
+}
+
+/**
+ * Update the user's global company blacklist.
+ */
+export async function updateGlobalBlacklist(companies: string[]): Promise<string[]> {
+  return await _mainProcessApiCall<string[]>('update-global-blacklist', { companies });
 }
 
 /**
@@ -530,9 +578,34 @@ export class ElectronApiSdk implements First2ApplyApiSdk {
   getUserReview = getUserReview;
   updateReview = updateReview;
 
-  // Advanced Matching
-  getAdvancedMatchingConfig = getAdvancedMatchingConfig;
-  updateAdvancedMatchingConfig = updateAdvancedMatchingConfig;
+  // AI Filter Profiles
+  listFilterProfiles = listFilterProfiles;
+  createFilterProfile = createFilterProfile;
+  updateFilterProfile = updateFilterProfile;
+  setDefaultFilterProfile = setDefaultFilterProfile;
+  deleteFilterProfile = deleteFilterProfile;
+
+  // Global Blacklist
+  getGlobalBlacklist = getGlobalBlacklist;
+  updateGlobalBlacklist = updateGlobalBlacklist;
+}
+
+export type SupabaseConfigInfo = {
+  url: string;
+  key: string;
+  source: 'user' | 'env' | 'none';
+};
+
+export async function getSupabaseConfig(): Promise<SupabaseConfigInfo> {
+  return _mainProcessApiCall<SupabaseConfigInfo>('get-supabase-config');
+}
+
+export async function testSupabaseConnection({ url, key }: { url: string; key: string }): Promise<void> {
+  await _mainProcessApiCall('test-supabase-connection', { url, key });
+}
+
+export async function setSupabaseConfig({ url, key }: { url: string; key: string }): Promise<void> {
+  await _mainProcessApiCall('set-supabase-config', { url, key });
 }
 
 /** Singleton instance of the Electron API SDK */

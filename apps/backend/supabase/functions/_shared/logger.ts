@@ -1,4 +1,3 @@
-import { throwError } from '@first2apply/core';
 import { Logger as MezmoLogger, createLogger } from 'npm:@logdna/logger';
 
 export interface ILogger {
@@ -13,50 +12,44 @@ export interface ILogger {
  * Custom logger class that wraps the Mezmo logger.
  */
 class Logger implements ILogger {
-  constructor(private _logger: MezmoLogger) {}
+  constructor(private _logger: MezmoLogger | null) {}
 
   debug(message: string, data?: Record<string, any>) {
     console.log(message, data);
-    this._logger.debug &&
-      this._logger.debug(message, {
-        meta: data,
-      });
+    this._logger?.debug(message, { meta: data });
   }
 
   info(message: string, data?: Record<string, any>) {
     console.log(message, data);
-    this._logger.info &&
-      this._logger.info(message, {
-        meta: data,
-      });
+    this._logger?.info(message, { meta: data });
   }
 
   error(message: string, data?: Record<string, any>) {
     console.error(message, data);
-    this._logger.error &&
-      this._logger.error(message, {
-        meta: data,
-      });
+    this._logger?.error(message, { meta: data });
   }
 
   addMeta(key: string, value: string) {
-    this._logger.addMetaProperty(key, value);
+    this._logger?.addMetaProperty(key, value);
   }
 
   flush() {
-    this._logger.flush();
+    this._logger?.flush();
   }
 }
 
 export const createLoggerWithMeta = (meta: Record<string, string>) => {
-  const mezmoLogger = createLogger(Deno.env.get('MEZMO_API_KEY') ?? throwError(''), {
-    level: 'info',
-    app: 'first2apply',
-    env: 'all',
-    hostname: 'edge-functions',
-    meta,
-    indexMeta: true,
-  });
+  const mezmoApiKey = Deno.env.get('MEZMO_API_KEY');
+  const mezmoLogger = mezmoApiKey
+    ? createLogger(mezmoApiKey, {
+        level: 'info',
+        app: 'first2apply',
+        env: 'all',
+        hostname: 'edge-functions',
+        meta,
+        indexMeta: true,
+      })
+    : null;
 
   return new Logger(mezmoLogger);
 };

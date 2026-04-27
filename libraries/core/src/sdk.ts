@@ -1,7 +1,7 @@
 import type { User } from '@supabase/supabase-js';
 
 import type {
-  AdvancedMatchingConfig,
+  AiFilterProfile,
   Job,
   JobLabel,
   JobSite,
@@ -114,10 +114,17 @@ export interface First2ApplyApiSdk {
     html: string;
     webPageRuntimeData: WebPageRuntimeData;
     force: boolean;
+    scanFrequency?: 'hourly' | 'daily';
+    filter_profile_id?: number | null;
   }): Promise<Link>;
 
   /** Update an existing link */
-  updateLink(_: { linkId: number; title: string; url: string }): Promise<Link>;
+  updateLink(_: {
+    linkId: number;
+    title?: string;
+    url?: string;
+    filter_profile_id?: number | null;
+  }): Promise<Link>;
 
   /** Delete a link */
   deleteLink(linkId: number): Promise<void>;
@@ -162,14 +169,39 @@ export interface First2ApplyApiSdk {
   updateReview(_: { id: number; title: string; description: string; rating: number }): Promise<Review>;
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Advanced Matching
+  // AI Filter Profiles
   // ─────────────────────────────────────────────────────────────────────────────
 
-  /** Get the advanced matching configuration */
-  getAdvancedMatchingConfig(): Promise<AdvancedMatchingConfig | null>;
+  /** List the user's AI filter profiles, ordered oldest-first */
+  listFilterProfiles(): Promise<AiFilterProfile[]>;
 
-  /** Update the advanced matching configuration */
-  updateAdvancedMatchingConfig(
-    config: Pick<AdvancedMatchingConfig, 'chatgpt_prompt' | 'blacklisted_companies'>,
-  ): Promise<AdvancedMatchingConfig>;
+  /** Create a new filter profile */
+  createFilterProfile(_: {
+    name: string;
+    chatgpt_prompt?: string;
+    blacklisted_companies?: string[];
+    is_default?: boolean;
+  }): Promise<AiFilterProfile>;
+
+  /** Update an existing filter profile */
+  updateFilterProfile(
+    id: number,
+    patch: Partial<Pick<AiFilterProfile, 'name' | 'chatgpt_prompt' | 'blacklisted_companies'>>,
+  ): Promise<AiFilterProfile>;
+
+  /** Mark a profile as the user's default */
+  setDefaultFilterProfile(id: number): Promise<void>;
+
+  /** Delete a filter profile */
+  deleteFilterProfile(id: number): Promise<void>;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Global Blacklist
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /** Get the user's global blacklist of companies */
+  getGlobalBlacklist(): Promise<string[]>;
+
+  /** Update the user's global blacklist of companies */
+  updateGlobalBlacklist(companies: string[]): Promise<string[]>;
 }

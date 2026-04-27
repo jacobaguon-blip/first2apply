@@ -46,6 +46,10 @@ export type JobScannerSettings = {
   useSound: boolean;
   areEmailAlertsEnabled: boolean;
   inAppBrowserEnabled: boolean;
+  pushoverEnabled?: boolean;
+  pushoverAppToken?: string;
+  pushoverUserKey?: string;
+  isPaused?: boolean;
 };
 
 export type NewAppVersion = {

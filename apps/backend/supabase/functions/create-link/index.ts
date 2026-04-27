@@ -25,14 +25,18 @@ Deno.serve(async (req) => {
     });
     const { user, supabaseClient } = context;
 
-    const { title, url, html, webPageRuntimeData, force } = (await req.json()) as {
+    const { title, url, html, webPageRuntimeData, force, scanFrequency, filter_profile_id } = (await req.json()) as {
       title: string;
       url: string;
       html?: string;
       webPageRuntimeData?: WebPageRuntimeData;
       force?: boolean;
+      scanFrequency?: 'hourly' | 'daily';
+      filter_profile_id?: number | null;
     };
     logger.info(`Creating link: ${title} - ${url}`);
+
+    const resolvedScanFrequency: 'hourly' | 'daily' = scanFrequency === 'daily' ? 'daily' : 'hourly';
 
     // list all job sites from db
     const { data, error: selectError } = await supabaseClient.from('sites').select('*');
@@ -90,6 +94,8 @@ Deno.serve(async (req) => {
         url: cleanUrl,
         title,
         site_id: site.id,
+        scan_frequency: resolvedScanFrequency,
+        ...(filter_profile_id != null ? { filter_profile_id } : {}),
       })
       .select('*');
     if (error) throw error;

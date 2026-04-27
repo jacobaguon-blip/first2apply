@@ -1,0 +1,2 @@
+Disables ~/.claude/hooks/auto-commit.py for this repo.
+Removed when the user wants per-Edit auto-commits back on.

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { BrowserWindow, BrowserWindowHandle } from '@/components/browserWindow';
+import { CreateCompanyTarget } from '@/components/createCompanyTarget';
 import { CreateLink } from '@/components/createLink';
 import { LinksList } from '@/components/linksList';
 import { LinksListSkeleton } from '@/components/skeletons/linksListSkeleton';
 import { useAppState } from '@/hooks/appState';
 import { useError } from '@/hooks/error';
-import { scanLink } from '@/lib/electronMainSdk';
-import { throwError } from '@first2apply/core';
+import { listFilterProfiles, scanLink } from '@/lib/electronMainSdk';
+import { AiFilterProfile, throwError } from '@first2apply/core';
 import { useLinks } from '@first2apply/ui';
 import { toast } from '@first2apply/ui';
 
@@ -19,12 +20,14 @@ export function LinksPage() {
   const { isScanning } = useAppState();
   const browserWindowRef = useRef<BrowserWindowHandle>(null);
   const [currentDebugLinkId, setCurrentDebugLinkId] = useState<number | null>(null);
+  const [profiles, setProfiles] = useState<AiFilterProfile[]>([]);
 
   // refresh links on component mount
   useEffect(() => {
     const asyncLoad = async () => {
       try {
-        await reloadLinks();
+        const [, loadedProfiles] = await Promise.all([reloadLinks(), listFilterProfiles()]);
+        setProfiles(loadedProfiles);
       } catch (error) {
         handleError({ error });
       }
@@ -37,6 +40,18 @@ export function LinksPage() {
   const handleDeleteLink = async (linkId: number) => {
     try {
       await removeLink(linkId);
+    } catch (error) {
+      handleError({ error });
+    }
+  };
+
+  const handleScanLinkNow = async (linkId: number) => {
+    try {
+      await scanLink(linkId);
+      toast({
+        title: 'Scanning URL in background ...',
+        description: 'The link will be scanned in the background. You will be notified if there are new jobs.',
+      });
     } catch (error) {
       handleError({ error });
     }
@@ -69,12 +84,18 @@ export function LinksPage() {
   };
 
   // update link
-  const handleUpdateLink = async (data: { linkId: number; title: string }) => {
+  const handleUpdateLink = async (data: { linkId: number; title: string; url: string }) => {
     try {
-      // for now, we only update the title
-      const link = links.find((l) => l.id === data.linkId) ?? throwError('Link not found');
+      await updateLink(data.linkId, { title: data.title, url: data.url });
+    } catch (error) {
+      handleError({ error });
+    }
+  };
 
-      await updateLink(data.linkId, { title: data.title, url: link.url });
+  // update a link's filter profile assignment
+  const handleUpdateLinkProfile = async (linkId: number, filterProfileId: number | null) => {
+    try {
+      await updateLink(linkId, { filter_profile_id: filterProfileId });
     } catch (error) {
       handleError({ error });
     }
@@ -88,6 +109,9 @@ export function LinksPage() {
     );
   }
 
+  const hourlyLinks = links.filter((link) => link.scan_frequency !== 'daily');
+  const dailyLinks = links.filter((link) => link.scan_frequency === 'daily');
+
   return (
     <DefaultLayout className="p-6 md:p-10">
       <div className="flex justify-between">
@@ -96,7 +120,7 @@ export function LinksPage() {
           {isScanning && <span className="ml-4 pb-1 text-xs">( currently scanning for new jobs )</span>}
         </div>
 
-        {links.length > 0 && <CreateLink />}
+        {links.length > 0 && <CreateLink profiles={profiles} />}
       </div>
 
       {links.length === 0 && (
@@ -107,19 +131,50 @@ export function LinksPage() {
           </h2>
 
           <div className="w-fit">
-            <CreateLink />
+            <CreateLink profiles={profiles} />
           </div>
         </div>
       )}
 
-      {links.length > 0 && (
+      {hourlyLinks.length > 0 && (
         <LinksList
-          links={links}
+          links={hourlyLinks}
           onDeleteLink={handleDeleteLink}
           onDebugLink={handleDebugLink}
+          onScanLink={handleScanLinkNow}
           onUpdateLink={handleUpdateLink}
+          profiles={profiles}
+          onUpdateLinkProfile={handleUpdateLinkProfile}
         />
       )}
+
+      <section className="mt-12">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="text-2xl font-medium tracking-wide">Target Company Pages</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Company career pages crawled once per day (e.g. <span className="font-mono">anthropic.com/careers</span>).
+            </p>
+          </div>
+          <CreateCompanyTarget />
+        </div>
+
+        {dailyLinks.length > 0 ? (
+          <LinksList
+            links={dailyLinks}
+            onDeleteLink={handleDeleteLink}
+            onDebugLink={handleDebugLink}
+            onScanLink={handleScanLinkNow}
+            onUpdateLink={handleUpdateLink}
+            profiles={profiles}
+            onUpdateLinkProfile={handleUpdateLinkProfile}
+          />
+        ) : (
+          <p className="mt-6 text-sm text-muted-foreground">
+            No target pages yet. Paste a company career URL to have it scanned once per day.
+          </p>
+        )}
+      </section>
 
       <BrowserWindow
         ref={browserWindowRef}
