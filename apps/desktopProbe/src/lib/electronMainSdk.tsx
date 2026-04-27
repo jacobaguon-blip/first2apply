@@ -12,6 +12,8 @@ import {
   Profile,
   Review,
   StripeConfig,
+  UserSettings,
+  UserSettingsUpsert,
   WebPageRuntimeData,
 } from '@first2apply/core';
 import { User } from '@supabase/supabase-js';
@@ -338,6 +340,28 @@ export async function getProfile(): Promise<Profile> {
 export async function getStripeConfig(): Promise<StripeConfig> {
   const { config } = await _mainProcessApiCall<{ config: StripeConfig }>('get-stripe-config', {});
   return config;
+}
+
+/**
+ * Get the current user's quiet-hours / pushover-device settings.
+ */
+export async function getUserSettings(): Promise<UserSettings | null> {
+  const { settings } = await _mainProcessApiCall<{ settings: UserSettings | null }>(
+    'get-user-settings',
+    {},
+  );
+  return settings;
+}
+
+/**
+ * Upsert the current user's quiet-hours / pushover-device settings.
+ */
+export async function upsertUserSettings(patch: UserSettingsUpsert): Promise<UserSettings> {
+  const { settings } = await _mainProcessApiCall<{ settings: UserSettings }>(
+    'upsert-user-settings',
+    { patch },
+  );
+  return settings;
 }
 
 /**
