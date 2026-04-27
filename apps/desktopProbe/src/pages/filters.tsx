@@ -370,20 +370,29 @@ function ProfileEditor({
   onSetDefault: () => Promise<void>;
   onRequestDelete: () => void;
 }) {
+  const { toast } = useToast();
   const [name, setName] = useState(profile.name ?? '');
   const [prompt, setPrompt] = useState(profile.chatgpt_prompt ?? '');
+  const [isSaving, setIsSaving] = useState(false);
 
   // When selected profile changes (parent passes `key={id}`), hooks reset — so these stay in sync.
 
-  const commitNameIfChanged = () => {
-    if (name !== profile.name) {
-      void onCommitField({ name });
-    }
-  };
+  // Dirty state: editor differs from server-truth profile.
+  const isNameDirty = (name ?? '') !== (profile.name ?? '');
+  const isPromptDirty = (prompt ?? '') !== (profile.chatgpt_prompt ?? '');
+  const isDirty = isNameDirty || isPromptDirty;
 
-  const commitPromptIfChanged = () => {
-    if (prompt !== profile.chatgpt_prompt) {
-      void onCommitField({ chatgpt_prompt: prompt });
+  const commitChanges = async () => {
+    if (!isDirty || isSaving) return;
+    setIsSaving(true);
+    try {
+      const patch: Partial<Pick<AiFilterProfile, 'name' | 'chatgpt_prompt'>> = {};
+      if (isNameDirty) patch.name = name;
+      if (isPromptDirty) patch.chatgpt_prompt = prompt;
+      await onCommitField(patch);
+      toast({ title: 'Profile saved' });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -396,15 +405,14 @@ function ProfileEditor({
           value={name}
           maxLength={80}
           onChange={(e) => setName(e.target.value)}
-          onBlur={commitNameIfChanged}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && isDirty) {
               e.preventDefault();
-              commitNameIfChanged();
-              (e.target as HTMLInputElement).blur();
+              void commitChanges();
             }
           }}
           className="bg-card"
+          aria-label="Profile name"
         />
       </div>
 
@@ -416,9 +424,9 @@ function ProfileEditor({
             value={prompt}
             placeholder='E.g. "Avoid Java or senior roles", "Seeking $60K+ salary, remote opportunities", "Suitable for under 2 years of experience"'
             onChange={(evt) => setPrompt(evt.target.value)}
-            onBlur={commitPromptIfChanged}
             minRows={4}
             maxLength={5000}
+            aria-label="Profile prompt"
             className="w-full resize-none rounded-md border border-border bg-card px-6 py-4 text-base ring-ring placeholder:text-muted-foreground focus:outline-none focus:ring-2"
           />
           <span className="absolute bottom-4 right-4 text-sm text-muted-foreground">{prompt.length}/5000</span>
@@ -433,6 +441,23 @@ function ProfileEditor({
             specifics like remote work or PTO preferences and more.
           </AlertDescription>
         </Alert>
+
+        {/* Explicit save row — replaces previous blur-autosave behavior. */}
+        <div className="mt-3 flex items-center justify-end gap-3">
+          {isDirty && (
+            <span className="text-sm text-muted-foreground" data-testid="filters-dirty-indicator">
+              Unsaved changes
+            </span>
+          )}
+          <Button
+            onClick={() => void commitChanges()}
+            disabled={!isDirty || isSaving}
+            data-testid="filters-save-button"
+            aria-label="Save profile"
+          >
+            {isSaving ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
       </div>
 
       {/* Per-profile blacklist */}
