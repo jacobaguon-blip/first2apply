@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
           },
         ]);
         if (htmlDumpError) {
-          logger.error(`failed to save html dump for link ${inFlightLink.id}: ${htmlDumpError.message}`);
+          logger.error(`failed to save html dump for link ${inFlightLink?.id ?? '<unknown>'}: ${htmlDumpError.message}`);
         }
 
         throw new Error(

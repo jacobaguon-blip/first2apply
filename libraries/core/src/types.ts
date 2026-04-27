@@ -184,7 +184,7 @@ export type DbSchema = {
       sites: {
         Row: JobSite;
         Insert: Pick<JobSite, 'name' | 'urls'>;
-        Update: never;
+        Update: {};
         Relationships: [];
       };
       links: {
@@ -231,7 +231,7 @@ export type DbSchema = {
       html_dumps: {
         Row: HtmlDump;
         Insert: Pick<HtmlDump, 'url' | 'html' | 'webpage_runtime_data'>;
-        Update: never;
+        Update: {};
         Relationships: [];
       };
       profiles: {
@@ -270,7 +270,7 @@ export type DbSchema = {
     Views: {};
     Functions: {
       list_jobs: {
-        Params: {
+        Args: {
           jobs_status: JobStatus;
           jobs_after: number | null;
           jobs_page_size: number;
@@ -278,37 +278,35 @@ export type DbSchema = {
           jobs_site_ids?: number[];
           jobs_link_ids?: number[];
         };
-        Args: {};
         Returns: Job[];
       };
       count_jobs: {
-        Params: {
+        Args: {
           jobs_status?: JobStatus;
           jobs_search?: string;
           jobs_site_ids?: number[];
           jobs_link_ids?: number[];
         };
-        Args: {};
         Returns: Array<{
           status: JobStatus;
           job_count: number;
         }>;
       };
       get_user_id_by_email: {
-        Params: { email: string };
-        Args: {};
+        Args: { email: string };
         Returns: { id: string };
       };
       count_chatgpt_usage: {
-        Params: {
+        Args: {
           for_user_id: string;
           cost_increment: number;
           input_tokens_increment: number;
           output_tokens_increment: number;
         };
-        Args: {};
         Returns: {};
       };
     };
+    Enums: {};
+    CompositeTypes: {};
   };
 };

@@ -80,7 +80,6 @@ Deno.serve(async (req) => {
         .update({
           stripe_customer_id: customer.id,
           stripe_subscription_id: subscription.id,
-          // @ts-expect-error: type is actually Date, but the front end get's it as a string
           subscription_end_date: new Date(subscription.current_period_end * 1000),
           subscription_tier: tier,
           is_trial: false,
