@@ -16,25 +16,25 @@ class Logger implements ILogger {
 
   debug(message: string, data?: Record<string, any>) {
     console.log(message, data);
-    this._logger?.debug(message, { meta: data });
+    this._logger?.debug?.(message, { meta: data });
   }
 
   info(message: string, data?: Record<string, any>) {
     console.log(message, data);
-    this._logger?.info(message, { meta: data });
+    this._logger?.info?.(message, { meta: data });
   }
 
   error(message: string, data?: Record<string, any>) {
     console.error(message, data);
-    this._logger?.error(message, { meta: data });
+    this._logger?.error?.(message, { meta: data });
   }
 
   addMeta(key: string, value: string) {
-    this._logger?.addMetaProperty(key, value);
+    this._logger?.addMetaProperty?.(key, value);
   }
 
   flush() {
-    this._logger?.flush();
+    this._logger?.flush?.();
   }
 }
 
