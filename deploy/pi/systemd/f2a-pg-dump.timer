@@ -1,0 +1,10 @@
+[Unit]
+Description=Run f2a-pg-dump nightly at 03:15 local time
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+Unit=f2a-pg-dump.service
+
+[Install]
+WantedBy=timers.target

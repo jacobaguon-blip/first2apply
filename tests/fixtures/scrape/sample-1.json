@@ -1,0 +1,22 @@
+{
+  "site": "linkedin",
+  "fetched_at": "2026-04-25T18:00:00Z",
+  "jobs": [
+    {
+      "id": "fixture-1",
+      "title": "Staff Software Engineer",
+      "company": "Acme Cloud",
+      "location": "Remote (US)",
+      "url": "https://example.com/jobs/fixture-1",
+      "description": "Build distributed systems."
+    },
+    {
+      "id": "fixture-2",
+      "title": "Senior Backend Engineer",
+      "company": "Globex",
+      "location": "San Francisco, CA",
+      "url": "https://example.com/jobs/fixture-2",
+      "description": "Own the billing pipeline."
+    }
+  ]
+}
