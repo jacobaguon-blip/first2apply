@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "salutation": "Dear Hiring Team,",
+  "body_paragraphs": [
+    "I'm writing to express strong interest in the {{role}} role at {{company}}. Your work on {{mission_keywords}} maps closely to what I've spent the last several years building.",
+    "At Acme Cloud I led a billing-service migration that cut p99 latency 60% by moving from a synchronous monolith to event-sourced microservices. I'm comfortable owning a service end-to-end — from schema and API design through on-call ergonomics.",
+    "I'd love to talk through how my background in {{skills}} fits the team. Thanks for your time."
+  ],
+  "closing": "Best,\nJane Doe",
+  "placeholders": ["role", "company", "mission_keywords", "skills"]
+}
