@@ -50,6 +50,8 @@ export type JobSite = {
   incognito_support: boolean;
 };
 
+export type LinkScanFrequency = 'hourly' | 'daily';
+
 export type Link = {
   id: number;
   url: string;
@@ -60,6 +62,8 @@ export type Link = {
   scrape_failure_count: number;
   last_scraped_at: string;
   scrape_failure_email_sent: boolean;
+  scan_frequency: LinkScanFrequency;
+  filter_profile_id: number | null;
 };
 
 export type JobType = 'remote' | 'hybrid' | 'onsite';
@@ -148,11 +152,20 @@ export type AdvancedMatchingConfig = {
   id: number;
   user_id: string;
   blacklisted_companies: string[];
-  chatgpt_prompt: string;
   ai_api_cost: number;
   ai_api_input_tokens_used: number;
   ai_api_output_tokens_used: number;
 };
+
+export interface AiFilterProfile {
+  id: number;
+  created_at: string;
+  user_id: string;
+  name: string;
+  chatgpt_prompt: string;
+  blacklisted_companies: string[];
+  is_default: boolean;
+}
 
 export type WebPageRuntimeData = Partial<Record<SiteProvider, ProviderRuntimeData>>;
 export type LinkedinRuntimeData = {
@@ -176,13 +189,16 @@ export type DbSchema = {
       };
       links: {
         Row: Link;
-        Insert: Pick<Link, 'url' | 'title' | 'site_id'>;
+        Insert: Pick<Link, 'url' | 'title' | 'site_id'> &
+          Partial<Pick<Link, 'scan_frequency' | 'filter_profile_id'>>;
         Update: {
           title?: string;
           url?: string;
           scrape_failure_count?: number;
           last_scraped_at?: Date;
           scrape_failure_email_sent?: boolean;
+          scan_frequency?: LinkScanFrequency;
+          filter_profile_id?: number | null;
         };
         Relationships: [];
       };
@@ -235,8 +251,19 @@ export type DbSchema = {
       };
       advanced_matching: {
         Row: AdvancedMatchingConfig;
-        Insert: Pick<AdvancedMatchingConfig, 'blacklisted_companies' | 'chatgpt_prompt'>;
-        Update: Partial<Pick<AdvancedMatchingConfig, 'blacklisted_companies' | 'chatgpt_prompt'>>;
+        Insert: Pick<AdvancedMatchingConfig, 'blacklisted_companies'>;
+        Update: Partial<Pick<AdvancedMatchingConfig, 'blacklisted_companies'>>;
+        Relationships: [];
+      };
+      ai_filter_profiles: {
+        Row: AiFilterProfile;
+        Insert: { name: string } & Partial<
+          Pick<
+            AiFilterProfile,
+            'id' | 'created_at' | 'user_id' | 'chatgpt_prompt' | 'blacklisted_companies' | 'is_default'
+          >
+        >;
+        Update: Partial<AiFilterProfile>;
         Relationships: [];
       };
     };
