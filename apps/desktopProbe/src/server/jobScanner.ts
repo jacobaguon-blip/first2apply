@@ -13,7 +13,7 @@ import { installLinkedInDecorator } from './browserHelpers';
 import { chunk, promiseAllSequence, waitRandomBetween } from './helpers';
 import { HtmlDownloader } from './htmlDownloader';
 import { ILogger } from './logger';
-import { sendPushover } from './pushover';
+import { dispatchPushoverSummary } from './notifications/dispatch';
 
 const userDataPath = app.getPath('userData');
 const settingsPath = path.join(userDataPath, 'settings.json');
@@ -408,18 +408,35 @@ export class JobScanner {
       jobs_count: newJobs.length,
     });
 
-    // Fire Pushover in parallel if configured. Env vars win over settings (for headless deploys).
+    // Fire Pushover via dispatchPushoverSummary so quiet-hours + per-window
+    // claim are honored. Env vars win over settings (for headless deploys).
     const appToken = ENV.pushover.appToken || this._settings.pushoverAppToken;
     const userKey = ENV.pushover.userKey || this._settings.pushoverUserKey;
     const pushoverEnabled = !!(ENV.pushover.appToken && ENV.pushover.userKey) || this._settings.pushoverEnabled;
     if (pushoverEnabled && appToken && userKey) {
       const pushoverBody = `${firstJobsLabel}${otherJobsLabel} ${displatedJobs.length > 1 ? 'are' : 'is'} now available!`;
-      sendPushover({
-        appToken,
-        userKey,
-        title: 'Job Search Update',
-        message: pushoverBody,
-      }).catch((err) => this._logger.error(`pushover send failed: ${getExceptionMessage(err)}`));
+      this._supabaseApi
+        .getUser()
+        .then(({ user }) => {
+          if (!user) {
+            this._logger.info('pushover dispatch skipped: no authenticated user');
+            return;
+          }
+          return dispatchPushoverSummary(this._supabaseApi.getSupabaseClient(), {
+            userId: user.id,
+            jobIds: newJobs.map((j) => j.id),
+            title: 'Job Search Update',
+            message: pushoverBody,
+            pushoverAppToken: appToken,
+            pushoverUserKey: userKey,
+          }).then((outcome) => {
+            this._logger.info(`pushover dispatch outcome: ${outcome.kind}`);
+            if (outcome.kind === 'error') {
+              this._logger.error(`pushover send failed: ${getExceptionMessage(outcome.error)}`);
+            }
+          });
+        })
+        .catch((err) => this._logger.error(`pushover dispatch failed: ${getExceptionMessage(err)}`));
     }
   }
 

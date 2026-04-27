@@ -26,6 +26,15 @@ export class F2aSupabaseApi {
   constructor(private _supabase: SupabaseClient<DbSchema>) {}
 
   /**
+   * Underlying supabase client. Exposed for callers that need to invoke
+   * RPCs or table operations not yet wrapped by this class
+   * (e.g. dispatchPushoverSummary in apps/desktopProbe/.../notifications).
+   */
+  getSupabaseClient(): SupabaseClient<DbSchema> {
+    return this._supabase
+  }
+
+  /**
    * Create a new user account using an email and password.
    */
   async signupWithEmail({
