@@ -64,23 +64,32 @@ Deno.serve(async (req) => {
     const allJobSites = jobSitesData ?? [];
 
     // parse htmls and match them with links
+    const parseErrors: Array<{ linkId: number; message: string }> = [];
     const parseAndSaveJobs = async () => {
       let parseFailed = false;
       const isLastRetry = htmls.every((html) => html.retryCount === html.maxRetries);
       const parsedJobs = await Promise.all(
         htmls.map(async (html) => {
-          const { jobs, currentUrlParseFailed } = await parseHtmlToJobsList({
-            html,
-            allJobSites,
-            isLastRetry,
-            links,
-            context,
-          });
-          if (currentUrlParseFailed) {
+          try {
+            const { jobs, currentUrlParseFailed } = await parseHtmlToJobsList({
+              html,
+              allJobSites,
+              isLastRetry,
+              links,
+              context,
+            });
+            if (currentUrlParseFailed) {
+              parseFailed = true;
+              parseErrors.push({ linkId: html.linkId, message: 'parser returned no jobs (listFound=false or all jobs filtered out)' });
+            }
+            return jobs;
+          } catch (err) {
             parseFailed = true;
+            const message = getExceptionMessage(err, true);
+            logger.error(`parse threw for link ${html.linkId}: ${message}`);
+            parseErrors.push({ linkId: html.linkId, message });
+            return [];
           }
-
-          return jobs;
         }),
       ).then((r) => r.flat());
 
@@ -106,7 +115,7 @@ Deno.serve(async (req) => {
 
     const { newJobs, parseFailed } = await parseAndSaveJobs();
 
-    return new Response(JSON.stringify({ newJobs, parseFailed }), {
+    return new Response(JSON.stringify({ newJobs, parseFailed, parseErrors }), {
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     });
   } catch (error) {
