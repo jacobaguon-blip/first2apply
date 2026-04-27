@@ -1,7 +1,7 @@
 import { getExceptionMessage } from '@first2apply/core';
 import { Job } from '@first2apply/core';
 import { F2aSupabaseApi } from '@first2apply/ui';
-import { dialog, ipcMain, shell } from 'electron';
+import { app, dialog, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import { json2csv } from 'json-2-csv';
 import os from 'os';
@@ -9,8 +9,10 @@ import os from 'os';
 import { IAnalyticsClient } from '../lib/analytics';
 import { F2aAutoUpdater } from './autoUpdater';
 import { JobScanner } from './jobScanner';
+import { logger } from './logger';
 import { OverlayBrowserView } from './overlayBrowserView';
 import { getStripeConfig } from './stripeConfig';
+import { getSupabaseConfig, setSupabaseConfig, testSupabaseConnection } from './supabaseConfig';
 
 /**
  * Helper methods used to centralize error handling.
@@ -77,7 +79,9 @@ export function initRendererIpcApi({
 
   ipcMain.handle('get-user', async () => _apiCall(() => supabaseApi.getUser()));
 
-  ipcMain.handle('create-link', async (_, { title, url, html, webPageRuntimeData, force }) =>
+  ipcMain.handle(
+    'create-link',
+    async (_, { title, url, html, webPageRuntimeData, force, scanFrequency, filter_profile_id }) =>
     _apiCall(async () => {
       const { link, newJobs } = await supabaseApi.createLink({
         title,
@@ -85,6 +89,8 @@ export function initRendererIpcApi({
         html,
         webPageRuntimeData,
         force,
+        scanFrequency,
+        filter_profile_id,
       });
 
       // intentionally not awaited to not have the user wait until JDs are in
@@ -98,8 +104,8 @@ export function initRendererIpcApi({
     }),
   );
 
-  ipcMain.handle('update-link', async (event, { linkId, title, url }) => {
-    const res = await _apiCall(() => supabaseApi.updateLink({ linkId, title, url }));
+  ipcMain.handle('update-link', async (event, { linkId, title, url, filter_profile_id }) => {
+    const res = await _apiCall(() => supabaseApi.updateLink({ linkId, title, url, filter_profile_id }));
     analytics.trackEvent('link_updated', { link_id: linkId });
     return res;
   });
@@ -243,7 +249,7 @@ export function initRendererIpcApi({
 
   ipcMain.handle('create-note', async (event, { job_id, text, files }) => {
     const res = await _apiCall(() => supabaseApi.createNote({ job_id, text, files }));
-    analytics.trackEvent('note_created', { job_id: job_id, note_id: res.data?.id });
+    analytics.trackEvent('note_created', { job_id: job_id, note_id: (res as any)?.data?.id });
     return res;
   });
 
@@ -263,11 +269,37 @@ export function initRendererIpcApi({
     return res;
   });
 
-  ipcMain.handle('get-advanced-matching-config', async () => _apiCall(() => supabaseApi.getAdvancedMatchingConfig()));
+  ipcMain.handle('list-filter-profiles', async () => _apiCall(() => supabaseApi.listFilterProfiles()));
 
-  ipcMain.handle('update-advanced-matching-config', async (event, { config }) => {
-    const res = _apiCall(() => supabaseApi.updateAdvancedMatchingConfig(config));
-    analytics.trackEvent('advanced_matching_config_updated', { config: JSON.stringify(config) });
+  ipcMain.handle('create-filter-profile', async (event, { input }) => {
+    const res = await _apiCall(() => supabaseApi.createFilterProfile(input));
+    analytics.trackEvent('filter_profile_created', { name: input?.name });
+    return res;
+  });
+
+  ipcMain.handle('update-filter-profile', async (event, { id, patch }) => {
+    const res = await _apiCall(() => supabaseApi.updateFilterProfile(id, patch));
+    analytics.trackEvent('filter_profile_updated', { id });
+    return res;
+  });
+
+  ipcMain.handle('set-default-filter-profile', async (event, { id }) => {
+    const res = await _apiCall(() => supabaseApi.setDefaultFilterProfile(id));
+    analytics.trackEvent('filter_profile_set_default', { id });
+    return res;
+  });
+
+  ipcMain.handle('delete-filter-profile', async (event, { id }) => {
+    const res = await _apiCall(() => supabaseApi.deleteFilterProfile(id));
+    analytics.trackEvent('filter_profile_deleted', { id });
+    return res;
+  });
+
+  ipcMain.handle('get-global-blacklist', async () => _apiCall(() => supabaseApi.getGlobalBlacklist()));
+
+  ipcMain.handle('update-global-blacklist', async (event, { companies }) => {
+    const res = await _apiCall(() => supabaseApi.updateGlobalBlacklist(companies));
+    analytics.trackEvent('global_blacklist_updated', { count: companies.length });
     return res;
   });
 
@@ -292,9 +324,38 @@ export function initRendererIpcApi({
     return _apiCall(async () => overlayBrowserView.goForward());
   });
   ipcMain.handle('finish-overlay-browser-view', async () => {
-    return _apiCall(async () => overlayBrowserView.finish());
+    logger.info('[IPC] finish-overlay-browser-view invoked');
+    const result = await _apiCall(async () => overlayBrowserView.finish());
+    logger.info('[IPC] finish-overlay-browser-view returning', {
+      hasData: 'data' in result,
+      hasError: 'error' in result,
+    });
+    return result;
   });
   ipcMain.handle('overlay-browser-view-navigate', async (event, { url }) => {
     return _apiCall(async () => overlayBrowserView.navigate(url));
   });
+
+  ipcMain.handle('get-supabase-config', async () =>
+    _apiCall(async () => getSupabaseConfig()),
+  );
+
+  ipcMain.handle('test-supabase-connection', async (_event, { url, key }) =>
+    _apiCall(async () => {
+      await testSupabaseConnection({ url, key });
+      return { ok: true };
+    }),
+  );
+
+  ipcMain.handle('set-supabase-config', async (_event, { url, key }) =>
+    _apiCall(async () => {
+      await testSupabaseConnection({ url, key });
+      setSupabaseConfig({ url, key });
+      setTimeout(() => {
+        app.relaunch();
+        app.exit(0);
+      }, 150);
+      return { ok: true };
+    }),
+  );
 }

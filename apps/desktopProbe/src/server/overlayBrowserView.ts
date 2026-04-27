@@ -3,6 +3,23 @@ import { WebPageRuntimeData } from '@first2apply/core';
 import { BrowserWindow, WebContentsView } from 'electron';
 
 import { consumeRuntimeData } from './browserHelpers';
+import { logger } from './logger';
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
 
 /**
  * Class used to render a WebContentsView on top of the main window
@@ -47,11 +64,26 @@ export class OverlayBrowserView {
     this._mainWindow.on('resize', this._resizeListener);
 
     // Listen for navigation events and send the new URL to the renderer
-    const sendUrlUpdate = (_event: Event, newUrl: string) => {
+    const sendUrlUpdate = (newUrl: string) => {
       this._mainWindow?.webContents.send('browser-view-url-changed', newUrl);
     };
-    this._searchView.webContents.on('did-navigate', sendUrlUpdate);
-    this._searchView.webContents.on('did-navigate-in-page', sendUrlUpdate);
+    this._searchView.webContents.on('did-navigate', (_event, url) => {
+      logger.debug('[OverlayBrowserView] did-navigate', { url });
+      sendUrlUpdate(url);
+    });
+    this._searchView.webContents.on('did-navigate-in-page', (_event, url) => {
+      logger.debug('[OverlayBrowserView] did-navigate-in-page', { url });
+      sendUrlUpdate(url);
+    });
+    this._searchView.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+      logger.error('[OverlayBrowserView] did-fail-load', { errorCode, errorDescription, validatedURL });
+    });
+    this._searchView.webContents.on('did-finish-load', () => {
+      logger.info('[OverlayBrowserView] did-finish-load', { url: this._searchView?.webContents.getURL() });
+    });
+    this._searchView.webContents.on('render-process-gone', (_event, details) => {
+      logger.error('[OverlayBrowserView] render-process-gone', { reason: details.reason });
+    });
 
     this._mainWindow.contentView.addChildView(this._searchView);
 
@@ -138,18 +170,78 @@ export class OverlayBrowserView {
    * Get the html content, title, and URL of the current page and close the modal.
    */
   async finish(): Promise<OverlayBrowserViewResult> {
+    logger.info('[OverlayBrowserView.finish] called');
     if (!this._searchView) {
+      logger.error('[OverlayBrowserView.finish] _searchView is undefined');
       throw new Error('Search view is not set');
     }
 
-    const html = await this._searchView.webContents.executeJavaScript('document.documentElement.outerHTML');
-    const title = await this._searchView.webContents.executeJavaScript('document.title');
-    const url = this._searchView.webContents.getURL();
+    const wc = this._searchView.webContents;
+    const preUrl = wc.getURL();
+    logger.info('[OverlayBrowserView.finish] webContents state', {
+      url: preUrl,
+      isLoading: wc.isLoading(),
+      isCrashed: wc.isCrashed(),
+      isDestroyed: wc.isDestroyed(),
+      isWaitingForResponse: wc.isWaitingForResponse(),
+    });
+
+    // executeJavaScript suspends until the page stops loading. Sites like LinkedIn
+    // keep a perpetual XHR stream, so we may need to stop any in-flight load.
+    // Give the page a short grace window first so we don't kill an in-flight
+    // top-level redirect and capture a blank/intermediate document.
+    if (wc.isLoading()) {
+      logger.info('[OverlayBrowserView.finish] page loading — waiting 500ms grace window');
+      await new Promise((r) => setTimeout(r, 500));
+      const stillLoading = wc.isLoading();
+      const urlNow = wc.getURL();
+      if (stillLoading && urlNow === preUrl) {
+        logger.info('[OverlayBrowserView.finish] still loading same URL — calling wc.stop()');
+        wc.stop();
+      } else if (stillLoading) {
+        logger.info('[OverlayBrowserView.finish] URL changed during grace window, letting new load settle', {
+          from: preUrl,
+          to: urlNow,
+        });
+        // Give the new navigation up to 3s to settle, then stop if still loading.
+        await new Promise((r) => setTimeout(r, 3_000));
+        if (wc.isLoading()) {
+          logger.info('[OverlayBrowserView.finish] new URL still loading after 3s — calling wc.stop()');
+          wc.stop();
+        }
+      }
+    }
+
+    logger.info('[OverlayBrowserView.finish] executing outerHTML...');
+    const html = await withTimeout(
+      wc.executeJavaScript('document.documentElement.outerHTML'),
+      10_000,
+      'executeJavaScript(outerHTML)',
+    ).catch((err) => {
+      logger.error('[OverlayBrowserView.finish] outerHTML failed', { error: err?.message });
+      throw new Error('Page is still loading. Wait a moment and try Save again.');
+    });
+    logger.info('[OverlayBrowserView.finish] outerHTML returned', { length: html?.length ?? 0 });
+
+    logger.info('[OverlayBrowserView.finish] executing document.title...');
+    const title = await withTimeout(
+      wc.executeJavaScript('document.title'),
+      5_000,
+      'executeJavaScript(title)',
+    ).catch((err) => {
+      logger.error('[OverlayBrowserView.finish] title failed', { error: err?.message });
+      throw new Error('Page is still loading. Wait a moment and try Save again.');
+    });
+    logger.info('[OverlayBrowserView.finish] title returned', { title });
+
+    const url = wc.getURL();
+    logger.info('[OverlayBrowserView.finish] final getURL', { url });
 
     // Read runtime data captured by the protocol handler (stored in main-process memory)
     const webPageRuntimeData: WebPageRuntimeData = consumeRuntimeData(url);
 
     this.close();
+    logger.info('[OverlayBrowserView.finish] returning result');
 
     return {
       url,

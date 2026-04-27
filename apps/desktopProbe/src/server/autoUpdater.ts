@@ -50,8 +50,9 @@ export class F2aAutoUpdater {
     private _onQuit: () => Promise<void>,
     private _analytics: IAnalyticsClient,
   ) {
-    // only enable auto-updates in packaged apps
-    this._canAutoUpdate = app.isPackaged;
+    // household fork: auto-updates disabled so we don't clobber local changes
+    // with upstream first2apply.com releases
+    this._canAutoUpdate = false;
     this._feedUrl = `${S3_BUCKET}/${process.platform}/${process.arch}/RELEASES.json`;
   }
 

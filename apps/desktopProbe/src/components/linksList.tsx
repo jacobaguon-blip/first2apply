@@ -1,11 +1,12 @@
-import { CopyIcon, Pencil1Icon, QuestionMarkCircledIcon, TrashIcon } from '@radix-ui/react-icons';
+import { CopyIcon, InfoCircledIcon, Pencil1Icon, QuestionMarkCircledIcon, ReloadIcon, TrashIcon } from '@radix-ui/react-icons';
 import { useMemo, useState } from 'react';
 import ReactTimeAgo from 'react-time-ago';
 
-import { Link } from '@first2apply/core';
+import { AiFilterProfile, Link } from '@first2apply/core';
 import { useSites } from '@first2apply/ui';
 import { Avatar, AvatarFallback, AvatarImage } from '@first2apply/ui';
 import { Button } from '@first2apply/ui';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@first2apply/ui';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@first2apply/ui';
 
 import { EditLink } from './editLink';
@@ -16,12 +17,18 @@ export function LinksList({
   links,
   onDeleteLink,
   onDebugLink,
+  onScanLink,
   onUpdateLink,
+  profiles,
+  onUpdateLinkProfile,
 }: {
   links: Link[];
   onDeleteLink: (linkId: number) => void;
   onDebugLink: (linkId: number) => void;
-  onUpdateLink: (data: { linkId: number; title: string }) => Promise<void>;
+  onScanLink: (linkId: number) => void;
+  onUpdateLink: (data: { linkId: number; title: string; url: string }) => Promise<void>;
+  profiles: AiFilterProfile[];
+  onUpdateLinkProfile: (linkId: number, filterProfileId: number | null) => Promise<void>;
 }) {
   const { siteLogos, sites } = useSites();
   const sitesMap = useMemo(() => new Map(sites.map((s) => [s.id, s])), [sites]);
@@ -29,6 +36,21 @@ export function LinksList({
   const [editedLink, setEditedLink] = useState<Link | null>(null);
 
   const isInFailureState = (link: Link) => link.scrape_failure_count >= scrapeFailureThreshold;
+
+  const defaultProfile = profiles.find((p) => p.is_default) ?? null;
+  const NULL_SENTINEL = '__null__';
+
+  const profileSelectValue = (link: Link): string => {
+    if (link.filter_profile_id == null) return NULL_SENTINEL;
+    const match = profiles.find((p) => p.id === link.filter_profile_id);
+    return match ? String(match.id) : NULL_SENTINEL;
+  };
+
+  const onProfileChange = (link: Link, nextValue: string) => {
+    const nextId = nextValue === NULL_SENTINEL ? null : Number(nextValue);
+    if (nextId === (link.filter_profile_id ?? null)) return;
+    void onUpdateLinkProfile(link.id, nextId);
+  };
 
   return (
     <>
@@ -63,6 +85,47 @@ export function LinksList({
               {link.url}
             </p> */}
 
+              {/* Filter profile selector */}
+              <div className="flex items-center gap-2" onClick={(evt) => evt.stopPropagation()}>
+                <label className="shrink-0 text-xs text-muted-foreground">Filter profile</label>
+                <Select value={profileSelectValue(link)} onValueChange={(v) => onProfileChange(link, v)}>
+                  <SelectTrigger className="h-8 flex-1 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {defaultProfile ? (
+                      <SelectItem value={NULL_SENTINEL}>
+                        <span>— Default — </span>
+                        <span className="text-muted-foreground">({defaultProfile.name})</span>
+                      </SelectItem>
+                    ) : (
+                      <SelectItem value={NULL_SENTINEL}>
+                        — No profile — <span className="text-muted-foreground">(AI filtering skipped)</span>
+                      </SelectItem>
+                    )}
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                        {p.is_default ? ' (default)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex cursor-help items-center">
+                        <InfoCircledIcon className="h-4 w-4 text-muted-foreground" />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs text-sm">
+                      Searches with no profile selected fall back to your default profile. If no default is set, AI
+                      filtering is skipped for those searches.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-light text-foreground/40">
@@ -90,6 +153,27 @@ export function LinksList({
                       <QuestionMarkCircledIcon className="h-5 w-5 text-primary" />
                     </Button>
                   )}
+
+                  {/* Scan now */}
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="default"
+                          className="ml-2 rounded-full bg-secondary/50 px-[9px] py-2 text-sm transition-colors duration-200 ease-in-out hover:bg-secondary focus:bg-secondary"
+                          onClick={(evt) => {
+                            evt.stopPropagation();
+                            onScanLink(link.id);
+                          }}
+                        >
+                          <ReloadIcon className="h-[18px] w-[18px]" />
+                        </Button>
+                      </TooltipTrigger>
+
+                      <TooltipContent side="left">Scan now</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
 
                   {/* Copy URL */}
                   <TooltipProvider delayDuration={200}>
@@ -158,7 +242,7 @@ export function LinksList({
             return;
           }
 
-          await onUpdateLink({ linkId: editedLink.id, title: data.title });
+          await onUpdateLink({ linkId: editedLink.id, title: data.title, url: data.url });
           setEditedLink(null);
         }}
         onCancel={() => {
