@@ -71,6 +71,10 @@ export interface JobScannerCtorArgs {
   isExternallyPaused?: () => boolean;
   /** Pushover env-var overrides (precedence over settings). Optional. */
   pushoverEnv?: { appToken?: string; userKey?: string };
+  /** When true, skips DB writes (scanHtmls, runPostScanHook) and notifications. Used by serverProbe --dry-run. */
+  dryRun?: boolean;
+  /** Optional callback fired when a scan finishes successfully. Used by health server. */
+  onScanComplete?: () => void;
 }
 
 /**
@@ -90,6 +94,8 @@ export class JobScanner {
   private _settingsProvider: ISettingsProvider<JobScannerSettings>;
   private _isExternallyPaused: () => boolean;
   private _pushoverEnv: { appToken?: string; userKey?: string };
+  private _dryRun: boolean;
+  private _onScanComplete?: () => void;
 
   private _isRunning = true;
   private _settings: JobScannerSettings = {
@@ -113,6 +119,9 @@ export class JobScanner {
     this._settingsProvider = args.settingsProvider;
     this._isExternallyPaused = args.isExternallyPaused ?? (() => false);
     this._pushoverEnv = args.pushoverEnv ?? {};
+    this._dryRun = !!args.dryRun;
+    this._onScanComplete = args.onScanComplete;
+    if (this._dryRun) this._logger.info('JobScanner running in DRY-RUN mode: no DB writes, no notifications');
 
     // Install session decorators (e.g. LinkedIn protocol interceptor) on the
     // normal scraper session. Caller supplies the decorator; lib stays
@@ -146,10 +155,12 @@ export class JobScanner {
     if (this.isPaused()) {
       this._logger.info(`skipping scheduled scan: scanner is paused`);
       this._analytics.trackEvent('scan_skipped_paused', { source: 'scheduled' });
+      this._onScanComplete?.();
       return;
     }
     if (this.isScanning()) {
       this._logger.info('skipping scheduled scan because the scanner is processing other links');
+      this._onScanComplete?.();
       return;
     }
 
@@ -172,6 +183,7 @@ export class JobScanner {
     if (this.isPaused()) {
       this._logger.info(`skipping scan: scanner is paused`);
       this._analytics.trackEvent('scan_skipped_paused', { source: 'manual', links_count: links.length });
+      this._onScanComplete?.();
       return;
     }
     try {
@@ -188,6 +200,10 @@ export class JobScanner {
               scrollTimes: 5,
               callback: async ({ html, webPageRuntimeData, maxRetries, retryCount }) => {
                 if (!this._isRunning) return [];
+                if (this._dryRun) {
+                  this._logger.info(`[dry-run] would scanHtmls for link ${link.title} (${html.length} bytes)`, { linkId: link.id });
+                  return [];
+                }
 
                 const { newJobs, parseFailed, parseErrors } = await this._supabaseApi.scanHtmls([
                   { linkId: link.id, content: html, webPageRuntimeData, maxRetries, retryCount },
@@ -215,6 +231,10 @@ export class JobScanner {
                 const errorMessage = getExceptionMessage(error);
                 this._logger.error(`failed to scan link: ${errorMessage}`, { linkId: link.id });
 
+                if (this._dryRun) {
+                  this._logger.info(`[dry-run] would increaseScrapeFailureCount for link ${link.id}`);
+                  return [];
+                }
                 await this._supabaseApi
                   .increaseScrapeFailureCount({
                     linkId: link.id,
@@ -235,6 +255,11 @@ export class JobScanner {
       this._logger.info(`downloaded html for ${links.length} links`);
 
       if (!this._isRunning) return;
+      if (this._dryRun) {
+        this._logger.info('[dry-run] skipping scanJobs / runPostScanHook / notifications');
+        this._onScanComplete?.();
+        return;
+      }
       const { jobs } = await this._supabaseApi.listJobs({ status: 'processing', limit: 300 });
       this._logger.info(`found ${jobs.length} jobs that need processing`);
       const scannedJobs = await this.scanJobs(jobs);
@@ -260,6 +285,7 @@ export class JobScanner {
         links_count: links.length,
         new_jobs_count: newJobs.length,
       });
+      this._onScanComplete?.();
     } catch (error) {
       this._logger.error(getExceptionMessage(error));
     } finally {

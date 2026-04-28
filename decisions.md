@@ -319,3 +319,31 @@ PR #19 opened. 5/5 tests pass, both lib + desktop typecheck clean.
 - PRs 3-5: deferred per design
 
 Next session can pick up by reviewing/merging PR 19 then writing PR 3 plan.
+
+---
+
+## 2026-04-27T20:45-07:00 — PR 3 (serverProbe Electron headless impl) shipped
+
+Branch `feat/pr3-server-probe-impl`. Lib build clean, serverProbe + desktop typecheck clean, desktop vitest 5/5, `electron dist/main.js --selftest` exits 0.
+
+**Scope adjustments during execution:**
+1. **No `@first2apply/ui` dependency.** Importing the ui lib at runtime in serverProbe would pull React/Radix; instead wrote a minimal `ServerSupabaseApi` (apps/serverProbe/src/supabaseApi.ts) that implements `IScannerSupabaseApi` directly against `@supabase/supabase-js`. Same edge-function names, same RPCs.
+2. **`getUser()` reads `F2A_OWNER_USER_ID` env var.** Service-role auth has no JWT user; pushover dispatch needs a user id. Added optional env var; absent → pushover skipped (not required by env validator).
+3. **`dryRun` + `onScanComplete` added to `JobScannerCtorArgs`.** Gates `scanHtmls`, `runPostScanHook`, notifications, AND `increaseScrapeFailureCount` (added after devil's-advocate flagged the leak). `onScanComplete` fires on success, paused, scanning-collision, and dry-run early-return — drives the health server's lastScanAt.
+4. **Health server.** `libraries/scraper/src/health/healthServer.ts`. `node:http`, `127.0.0.1:7878`, bootstrap-grace = `min(2*cron, 10min)`, freshness window = `2*cron`, `'error'` handler logs (doesn't crash) on EADDRINUSE.
+5. **Unknown-flag rejection in CLI.** `parseArgs` now exits with code 2 on unknown `--foo`, preventing `--self-test` typo from silently entering serve mode.
+6. **Shutdown awaits in-flight scans.** `waitForScansToFinish(scanner, 30_000)` between `scanner.close()` and `downloader.close()` so SIGTERM mid-scan doesn't tear down BrowserWindows under executeJavaScript.
+7. **Selftest simplified.** No 250ms timeout race; `app.exit(0)` immediately after `whenReady`.
+8. **`F2A_LOG_FILE=1` opts in to file mirror at `/opt/first2apply/logs/server-probe.log`** (mkdir best-effort; falls back to stdout-only if unavailable).
+9. **Electron version pinned to 39.0.0** (matches desktopProbe dep) per design §5.PR-3.
+10. **`browserHelpers.ts` + `workerQueue.ts` copied** from desktopProbe (still used by desktop too — no de-dupe attempt; both copies are tightly coupled to their respective downloaders). `workerQueue.ts` strict-null fix added (`if (!task) return`).
+11. **No `--scan-once` end-to-end test in PR 3.** Deferred to PR 4 per design — Xvfb on Mac local-test impossibility means real validation needs Docker.
+
+**Devil's-advocate review applied:** 3 HIGH (shutdown race, queue hang risk, health flap on paused) + 4 MEDIUM (dry-run write leak, CLI typo, selftest race, health listen error). HIGH 2 (queue hang) verified safe — listener attaches before `_queue.next()`; if already-empty, `next()` synchronously emits.
+
+**Open follow-ups (intentional, not blockers):**
+- `OPENAI_API_KEY` and `APPROVAL_HMAC_SECRET` are required at boot but not used by serverProbe code path (they're for edge functions). Forced presence simplifies Pi `.env` audit; removable later.
+- `NoopAnalytics.trackEvent` calls `console.debug` rather than no-op — flagged LOW; unchanged.
+- `as never` casts in `ServerSupabaseApi` row mappers — type guarantee is informal; revisit when the desktop's `database.types.ts` regen cleans up.
+- `F2A_OWNER_USER_ID` not in REQUIRED env list — pushover silently skipped without it. Document in PR 4 `.env.example`.
+
