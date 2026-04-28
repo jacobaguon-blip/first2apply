@@ -208,6 +208,32 @@ export type LinkedinRuntimeData = {
 
 export type ProviderRuntimeData = LinkedinRuntimeData;
 
+export type MasterContentSection = 'resume' | 'cover_letter';
+
+export type AccountMasterResumeRow = {
+  account_id: string;
+  content_jsonb: unknown;
+  uploaded_filename: string | null;
+  uploaded_at: string;
+  updated_at: string;
+};
+
+export type AccountMasterCoverLetterRow = AccountMasterResumeRow;
+
+export type AccountRow = {
+  id: string;
+  name: string;
+  created_at: string;
+  owner_user_id: string;
+};
+
+export type AccountMemberRow = {
+  account_id: string;
+  user_id: string;
+  role: 'owner' | 'admin' | 'member';
+  added_at: string;
+};
+
 /**
  * Supabase database schema.
  */
@@ -303,6 +329,32 @@ export type DbSchema = {
         Row: UserSettings;
         Insert: UserSettingsUpsert;
         Update: UserSettingsUpsert;
+        Relationships: [];
+      };
+      accounts: {
+        Row: AccountRow;
+        Insert: Pick<AccountRow, 'name' | 'owner_user_id'>;
+        Update: {};
+        Relationships: [];
+      };
+      account_members: {
+        Row: AccountMemberRow;
+        Insert: AccountMemberRow;
+        Update: {};
+        Relationships: [];
+      };
+      account_master_resume: {
+        Row: AccountMasterResumeRow;
+        Insert: Pick<AccountMasterResumeRow, 'account_id' | 'content_jsonb'> &
+          Partial<Pick<AccountMasterResumeRow, 'uploaded_filename'>>;
+        Update: Partial<Pick<AccountMasterResumeRow, 'content_jsonb' | 'uploaded_filename'>>;
+        Relationships: [];
+      };
+      account_master_cover_letter: {
+        Row: AccountMasterCoverLetterRow;
+        Insert: Pick<AccountMasterCoverLetterRow, 'account_id' | 'content_jsonb'> &
+          Partial<Pick<AccountMasterCoverLetterRow, 'uploaded_filename'>>;
+        Update: Partial<Pick<AccountMasterCoverLetterRow, 'content_jsonb' | 'uploaded_filename'>>;
         Relationships: [];
       };
     };
