@@ -214,3 +214,22 @@ Re-reading the v2 docs adversarially with fresh eyes.
 - **R3-M7.** PR 1 plan Task 9 assumes `project.json` exists. Verify nx config shape; handle the "no project.json, only package.json" case.
 
 ### Action: applying fixes inline.
+
+---
+
+## 2026-04-27T20:15-07:00 — Devil's advocate round 4 (convergence)
+
+Final adversarial pass. Looking only for material issues.
+
+### MEDIUM (3)
+- **R4-M1.** `--dry-run` mode threads through multiple lib functions: `scanHtmls` (must stub the upsert), `runPostScanHook` (skip), `dispatchPushoverSummary` (skip). Lib needs a `dryRun: boolean` flag in scanner config or per-call. Document the wiring in PR 3 plan.
+- **R4-M2.** PR 2's library extraction moves both source and test files. PR 1's vitest config specifies `quietHours.test.ts` and `__tests__/**` exact paths. After PR 2 moves them, vitest config must be updated. Add to PR 2 plan stub.
+- **R4-M3.** `--probe-once` vs `--dry-run` naming: probe-once sounds non-destructive but is full prod-write. Rename to `--scan-once` for clarity, leave `--probe-once` as a deprecated alias for backwards-compat with the existing scaffold.
+
+### LOW (1)
+- **R4-L1.** Legacy `F2A_MOCK_SCRAPE=1` env var (used by current scaffold) will be removed in PR 3. Document the deprecation in PR 3 plan.
+
+### Convergence statement
+Round 4 found 3 medium + 1 low; no critical or high. The remaining issues are clarifications/naming, not blast-radius problems. Calling convergence: 4 rounds, 32 + 18 + 11 + 4 = 65 issues identified and addressed across docs + .env.example + database.types.ts.
+
+Moving to pipeline step 2: code review (`/superpowers:requesting-code-review`).

@@ -276,10 +276,12 @@ Thin Electron shell. Realistic effort: **1.5–2 days** (revised up from "1 day"
 - Adapter implementations: env-driven `ISettingsProvider`, console+file `ILogger`, no-op `IAnalyticsClient`, hidden-window `IBrowserWindowFactory`
 - `app.commandLine.appendSwitch('no-sandbox')` per §4.3 (placement above all other Electron API access)
 - Local Xvfb test target: `xvfb-run electron .` on a Linux box; on Mac, run inside the Docker image via `docker run -it`
-- Three CLI modes:
+- Three CLI modes (with deprecated alias):
   - `--selftest` — verifies Electron + Xvfb start, exits 0. No supabase calls. Used by CI runtime smoke.
-  - `--dry-run` — performs a full scrape against cloud Supabase to validate the path, but skips ALL writes (`runPostScanHook`, `scanHtmls` upserts) AND skips notifications. Read-only validation. Used for PR 3 pass condition.
-  - `--probe-once` — full end-to-end one-shot: writes to prod DB, fires real Pushover. Use only when intentionally seeding/testing prod state.
+  - `--dry-run` — performs a full scrape against cloud Supabase to validate the path, but skips ALL writes (`scanHtmls` upserts, `runPostScanHook`) AND skips notifications. Read-only validation. Used for PR 3 pass condition. The `dryRun: boolean` flag threads through the library's scanner config and is checked at the call sites of `scanHtmls`, `runPostScanHook`, and `dispatchPushoverSummary`.
+  - `--scan-once` — full end-to-end one-shot: writes to prod DB, fires real Pushover. Use only when intentionally seeding/testing prod state.
+  - `--probe-once` — deprecated alias for `--scan-once`, kept for backwards-compat with the existing scaffold. PR 3 logs a deprecation warning when used.
+- Legacy `F2A_MOCK_SCRAPE=1` env var (used by current `apps/serverProbe/src/main.ts` scaffold for fixture-only mode) is removed in PR 3 — superseded by `--dry-run`. PR 3 commit message calls this out.
 - **Pass condition:** `serverProbe --dry-run` runs end-to-end against the production Supabase account inside Docker (Pi or laptop). No prod data is written. Confirm via `journalctl` log of "would have written N jobs."
 
 ### PR 4 — Dockerfile + Pi systemd unit update
