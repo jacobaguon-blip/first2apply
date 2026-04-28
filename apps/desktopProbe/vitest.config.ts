@@ -10,10 +10,10 @@ export default defineConfig({
     // ai/budget.test.ts, keywords/keywords.test.ts) run assertions at
     // module top level and would corrupt the vitest run on import.
     // Migrate those files in their own follow-up PR.
-    include: [
-      'src/server/notifications/quietHours.test.ts',
-      'src/server/__tests__/**/*.test.ts',
-    ],
+    // quietHours.test.ts moved to libraries/scraper as part of the PR 2 extraction.
+    // Vitest there is a follow-up. For now, desktop's vitest only runs the
+    // JobScanner orchestration tests against the lib's exported class.
+    include: ['src/server/__tests__/**/*.test.ts'],
     exclude: [
       'node_modules/**',
       'src/server/tailored/**',
