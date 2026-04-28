@@ -497,6 +497,75 @@ export class F2aSupabaseApi {
   }
 
   /**
+   * Upsert master resume or cover letter content for the authenticated user's account.
+   */
+  async upsertMasterContent({
+    kind,
+    content,
+    filename,
+  }: {
+    kind: 'resume' | 'cover_letter'
+    content: unknown
+    filename: string | null
+  }) {
+    const {
+      data: { user },
+    } = await this._supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    const { data: membership, error: memberErr } = await this._supabase
+      .from('account_members')
+      .select('account_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (memberErr) throw memberErr
+    if (!membership)
+      throw new Error('No account found for user — run ensure_personal_account')
+
+    const table =
+      kind === 'resume' ? 'account_master_resume' : 'account_master_cover_letter'
+    const row = {
+      account_id: membership.account_id,
+      content_jsonb: content,
+      uploaded_filename: filename,
+    }
+    const { data, error } = await this._supabase
+      .from(table)
+      .upsert(row, { onConflict: 'account_id' })
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  }
+
+  /**
+   * Get master resume or cover letter content for the authenticated user's account.
+   */
+  async getMasterContent({ kind }: { kind: 'resume' | 'cover_letter' }) {
+    const {
+      data: { user },
+    } = await this._supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+
+    const { data: membership } = await this._supabase
+      .from('account_members')
+      .select('account_id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (!membership) return null
+
+    const table =
+      kind === 'resume' ? 'account_master_resume' : 'account_master_cover_letter'
+    const { data, error } = await this._supabase
+      .from(table)
+      .select('content_jsonb, uploaded_filename, updated_at')
+      .eq('account_id', membership.account_id)
+      .maybeSingle()
+    if (error) throw error
+    return data
+  }
+
+  /**
    * Get user's review.
    */
   async getUserReview() {
