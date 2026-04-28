@@ -1,40 +1,18 @@
 /**
- * Quiet-hours unit tests.
+ * Quiet-hours unit tests (vitest).
  *
- * Run with:  npx tsx apps/desktopProbe/src/server/notifications/quietHours.test.ts
- *
- * Uses a tiny inline assertion harness (no external test runner) so the file
- * is portable across the desktopProbe build setup.
+ * Migrated from the inline-harness pattern. Each `test()` from the original
+ * is preserved as an `it()` with identical assertions.
  */
+import { describe, it, expect } from 'vitest';
 import type { QuietHoursSchedule } from '@first2apply/core';
 
 import { isInQuietHours } from './quietHours';
 
-let passed = 0;
-let failed = 0;
-
-function test(name: string, fn: () => void) {
-  try {
-    fn();
-    passed++;
-    console.log(`  ok  ${name}`);
-  } catch (err) {
-    failed++;
-    console.error(`  FAIL ${name}`);
-    console.error(err instanceof Error ? err.stack ?? err.message : String(err));
-  }
-}
-
-function assertEqual<T>(actual: T, expected: T, msg?: string) {
-  if (actual !== expected) {
-    throw new Error(`${msg ?? 'assertEqual'} — expected ${String(expected)}, got ${String(actual)}`);
-  }
-}
-
 /**
  * Build a UTC Date that, when projected into `tz`, lands on the given local
- * y-m-d-h-m. We do this by binary-searching offset minutes — small (< 1s)
- * and works regardless of DST.
+ * y-m-d-h-m. Binary-searches offset minutes — small (< 1s) and works
+ * regardless of DST.
  */
 function localToUtc(
   tz: string,
@@ -44,7 +22,6 @@ function localToUtc(
   h: number,
   mi: number,
 ): Date {
-  // Start from the wall-clock as if it were UTC, then correct.
   const guess = Date.UTC(y, mo - 1, d, h, mi, 0);
   for (let attempt = 0; attempt < 4; attempt++) {
     const candidate = new Date(guess);
@@ -69,7 +46,6 @@ function localToUtc(
     const targetMs = Date.UTC(y, mo - 1, d, h, mi, 0);
     const drift = localMs - targetMs;
     if (drift === 0) return candidate;
-    // shift guess by -drift
     return new Date(candidate.getTime() - drift);
   }
   return new Date(guess);
@@ -85,47 +61,39 @@ const NIGHTLY_22_07: QuietHoursSchedule = {
   sunday: { start: '22:00', end: '07:00' },
 };
 
-console.log('quietHours.test.ts');
+describe('isInQuietHours', () => {
+  it('22:00→07:00 wrap, now=02:00 local → in window', () => {
+    const now = localToUtc('America/Los_Angeles', 2026, 5, 5, 2, 0);
+    expect(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 0, now)).toBe(true);
+  });
 
-test('22:00→07:00 wrap, now=02:00 local → in window', () => {
-  const now = localToUtc('America/Los_Angeles', 2026, 5, 5, 2, 0); // Tue 02:00
-  assertEqual(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 0, now), true);
+  it('22:00→07:00 wrap, now=12:00 local → NOT in window', () => {
+    const now = localToUtc('America/Los_Angeles', 2026, 5, 5, 12, 0);
+    expect(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 0, now)).toBe(false);
+  });
+
+  it('DST spring-forward: 03:30 PT on 2026-03-08 still inside 22:00→07:00 window', () => {
+    const now = localToUtc('America/Los_Angeles', 2026, 3, 8, 3, 30);
+    expect(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 0, now)).toBe(true);
+  });
+
+  it('DST fall-back: 06:30 PT on 2026-11-01 still inside wrap window', () => {
+    const now = localToUtc('America/Los_Angeles', 2026, 11, 1, 6, 30);
+    expect(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 0, now)).toBe(true);
+  });
+
+  it('Empty schedule → always false', () => {
+    const now = new Date();
+    expect(isInQuietHours({}, 'America/Los_Angeles', 0, now)).toBe(false);
+  });
+
+  it('1-hour grace pushes 07:00 end → still quiet at 07:30', () => {
+    const now = localToUtc('America/Los_Angeles', 2026, 5, 5, 7, 30);
+    expect(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 60, now)).toBe(true);
+  });
+
+  it('Asia/Tokyo: 23:00 local Tue is inside 22:00→07:00 window for that tz', () => {
+    const now = localToUtc('Asia/Tokyo', 2026, 5, 5, 23, 0);
+    expect(isInQuietHours(NIGHTLY_22_07, 'Asia/Tokyo', 0, now)).toBe(true);
+  });
 });
-
-test('22:00→07:00 wrap, now=12:00 local → NOT in window', () => {
-  const now = localToUtc('America/Los_Angeles', 2026, 5, 5, 12, 0);
-  assertEqual(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 0, now), false);
-});
-
-test('DST spring-forward: 03:30 PT on 2026-03-08 still inside 22:00→07:00 window', () => {
-  // 2026-03-08 02:00 PT does not exist (clocks jump to 03:00). 03:30 PT is valid
-  // and should still be inside the wrap window that started Saturday 22:00 PT.
-  const now = localToUtc('America/Los_Angeles', 2026, 3, 8, 3, 30);
-  assertEqual(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 0, now), true);
-});
-
-test('DST fall-back: 06:30 PT on 2026-11-01 still inside wrap window', () => {
-  // 2026-11-01: clocks fall back at 02:00. 06:30 should still be quiet.
-  const now = localToUtc('America/Los_Angeles', 2026, 11, 1, 6, 30);
-  assertEqual(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 0, now), true);
-});
-
-test('Empty schedule → always false', () => {
-  const now = new Date();
-  assertEqual(isInQuietHours({}, 'America/Los_Angeles', 0, now), false);
-});
-
-test('1-hour grace pushes 07:00 end → still quiet at 07:30', () => {
-  const now = localToUtc('America/Los_Angeles', 2026, 5, 5, 7, 30);
-  assertEqual(isInQuietHours(NIGHTLY_22_07, 'America/Los_Angeles', 60, now), true);
-});
-
-test('Asia/Tokyo: 23:00 local Tue is inside 22:00→07:00 window for that tz', () => {
-  const now = localToUtc('Asia/Tokyo', 2026, 5, 5, 23, 0);
-  assertEqual(isInQuietHours(NIGHTLY_22_07, 'Asia/Tokyo', 0, now), true);
-});
-
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) {
-  process.exit(1);
-}
