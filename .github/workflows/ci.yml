@@ -19,6 +19,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Build libs (provides .d.ts for downstream typecheck)
+        run: |
+          cd libraries/core && npm run build && cd ../..
+          cd libraries/scraper && npm run build && cd ../..
       - name: Typecheck server-probe + libs
         run: npx nx run-many -t typecheck --projects=@first2apply/core,@first2apply/scraper,first2apply-server-probe
 
@@ -34,6 +38,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Build libs (vitest resolves @first2apply/* via main/exports)
+        run: |
+          cd libraries/core && npm run build && cd ../..
+          cd libraries/scraper && npm run build && cd ../..
       - name: JobScanner regression tests
         working-directory: apps/desktopProbe
         run: npx vitest run
