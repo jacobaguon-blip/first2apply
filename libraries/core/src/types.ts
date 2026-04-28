@@ -339,7 +339,7 @@ export type DbSchema = {
       };
       account_members: {
         Row: AccountMemberRow;
-        Insert: AccountMemberRow;
+        Insert: Pick<AccountMemberRow, 'account_id' | 'user_id' | 'role'> & Partial<Pick<AccountMemberRow, 'added_at'>>;
         Update: {};
         Relationships: [];
       };
