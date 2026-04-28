@@ -18,8 +18,20 @@ VERSION=$(node -p "require('./package.json').version")
 # user-data-dir and the freshly-installed .app fails to launch.
 bash "$APP_DIR/scripts/kill-dev.sh"
 
+# Blank PUSHOVER_USER_KEY for the duration of the build so the dev's personal
+# pushover key doesn't get baked into a multi-user build. Each user enters
+# their own key in the in-app Settings; this is just a build-time fallback.
+# trap ensures restore runs even if the build crashes.
+ENV_FILE="$APP_DIR/.env"
+ENV_BACKUP="$APP_DIR/.env.publish-backup"
+if [ -f "$ENV_FILE" ]; then
+  cp "$ENV_FILE" "$ENV_BACKUP"
+  trap 'mv "$ENV_BACKUP" "$ENV_FILE" 2>/dev/null || true' EXIT
+  sed -i '' 's/^PUSHOVER_USER_KEY=.*/PUSHOVER_USER_KEY=/' "$ENV_FILE"
+fi
+
 echo "Building $APP_NAME $VERSION (arm64)..."
-yarn make
+pnpm make
 
 BUILT="out/$APP_NAME-darwin-arm64/$APP_NAME.app"
 if [ ! -d "$BUILT" ]; then
