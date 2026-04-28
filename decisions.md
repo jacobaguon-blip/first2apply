@@ -161,3 +161,35 @@ Adversarial review of `docs/plans/2026-04-27-server-probe-design.md` + `docs/pla
 
 ### Action: applying fixes now
 Editing both plan files + bootstrap + .env.example + decisions.md, then running round 2.
+
+---
+
+## 2026-04-27T19:50-07:00 — Devil's advocate round 2
+
+Re-reading the v2 docs adversarially with fresh eyes.
+
+### HIGH (6)
+- **R2-H1.** `/healthz` first-probe failure: when the scanner just started and `lastSuccessfulScanFinishedAt` is null, `Date.now() - null < 2 * cronIntervalMs` returns NaN-comparison-false, so first probe at 30s fails. Container marked unhealthy. Fix: return 200 for the first `2 * cronIntervalMs` after process start regardless of last-scan time.
+- **R2-H2.** Container name collision on rapid restart: `--rm --name f2a-server-probe` works only if the previous container's `--rm` actually fired. If docker daemon hung mid-stop, the name is taken on next `docker run`. Fix: `ExecStartPre=-/usr/bin/docker rm -f f2a-server-probe` (the `-` prefix tolerates non-zero exit when no container exists).
+- **R2-H3.** `pg_dump.service` failure alert: design claims "alert on error" but no wiring exists. Fix: either build the alert (call `dispatchPushoverSummary`-equivalent from a shell wrapper) or remove the claim.
+- **R2-H4.** `TZ` env var missing from `.env.example`. Container default UTC makes journalctl debugging confusing. Fix: add `TZ=America/Los_Angeles` (or the user's actual TZ) to `.env.example`.
+- **R2-H5.** `app.commandLine.appendSwitch('no-sandbox')` must run BEFORE `app.whenReady()`. If serverProbe init order is wrong, `--no-sandbox` is silently no-op, Chromium fails sandbox, container can't render. Fix: design + plan specifies ordering.
+- **R2-H6.** CI buildx cache layer not specified. Without `--cache-from type=gha --cache-to type=gha,mode=max`, every PR rebuilds Chromium-installing image layers from scratch (~5 min cold). Fix: add cache flags to `build-server-probe-image` job.
+
+### MEDIUM (10)
+- **R2-M1.** Hardcoded `ghcr.io/jacobaguon-blip/...` registry path. Use `ghcr.io/${{ github.repository_owner }}/...` in workflows for portability.
+- **R2-M2.** Empty-scan signal absent: scanner returns silently when 0 new jobs, no "I'm alive" pushover. Out of scope for v0 but flag.
+- **R2-M3.** `/dev/shm` ≥ 2GB pre-flight check is unnecessary — Docker `--shm-size=2g` carves out tmpfs from kernel regardless of host /dev/shm size. Remove.
+- **R2-M4.** `/healthz` should return 503 (not just 200/anything-else) when stale.
+- **R2-M5.** PR 4 pass condition missing pg_dump.service smoke run. Add.
+- **R2-M6.** `docker login -u <u> -p <pat>` exposes PAT in shell history. Recommend `--password-stdin` form.
+- **R2-M7.** `bootstrap.sh` should print the next-step note about `docker login`.
+- **R2-M8.** `apps/serverProbe`'s Electron version pinning vs desktop. Specify: match desktop's version exactly to keep the Chromium engine consistent.
+- **R2-M9.** `nx run-many --exclude=` syntax: comma-separated string. Verify the syntax in PR 5 plan.
+- **R2-M10.** Excluded inline-harness tests are long-term drift risk. Track as follow-up issue in repo.
+
+### LOW (2)
+- **R2-L1.** TIME_WAIT on health server port 7878 across container restarts. Probably fine (different process namespaces) but watch.
+- **R2-L2.** Migration ordering risk: if PR 1 merges and PR 2 stalls, master is in "vitest configured, legacy tests excluded" state. No regression but document.
+
+### Action: applying fixes inline.
