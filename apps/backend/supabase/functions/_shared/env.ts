@@ -8,6 +8,8 @@ export type First2ApplyBackendEnv = {
   openAiConfig: OpenAiConfig;
   mailerLiteApiKey?: string;
   mailerSendApiKey?: string;
+  mailerFromEmail: string;
+  mailerFromName: string;
   mezmoApiKey: string;
   f2aWebhookSecret: string;
   stripeSecretKey: string;
@@ -24,6 +26,8 @@ export function parseEnv(): First2ApplyBackendEnv {
     },
     mailerLiteApiKey: Deno.env.get('MAILERLITE_API_KEY'),
     mailerSendApiKey: Deno.env.get('MAILERSEND_API_KEY'),
+    mailerFromEmail: Deno.env.get('MAILER_FROM_EMAIL') ?? 'contact@first2apply.com',
+    mailerFromName: Deno.env.get('MAILER_FROM_NAME') ?? 'First 2 Apply',
     mezmoApiKey: Deno.env.get('MEZMO_API_KEY') ?? '',
     f2aWebhookSecret: Deno.env.get('F2A_WEBHOOK_SECRET') ?? throwError('F2A_WEBHOOK_SECRET is not set'),
     stripeSecretKey: Deno.env.get('STRIPE_SECRET_KEY') ?? '',
