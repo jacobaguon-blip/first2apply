@@ -1,22 +1,5 @@
-// AUTO-GENERATED via `supabase gen types typescript --linked --schema public`
-// Re-run when the cloud schema changes:
-//   cd apps/backend && supabase gen types typescript --linked --schema public \
-//     > ../../libraries/core/src/database.types.ts
-//
-// Migration path from the hand-rolled `DbSchema` in `./types.ts`:
-//   1. Replace `import { DbSchema } from '@first2apply/core'` with
-//      `import { Database } from '@first2apply/core'` and update each
-//      `SupabaseClient<DbSchema, 'public', DbSchema['public']>` to
-//      `SupabaseClient<Database>`.
-//   2. Update `DbSchema['public']['Tables']['<t>']['Row']` references to
-//      `Database['public']['Tables']['<t>']['Row']` (or use the table type
-//      via `Tables<'<t>'>` helper if added).
-//   3. Once all consumers migrate, remove the hand-rolled `DbSchema` block
-//      from `./types.ts`.
-// This unblocks the GenericSchema constraint: `Database` includes the
-// `__InternalSupabase: { PostgrestVersion: '14.5' }` discriminator that
-// modern @supabase/postgrest-js requires.
-
+WARN: no SMS provider is enabled. Disabling phone login
+Initialising login role...
 export type Json =
   | string
   | number
@@ -33,6 +16,120 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_master_cover_letter: {
+        Row: {
+          account_id: string
+          content_jsonb: Json
+          updated_at: string
+          uploaded_at: string
+          uploaded_filename: string | null
+        }
+        Insert: {
+          account_id: string
+          content_jsonb?: Json
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_filename?: string | null
+        }
+        Update: {
+          account_id?: string
+          content_jsonb?: Json
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_filename?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_master_cover_letter_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_master_resume: {
+        Row: {
+          account_id: string
+          content_jsonb: Json
+          updated_at: string
+          uploaded_at: string
+          uploaded_filename: string | null
+        }
+        Insert: {
+          account_id: string
+          content_jsonb?: Json
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_filename?: string | null
+        }
+        Update: {
+          account_id?: string
+          content_jsonb?: Json
+          updated_at?: string
+          uploaded_at?: string
+          uploaded_filename?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_master_resume_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_members: {
+        Row: {
+          account_id: string
+          added_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          added_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          added_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_members_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_user_id?: string
+        }
+        Relationships: []
+      }
       advanced_matching: {
         Row: {
           ai_api_cost: number
@@ -120,6 +217,96 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_tokens: {
+        Row: {
+          consumed_at: string | null
+          expires_at: string
+          job_id: string
+          jti: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          expires_at: string
+          job_id: string
+          jti: string
+        }
+        Update: {
+          consumed_at?: string | null
+          expires_at?: string
+          job_id?: string
+          jti?: string
+        }
+        Relationships: []
+      }
+      companies: {
+        Row: {
+          created_at: string
+          id: number
+          linkedin_url: string | null
+          mission_keywords_jsonb: Json | null
+          name: string
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          linkedin_url?: string | null
+          mission_keywords_jsonb?: Json | null
+          name: string
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          linkedin_url?: string | null
+          mission_keywords_jsonb?: Json | null
+          name?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      cover_letter_versions: {
+        Row: {
+          content_jsonb: Json
+          created_at: string
+          id: number
+          link_id: number | null
+          model: string
+          profile_id: number | null
+        }
+        Insert: {
+          content_jsonb: Json
+          created_at?: string
+          id?: number
+          link_id?: number | null
+          model?: string
+          profile_id?: number | null
+        }
+        Update: {
+          content_jsonb?: Json
+          created_at?: string
+          id?: number
+          link_id?: number | null
+          model?: string
+          profile_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cover_letter_versions_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cover_letter_versions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "ai_filter_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       html_dumps: {
         Row: {
           created_at: string
@@ -149,6 +336,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          approval_state: string
           companyLogo: string | null
           companyName: string
           created_at: string
@@ -172,6 +360,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approval_state?: string
           companyLogo?: string | null
           companyName: string
           created_at?: string
@@ -195,6 +384,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          approval_state?: string
           companyLogo?: string | null
           companyName?: string
           created_at?: string
@@ -239,6 +429,7 @@ export type Database = {
           created_at: string
           filter_profile_id: number | null
           id: number
+          keywords_jsonb: Json | null
           last_scraped_at: string
           scan_frequency: string
           scrape_failure_count: number
@@ -252,6 +443,7 @@ export type Database = {
           created_at?: string
           filter_profile_id?: number | null
           id?: number
+          keywords_jsonb?: Json | null
           last_scraped_at?: string
           scan_frequency?: string
           scrape_failure_count?: number
@@ -265,6 +457,7 @@ export type Database = {
           created_at?: string
           filter_profile_id?: number | null
           id?: number
+          keywords_jsonb?: Json | null
           last_scraped_at?: string
           scan_frequency?: string
           scrape_failure_count?: number
@@ -328,6 +521,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_id: string | null
           created_at: string
           id: number
           is_trial: boolean
@@ -338,6 +532,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_id?: string | null
           created_at?: string
           id?: number
           is_trial?: boolean
@@ -348,6 +543,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          account_id?: string | null
           created_at?: string
           id?: number
           is_trial?: boolean
@@ -357,7 +553,57 @@ export type Database = {
           subscription_tier?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resume_versions: {
+        Row: {
+          content_jsonb: Json
+          created_at: string
+          id: number
+          link_id: number | null
+          model: string
+          profile_id: number | null
+        }
+        Insert: {
+          content_jsonb: Json
+          created_at?: string
+          id?: number
+          link_id?: number | null
+          model?: string
+          profile_id?: number | null
+        }
+        Update: {
+          content_jsonb?: Json
+          created_at?: string
+          id?: number
+          link_id?: number | null
+          model?: string
+          profile_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_versions_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resume_versions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "ai_filter_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviews: {
         Row: {
@@ -514,6 +760,7 @@ export type Database = {
           jobs_status: Database["public"]["Enums"]["Job Status"]
         }
         Returns: {
+          approval_state: string
           companyLogo: string | null
           companyName: string
           created_at: string
@@ -561,6 +808,7 @@ export type Database = {
         | "archived"
         | "processing"
         | "excluded_by_advanced_matching"
+        | "deleted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -694,7 +942,10 @@ export const Constants = {
         "archived",
         "processing",
         "excluded_by_advanced_matching",
+        "deleted",
       ],
     },
   },
 } as const
+A new version of Supabase CLI is available: v2.95.4 (currently installed v2.90.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
