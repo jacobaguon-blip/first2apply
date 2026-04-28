@@ -1,7 +1,8 @@
 [Unit]
-Description=first2apply server probe (headless)
+Description=first2apply server probe (headless, dockerized)
 After=network-online.target docker.service
 Wants=network-online.target
+Requires=docker.service
 
 [Service]
 Type=simple
@@ -9,14 +10,19 @@ User=first2apply
 Group=first2apply
 WorkingDirectory=/opt/first2apply
 EnvironmentFile=/opt/first2apply/.env
-ExecStart=/usr/bin/node /opt/first2apply/builds/server-probe/main.js
+# Tolerate stale container if a previous --rm didn't fire (e.g. host reboot).
+ExecStartPre=-/usr/bin/docker rm -f f2a-server-probe
+ExecStart=/usr/bin/docker run --rm --name f2a-server-probe \
+          --env-file /opt/first2apply/.env \
+          --network host \
+          --shm-size=2g \
+          --memory=4g \
+          --cpus=2.0 \
+          ghcr.io/jacobaguon-blip/f2a-server-probe:latest
+ExecStop=/usr/bin/docker stop -t 60 f2a-server-probe
 Restart=on-failure
 RestartSec=10
-# Hardening
 NoNewPrivileges=true
-ProtectSystem=strict
-ReadWritePaths=/opt/first2apply
-ProtectHome=true
 PrivateTmp=true
 
 [Install]

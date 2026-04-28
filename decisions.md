@@ -347,3 +347,19 @@ Branch `feat/pr3-server-probe-impl`. Lib build clean, serverProbe + desktop type
 - `as never` casts in `ServerSupabaseApi` row mappers — type guarantee is informal; revisit when the desktop's `database.types.ts` regen cleans up.
 - `F2A_OWNER_USER_ID` not in REQUIRED env list — pushover silently skipped without it. Document in PR 4 `.env.example`.
 
+
+## 2026-04-28 — PR 4 (Dockerfile + Pi systemd update)
+
+**Scope:** Multi-stage `apps/serverProbe/Dockerfile`, `entrypoint.sh`, `.dockerignore`; updated `deploy/pi/systemd/f2a-server-probe.service` to docker-run form; new `deploy/pi/deploy.sh`; NTP pre-flight prepended to `bootstrap.sh`; Pushover failure alert wrapped around `pg_dump.sh`; missing env vars documented in `.env.example`.
+
+**Decisions:**
+1. **Multi-stage Dockerfile, not symlink shim.** Builder stage runs `pnpm install --frozen-lockfile --filter "first2apply-server-probe..." --filter "@first2apply/scraper..." --filter "@first2apply/core..."` (skips desktopProbe/electron-forge/contentlayer/etc.) then `pnpm build` for the three packages. Runtime stage `COPY --from=builder /app /app` whole — pnpm's `.pnpm`-store symlinks only resolve when the workspace layout is preserved, so cherry-picking files would break resolution. Larger image vs. minimal-prod-deps approach but reproducible from a clean clone with no fragile `@first2apply/*` symlink steps.
+2. **`dumb-init` as PID 1.** Forwards SIGTERM to Xvfb + Electron correctly so `docker stop -t 60` exits cleanly during systemd restart.
+3. **Health-check `start-period=300s`.** Covers cold-start (Electron + Xvfb boot, JobScanner first scan, bootstrap-grace window).
+4. **Drive-by fix: `libraries/core/src/database.types.ts`** had two stray Supabase CLI stdout lines (top-of-file "WARN/Initialising" and tail "A new version… available") that broke `tsc` from a clean build. Pre-existing, blocked Docker build, removed.
+5. **Pushover wrap on `pg_dump.sh`** uses an `EXIT` trap that re-exits with the original `$?`. Honors `F2A_PUSHOVER_MOCK=1` for parity with serverProbe's pushover gating.
+6. **No local Docker test.** Docker daemon not running on the dev Mac during PR 4 work. Pi smoke test deferred — PR 5 (CI) will validate that the Dockerfile builds clean for `linux/arm64`. Branch pushed unblemished; the entrypoint and Dockerfile have been desk-checked but not executed.
+
+**Open follow-ups:**
+- Image size will be larger than ideal (carries unused workspace package.jsons + libraries' src). Acceptable for v1; later: switch to `pnpm deploy --filter` to materialize a self-contained subtree.
+- Auto-regen of `database.types.ts` via `supabase gen types` — the stray CLI noise indicates whoever last ran the regen redirected the wrong stream. Worth a small wrapper script that pipes through `tail -n +1` and validates the output.
