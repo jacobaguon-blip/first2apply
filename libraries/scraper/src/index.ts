@@ -6,3 +6,4 @@ export * from './pushover';
 export * from './notifications/quietHours';
 export * from './notifications/dispatch';
 export * from './jobScanner';
+export * from './health/healthServer';
