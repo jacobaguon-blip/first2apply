@@ -15,7 +15,9 @@
     "prettier": "prettier --check \"src/**/*.{ts,tsx}\"",
     "package": "electron-forge package",
     "make": "electron-forge make --arch=arm64",
-    "release": "npx release-it --ci"
+    "release": "npx release-it --ci",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "BeastX Industries",
@@ -52,7 +54,10 @@
     "@electron-forge/publisher-s3": "^7.10.2",
     "@electron-forge/shared-types": "^7.10.2",
     "@electron/fuses": "^1.8.0",
-    "electron": "39.0.0"
+    "@vitest/expect": "^4.1.5",
+    "electron": "39.0.0",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.5"
   },
   "dependencies": {
     "@first2apply/core": "workspace:*",
