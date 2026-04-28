@@ -10,6 +10,24 @@ ENV_FILE="${F2A_ENV_FILE:-/opt/first2apply/.env}"
 DEST_DIR="${F2A_BACKUP_DIR:-/var/backups/supabase}"
 RETAIN_DAYS=7
 
+# Pushover failure alert. Reads PUSHOVER_{APP_TOKEN,USER_KEY} from env (sourced
+# below from $ENV_FILE). Silent no-op if either is unset, so a fresh box without
+# Pushover wired up still surfaces failures via systemd / journalctl.
+on_exit() {
+  local rc=$?
+  if [ "$rc" -ne 0 ] && [ -n "${PUSHOVER_APP_TOKEN:-}" ] && [ -n "${PUSHOVER_USER_KEY:-}" ] \
+     && [ "${F2A_PUSHOVER_MOCK:-0}" != "1" ]; then
+    curl -s --max-time 10 \
+      --form-string "token=$PUSHOVER_APP_TOKEN" \
+      --form-string "user=$PUSHOVER_USER_KEY" \
+      --form-string "title=f2a pg_dump FAILED" \
+      --form-string "message=pg_dump exited rc=$rc on $(hostname) at $(date -u +%FT%TZ)" \
+      https://api.pushover.net/1/messages.json >/dev/null || true
+  fi
+  exit "$rc"
+}
+trap on_exit EXIT
+
 run() {
   if [ "$APPLY" = "1" ]; then
     echo "[APPLY] $*"; eval "$@"

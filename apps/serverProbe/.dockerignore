@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/build
+**/.next
+**/.nx
+**/.turbo
+**/coverage
+**/__tests__
+**/*.test.ts
+**/*.spec.ts
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+**/*.log
+.DS_Store

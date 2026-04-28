@@ -22,6 +22,14 @@ echo "  apply mode : ${APPLY}  (set F2A_PI_APPLY=1 to mutate)"
 echo "  namespace  : ${NS}"
 echo "  svc user   : ${SVC_USER}"
 
+# 0. NTP pre-flight (must be Step 1 — quiet hours + retention rely on accurate time)
+echo "  [check] NTP synchronized..."
+if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" != "yes" ]; then
+  echo "  [FAIL] NTP not synchronized. Install chrony or enable systemd-timesyncd before re-running."
+  exit 1
+fi
+echo "  [ok] NTP synchronized"
+
 # 1. Docker presence (idempotent check, no install on this run)
 if command -v docker >/dev/null 2>&1; then
   echo "  [ok] docker $(docker --version)"
@@ -64,4 +72,8 @@ if [ -f "$COMPOSE_SRC" ]; then
 fi
 
 echo "===== bootstrap complete (apply=$APPLY) ====="
-echo "Next: review $NS, then run deploy/pi/go-live.sh to enable services."
+echo "Next steps:"
+echo "  1. echo \$PAT | docker login ghcr.io -u <user> --password-stdin"
+echo "  2. bash deploy/pi/deploy.sh"
+echo "  3. sudo systemctl enable --now f2a-server-probe.service"
+echo "  4. Review $NS and run deploy/pi/go-live.sh for the rest of the units."
