@@ -12,11 +12,50 @@
 
 **Out of scope for PR 1:** Migrating the other 5 inline-harness tests in `apps/desktopProbe`. Adding `HtmlDownloader` unit tests. Parser regression tests.
 
-**Key revisions from v1 (devil's advocate round 1):**
+**Key revisions from v1 (devil's advocate round 1) and v1.1 (code review):**
 - C2 fix: vitest config explicitly sets up `vite-tsconfig-paths` so `@/` and `@first2apply/ui` workspace refs resolve.
 - C3 fix: vitest config `include` only the migrated/new tests; `exclude` the legacy inline-harness files until they're migrated.
 - M3 fix: all required mocks pre-baked in Task 4, including `installLinkedInDecorator` and `dispatchPushoverSummary`. No reactive "if it fails, add another mock" steps.
 - L2 fix: removed the inconsistent "verify tsx invocation" step from Task 3.
+- **Code-review C2 fix:** added Task 0 — verify constructor signature + `JobScannerSettings` shape against actual code before writing test mocks. Avoids "tests fail at first run, contributor reactively patches mocks" anti-pattern.
+- **Code-review M5 fix:** Task 10 verification asserts exact test count, not "≥".
+
+---
+
+## Task 0: Verify the existing code shapes that the test mocks assume
+
+Before writing any mocks, read the real code so the mock shapes match by construction. This is the anti-reactive-mock-additions guard.
+
+**Files to read (no edits):**
+- `apps/desktopProbe/src/server/jobScanner.ts:58-110` — constructor destructured params
+- `apps/desktopProbe/src/lib/types.ts` — `JobScannerSettings` type (for `updateSettings()` calls in tests)
+- `apps/desktopProbe/src/server/notifications/quietHours.test.ts` — existing inline-harness test count
+
+**Step 1: Confirm constructor signature**
+
+```bash
+sed -n '58,80p' apps/desktopProbe/src/server/jobScanner.ts
+```
+
+Expected destructured params: `{ logger, supabaseApi, normalHtmlDownloader, incognitoHtmlDownloader, onNavigate, analytics }`. If any are different, update Task 4's `makeMocks()` shape to match exactly.
+
+**Step 2: Confirm `JobScannerSettings`**
+
+```bash
+grep -A20 'export type JobScannerSettings' apps/desktopProbe/src/lib/types.ts
+```
+
+Expected fields used by tests: `cronRule?`, `preventSleep`, `useSound`, `areEmailAlertsEnabled`, `inAppBrowserEnabled`, `pushoverEnabled?`, `pushoverAppToken?`, `pushoverUserKey?`, `isPaused?`. Task 6 + Task 8 use `isPaused`, `pushoverEnabled`, `pushoverAppToken`, `pushoverUserKey`. If any are missing or renamed, update those tasks.
+
+**Step 3: Count quietHours inline tests**
+
+```bash
+grep -cE "^\s*test\(" apps/desktopProbe/src/server/notifications/quietHours.test.ts
+```
+
+Note the count; Task 3's migration must produce the SAME count. Task 10's verification will assert this exact number, not "≥7."
+
+**No commits in Task 0** — this is a read-only verification. Note the values for use in subsequent tasks.
 
 ---
 
@@ -532,7 +571,7 @@ cd /Users/jacobaguon/projects/first2apply
 npx nx run first2apply-desktop:test --reporter verbose
 ```
 
-Expected: 11+ tests PASS.
+Expected: exactly `<quietHours-count-from-Task-0> + 4` tests PASS. With the Task 0 measured count of 7, total = 11. Use exact equality (>= masks off-by-one regressions).
 
 **Step 2: Full project typecheck (no regression)**
 

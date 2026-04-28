@@ -42,9 +42,9 @@ Three layers:
                                   │  health/healthServer │ NEW (small fastify)
                                   │  notifications/{     │
                                   │    dispatch,         │
-                                  │    quietHours,       │
-                                  │    pushover          │
+                                  │    quietHours        │
                                   │  }                   │
+                                  │  pushover            │
                                   │  helpers, types      │
                                   └──────────┬───────────┘
                                              │ DI: BrowserWindow factory,
@@ -158,7 +158,13 @@ Electron/Chromium inside Docker fails its sandbox setup unless one of these is t
 | `--cap-add=SYS_ADMIN` | Sandbox stays enabled | Container has elevated capability |
 | `--no-sandbox` flag in Electron init | No host capability needed | Sandbox disabled (process-level isolation only) |
 
-**Choice for v0:** `--no-sandbox` in the Electron app init. Rationale: Tailscale-only network + dedicated Linux user + dedicated container = process-level isolation is sufficient for our threat model. Avoids granting `SYS_ADMIN` to a long-running container.
+**Choice for v0:** `--no-sandbox` in the Electron app init.
+
+Rationale, with the caveats spelled out honestly:
+- The Tailscale-only network argument addresses *ingress* (no random attacker can reach the Pi). It does NOT address the threat the Chromium sandbox is designed for: *renderer escape from hostile JS loaded from a remote origin*. The scraper's job is to load attacker-controlled HTML/JS from 17 job sites. Sandbox-off + arbitrary remote JS is exactly the configuration the sandbox defends against.
+- Mitigations we accept in lieu of the sandbox: dedicated Linux user (cannot read other users' files), dedicated container (cannot read host filesystem outside `--env-file` and the bind mount), `--memory=4g --cpus=2.0` resource caps (limits a runaway script's blast), no host secrets beyond `.env` (no SSH keys, no broader cloud credentials).
+- Residual risk we accept for v0: a malicious payload from a job board could exfiltrate `.env` contents over the container's outbound HTTPS. Threat assessment: attacker would need to fingerprint our scraper specifically, the rate of malicious JS on legitimate job boards is low, and `.env` rotation is bounded (Pushover keys, OpenAI key, Supabase service-role).
+- **Future hardening path:** `--cap-add=SYS_ADMIN --security-opt seccomp=<tightened-profile>` re-enables the sandbox without giving full host capabilities. Recommended after v0 ships if the renderer-escape threat materializes.
 
 **Critical ordering:** `app.commandLine.appendSwitch('no-sandbox')` MUST be called before `app.whenReady()`. If invoked after, the flag is silently ignored, Chromium fails to set up its sandbox, and the container is unable to render. PR 3's `main.ts` puts the appendSwitch call at the very top, before any other Electron API access. Tested via `--selftest` mode.
 
@@ -197,7 +203,7 @@ In CI workflows the registry path is `ghcr.io/${{ github.repository_owner }}/f2a
 ### 4.5 Pi pre-flight requirements (added to `bootstrap.sh`)
 
 Bootstrap currently only checks docker. Adding:
-- **chronyd or systemd-timesyncd active** — required for quiet-hours correctness. If `timedatectl show -p NTPSynchronized --value` returns false, bootstrap fails loudly **before any mutations**.
+- **NTP check is Step 1 of `bootstrap.sh`, before every other action** (including the docker presence check). `if timedatectl show -p NTPSynchronized --value | grep -q false; then echo "FAIL: NTP not synchronized; install chrony or enable systemd-timesyncd before re-running"; exit 1; fi`. Reason: every later step is a mutation; we never want to enter a half-bootstrapped state with bad time.
 - **Final-step echo: docker login reminder.** Bootstrap prints "Next: `echo $PAT | docker login ghcr.io -u <user> --password-stdin`" so the user doesn't forget. (`--password-stdin` keeps the PAT out of shell history.)
 
 (`/dev/shm` ≥ 2GB pre-flight removed — Docker `--shm-size=2g` carves out a private tmpfs from the kernel regardless of host /dev/shm size, so a host-side check would be misleading.)
@@ -214,7 +220,7 @@ Bootstrap currently only checks docker. Adding:
 - Logs → container stdout → `journalctl -u f2a-server-probe`
 - Failure self-alert: 3 consecutive failed scans → scanner self-pushovers an "I'm stuck" notification using the existing user creds
 - pg-dump timer (already shipped, runs nightly at 03:15) writes to `/opt/first2apply/data/`, 7-day retention. **Failure alert:** PR 4 wraps the existing `pg_dump.sh` to call `dispatchPushoverSummary`-equivalent on non-zero exit (a small inline `curl https://api.pushover.net` shell helper, since the lib isn't in shell path). Without this wrapper the failure is silent — only journalctl shows it.
-- Stuck-tab detection via the `/healthz` indirect signal (see §3.3); explicit BrowserWindow watchdog deferred until the failure mode is observed in practice.
+- Stuck-tab detection: the `/healthz` indirect signal (§3.3) only catches stuck tabs at granularity `2 * cronIntervalMs + 3 * 30s` (e.g., 2h on hourly cron). MTTR for a stuck tab is therefore on the order of hours, not minutes. This is **NOT a real stuck-tab watchdog** — it's a coarse "alive in the last few hours" signal. Direct watchdog (renderer reports liveness to main on a tight timer) is deferred until the failure mode shows up in practice.
 
 ### 4.8 Failure modes & mitigations
 
@@ -257,7 +263,7 @@ Mechanical move. PR 1 tests prove no orchestrator regression.
 
 - Create `libraries/scraper/{src,package.json,tsconfig.json}`
 - Add to `pnpm-workspace.yaml` under existing libraries entry: `'libraries/scraper'`
-- Move 7 files (htmlDownloader, jobScanner, browserHelpers, notifications/{dispatch,quietHours,pushover}, helpers)
+- Move 7 files (htmlDownloader, jobScanner, browserHelpers, pushover, notifications/{dispatch,quietHours}, helpers). Note: `pushover.ts` lives at `apps/desktopProbe/src/server/pushover.ts` (NOT under `notifications/`); the v1 doc claimed otherwise.
 - Define interfaces in `libraries/scraper/src/types.ts` (Section 3.1)
 - Update `apps/desktopProbe` imports
 - Electron-coupled bits become *adapter classes* in `apps/desktopProbe` injected via DI
@@ -281,7 +287,7 @@ Thin Electron shell. Realistic effort: **1.5–2 days** (revised up from "1 day"
   - `--dry-run` — performs a full scrape against cloud Supabase to validate the path, but skips ALL writes (`scanHtmls` upserts, `runPostScanHook`) AND skips notifications. Read-only validation. Used for PR 3 pass condition. The `dryRun: boolean` flag threads through the library's scanner config and is checked at the call sites of `scanHtmls`, `runPostScanHook`, and `dispatchPushoverSummary`.
   - `--scan-once` — full end-to-end one-shot: writes to prod DB, fires real Pushover. Use only when intentionally seeding/testing prod state.
   - `--probe-once` — deprecated alias for `--scan-once`, kept for backwards-compat with the existing scaffold. PR 3 logs a deprecation warning when used.
-- Legacy `F2A_MOCK_SCRAPE=1` env var (used by current `apps/serverProbe/src/main.ts` scaffold for fixture-only mode) is removed in PR 3 — superseded by `--dry-run`. PR 3 commit message calls this out.
+- Legacy `F2A_MOCK_SCRAPE=1` env var (used by current `apps/serverProbe/src/main.ts` scaffold for fixture-only mode): PR 3 keeps it as a recognized env var that emits a `console.warn("F2A_MOCK_SCRAPE is deprecated; use --dry-run flag")` AND maps to `dryRun=true` for one release cycle. Hard removal happens in a follow-up PR after one deploy cycle has shipped. Avoids silent breaking-change for any cron / recon notes / scratch scripts that set it.
 - **Pass condition:** `serverProbe --dry-run` runs end-to-end against the production Supabase account inside Docker (Pi or laptop). No prod data is written. Confirm via `journalctl` log of "would have written N jobs."
 
 ### PR 4 — Dockerfile + Pi systemd unit update
@@ -307,11 +313,16 @@ Production deployment plumbing.
 Gate future PRs on regression tests + image build + runtime smoke.
 
 - New: `.github/workflows/ci.yml`
+- Job pre-steps (every job that needs to build or run linux/arm64 images):
+  - `actions/checkout@v4`
+  - `docker/setup-qemu-action@v3` — registers QEMU binfmt for arm64 emulation on the x86_64 GHA runner. Without this, `--platform linux/arm64 --load` produces an image that errors with `exec format error` on `docker run`.
+  - `docker/setup-buildx-action@v3` — enables `--cache-from type=gha`.
+  - **Alternative:** use `runs-on: ubuntu-22.04-arm` (GitHub now hosts arm64 runners). Native arm64 build is ~5x faster than QEMU; revisit if QEMU build time becomes painful.
 - Jobs:
   - `typecheck`: `pnpm install`, `nx run-many -t typecheck`
   - `test`: `nx run-many -t test --exclude=@first2apply/node-backend,@first2apply/invoice-downloader` (those have `exit 1` noop test scripts; replace or exclude)
-  - `build-server-probe-image`: `docker buildx build --platform linux/arm64 --load -t f2a-server-probe:ci --cache-from type=gha --cache-to type=gha,mode=max .` — gha cache so PR rebuilds reuse Chromium-installing layers (~5min cold → ~30s warm)
-  - `runtime-smoke-server-probe`: `docker run --rm f2a-server-probe:ci /usr/local/bin/entrypoint.sh --selftest` — verifies the image actually boots Xvfb + Electron, exits 0 only if both came up
+  - `build-server-probe-image`: `docker buildx build --platform linux/arm64 --load -t f2a-server-probe:ci --cache-from type=gha --cache-to type=gha,mode=max .` — gha cache so PR rebuilds reuse Chromium-installing layers (~5min cold → ~30s warm with cache hit; full cold + QEMU emulation ~10 min on x86_64 runner).
+  - `runtime-smoke-server-probe`: `docker run --rm f2a-server-probe:ci /usr/local/bin/entrypoint.sh --selftest` — verifies the image actually boots Xvfb + Electron, exits 0 only if both came up. Requires QEMU registered (above).
   - All jobs verify-only on PRs; image push happens only on merges to master via separate `release.yml` (workflow with `permissions: packages: write`)
 - Add `CODEOWNERS` stub
 - Update PR template to require `## Test plan` section

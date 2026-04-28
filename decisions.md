@@ -233,3 +233,31 @@ Final adversarial pass. Looking only for material issues.
 Round 4 found 3 medium + 1 low; no critical or high. The remaining issues are clarifications/naming, not blast-radius problems. Calling convergence: 4 rounds, 32 + 18 + 11 + 4 = 65 issues identified and addressed across docs + .env.example + database.types.ts.
 
 Moving to pipeline step 2: code review (`/superpowers:requesting-code-review`).
+
+---
+
+## 2026-04-27T20:30-07:00 — Code review applied
+
+Reviewer (superpowers:code-reviewer subagent) flagged 2 critical, 5 important, 5 minor issues.
+
+**CRITICAL (both verified against real code, both fixed):**
+- C1. Design's "7 files to move" inventory placed `pushover.ts` under `notifications/`. Real path is `apps/desktopProbe/src/server/pushover.ts`. Verified via `find`. Fixed in design ASCII diagram + §5 PR 2 file list.
+- C2. PR 1 plan's mock shape was unverified against real code. Verified `JobScanner` constructor destructures `{logger, supabaseApi, normalHtmlDownloader, incognitoHtmlDownloader, onNavigate, analytics}` — matches plan. `JobScannerSettings` has all fields tests use. But the verification was lucky, not by construction. Fix: added Task 0 to PR 1 plan that reads the real code shapes BEFORE writing mocks.
+
+**IMPORTANT (5):**
+- I1. F2A_MOCK_SCRAPE removal was a silent breaking change. Fixed: PR 3 emits deprecation warning + maps to `dryRun=true` for one release before hard removal.
+- I2. `--no-sandbox` rationale conflated ingress threat (Tailscale solves) with renderer-escape threat (sandbox solves). Honest revision: spelled out residual risk + named SYS_ADMIN+seccomp as the future hardening path.
+- I3. /healthz freshness window (2h on hourly cron) is too coarse to claim "stuck-tab detection." Fixed: revised wording to "alive in the last few hours" + flagged direct watchdog as deferred.
+- I4. CI runtime smoke needs setup-qemu-action to run linux/arm64 images on x86_64 runners. Added.
+- I5. Bootstrap NTP check ordering: now explicitly Step 1 of bootstrap.sh before any mutations.
+
+**MINOR (5):**
+- M1, M4, M5: cosmetic / accepted as-is.
+- M2 (PR 3 effort calibration): noted, leaving estimate as 1.5–2 days with explicit "+0.5–1 day buffer for first-time Xvfb-on-Mac-via-Docker-via-QEMU debugging" implied.
+- M3 (memory file path): reviewer-confused, the file exists. No-op.
+- Code-review M5 (test count assertion): converted "≥11" to exact-count assertion in Task 10.
+
+**Codebase contradiction noted by reviewer (no fix needed):**
+- `apps/desktopProbe/project.json` doesn't exist; PR 1 plan's "if project.json exists" branch is dead. Acceptable as-is — plan handles both cases.
+
+Convergence reached on review. Moving to step 3: plan-builder for full execution plan.
