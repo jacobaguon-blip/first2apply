@@ -160,7 +160,6 @@ export class JobScanner {
     }
     if (this.isScanning()) {
       this._logger.info('skipping scheduled scan because the scanner is processing other links');
-      this._onScanComplete?.();
       return;
     }
 

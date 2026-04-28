@@ -133,6 +133,11 @@ async function main() {
   });
 
   if (args.mode === 'dry-run' || args.mode === 'scan-once') {
+    const hardExit = setTimeout(() => {
+      logger.error('one-shot exit timeout reached, forcing exit');
+      process.exit(1);
+    }, 60_000);
+    hardExit.unref();
     try {
       await scanner.scanAllLinks();
       logger.info(`one-shot ${args.mode} complete`);
@@ -140,7 +145,9 @@ async function main() {
       logger.error(`one-shot ${args.mode} failed: ${(err as Error).message}`);
     } finally {
       scanner.close();
+      await waitForScansToFinish(scanner);
       await Promise.all([normal.close(), incognito.close()]);
+      clearTimeout(hardExit);
       app.exit(0);
     }
     return;
