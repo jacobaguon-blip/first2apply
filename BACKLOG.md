@@ -12,6 +12,12 @@
 - Auto-apply via Playwright Chrome extension — drive job applications through a Playwright-backed Chrome extension (form fill, upload tailored resume/cover letter, submit).
 - Approve job applications via Pushover — before auto-submit, send a Pushover notification with the tailored resume/cover letter + JD summary; submission only proceeds on user approval.
 - LinkedIn connections CSV import — upload the user's exported LinkedIn connections CSV, parse contacts (name, relationship, company, position), then enrich each row by resolving the company's LinkedIn page and official company website for outreach/networking workflows.
+- Quiet hours: source-grouped summary body — replace the single Pushover summary message with a "5 from LinkedIn – \"Frontend Remote\"\n2 from Indeed – \"Product Designer\"" format in `dispatchPushoverSummary` (libraries/scraper/src/notifications/dispatch.ts).
+- Quiet hours: `pushover_owner_device_id` toggle in settings UI — column already exists in `user_settings`; UI never sets it. Add a "This device sends Pushover notifications" switch to apps/desktopProbe/src/pages/settings.tsx and gate Pushover send in `dispatchPushoverSummary` on a device-id match so only one device per account sends.
+- Quiet hours: "Copy to all days" + "Copy to weekdays" buttons in the schedule editor (apps/desktopProbe/src/pages/settings.tsx).
+- Quiet hours: local-file settings cache — read `user_settings` once and persist to JSON in `app.getPath('userData')`; honor cached settings when Supabase is unreachable so the Pi keeps respecting quiet hours offline.
+- Quiet hours: per-device desktop-summary notification — track inside→outside transitions in the probe and fire one local Electron Notification at window end summarizing new jobs that arrived during the window.
+- Quiet hours: investigate prior master reset that lost two implementations (feat/quiet-hours and PR #9 backlog/02-quiet-hours-v2) — both still recoverable as dangling commits per `git fsck --no-reflogs --lost-found`. Tag them as branches before they get garbage-collected.
 
 ## Bugs
 
