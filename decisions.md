@@ -116,3 +116,48 @@ Rules: no permission gates, fix-and-continue, log to terminal + decisions.md.
 **Initial state:** Branch `feat/server-probe-design`, PR #17 open with design doc, PR 1 plan uncommitted at `docs/plans/2026-04-27-pr1-regression-net.md`. Untracked: `.merge-train-log.md`, `recon-build-notes.md` (legacy artifacts, ignored for now).
 
 **Decision:** First commit the PR 1 plan to the same branch + PR (PR #17 expands to "design + PR 1 plan"). Then begin devil's advocate loop.
+
+---
+
+## 2026-04-27T19:35-07:00 — Devil's advocate round 1 (32 issues, applying fixes)
+
+Adversarial review of `docs/plans/2026-04-27-server-probe-design.md` + `docs/plans/2026-04-27-pr1-regression-net.md` + the surrounding code (`apps/desktopProbe/src/server/jobScanner.ts`, the existing inline-harness tests, `deploy/pi/.env.example`, the systemd units).
+
+### CRITICAL (3)
+- **C1.** `deploy/pi/.env.example` does not include `F2A_PUSHOVER_MOCK=0` toggle the runtime checks (`apps/desktopProbe/src/server/pushover.ts:78`). Without it the server defaults to mock send and "production Pushover" silently no-ops. Fix: add the toggle.
+- **C2.** PR 1 vitest config does not resolve `@/` path alias or `@first2apply/ui` workspace ref. JobScanner imports both at module top — vitest config will fail at module load. Fix: add `vite-tsconfig-paths` plugin or explicit aliases.
+- **C3.** PR 1 plan claims "vitest discovers the 6 existing `*.test.ts` files." But those files use a hand-rolled inline-harness pattern that runs assertions at module top-level. When vitest imports them it executes those assertions immediately; failed asserts may throw at import and break the whole run. Fix: explicitly include only the migrated/new tests in `vitest.config.ts`.
+
+### HIGH (9)
+- **H1.** Electron + Xvfb in Docker on aarch64 hits Chromium sandbox / D-Bus issues unless either `--cap-add=SYS_ADMIN` or `--no-sandbox` is set. Design doesn't specify. Real failure: container starts, Chromium errors "Failed to move to new namespace," scraper never works. Fix: document the flag and document why.
+- **H2.** Design says `/healthz` is exposed by the scanner on `127.0.0.1:7878`. The scanner has no HTTP server today. New component, not in any PR. Fix: specify which PR adds it, where it lives (library vs server-only adapter), and what library it uses.
+- **H3.** `HtmlDownloader` is the highest-coupling-to-Electron file PR 2 moves, and PR 1 has no regression net for it. Fix: either add a thin DI integration test in PR 1 or document the mitigation explicitly (PR 2 verifies via end-to-end desktop scan post-refactor).
+- **H4.** Quiet hours rely on accurate time. If `chronyd` (or systemd-timesyncd) isn't running on the Pi, time can drift hours. No pre-flight check. Fix: add to bootstrap.sh.
+- **H5.** GHCR pull credentials use a personal access token. Modern GH PATs default to ≤1y expiry; when it expires `docker pull` fails silently in the systemd context. No rotation procedure. Fix: document rotation + recommend classic PAT (no expiry) or fine-grained scoped to read:packages.
+- **H6.** CI plan only validates that the Dockerfile builds (`buildx --no-push`). A working build can produce a runtime-broken image (missing entrypoint perms, lib version mismatch). Fix: add `docker run --rm <image> /opt/first2apply/entrypoint.sh --selftest` step that exits 0 only if Electron/Xvfb start successfully.
+- **H7.** Some existing nx projects have `test` scripts that hardcode `exit 1` ("Error: no test specified" && exit 1, e.g. `@first2apply/node-backend`). `nx run-many -t test` will fail forever on those. Fix: enumerate broken targets and either replace with `echo 'noop'` or `--exclude` them in CI.
+- **H8.** Design says `BrowserWindow` is "offscreen." Electron has two distinct concepts: `show: false` (hidden, still uses compositor) vs `webPreferences.offscreen: true` (true offscreen, async render only, some sites detect it). The current `HtmlDownloader` uses `show: false` (hence the Xvfb dependency). Fix: state which mode and why.
+- **H9.** PR 3 effort estimate ("~1 day") is optimistic for a from-scratch Electron main process with new lifecycle, IPC-free wiring, env-driven settings, file logger, health endpoint, and Xvfb integration. Fix: bump to 1.5–2 days; acknowledge the unknown.
+
+### MEDIUM (10)
+- **M1.** Service-role key vs anon-key + refresh path is ambiguous in design. Fix: state explicitly that v0 uses service-role only; no refresh logic.
+- **M2.** "Multi-account is mechanical" — `node-cron` schedules are process-global. Multi-account-in-one-process means N timers competing for same shared scrape pool. Per-process or worker-thread isolation is the real path. Fix: rename to "deferred, design TBD."
+- **M3.** PR 1 plan misses several mocks (`installLinkedInDecorator`, `dispatchPushoverSummary` import after `vi.mock`, `@/lib/analytics` alias). Fix: pre-bake them all in Task 4 instead of reactively in Step 3.
+- **M4.** Container stop timeout `-t 30` could cut pg_dump mid-stream. Fix: increase to 120s, or run pg_dump in its own non-container systemd unit (it already is — `f2a-pg-dump.service` is separate, so this concern is mostly NA. Document.)
+- **M5.** `:latest` tag with no `:previous` retention means broken push has no easy rollback. Fix: deploy.sh tags incoming as `:previous` before pulling new.
+- **M6.** No `docker image prune` in deploy.sh. Cache grows unbounded. Fix: add prune to deploy.sh.
+- **M7.** No staging Supabase project. Every PR/CI run hits prod. Fix: document acceptance + name a future improvement.
+- **M8.** `database.types.ts` is stale relative to today's `'deleted'` enum migration. Fix: regenerate and commit.
+- **M9.** `pnpm-workspace.yaml` change for `libraries/scraper` not specified. Fix: name the entry.
+- **M10.** Env layer (apps/desktopProbe/src/env.ts) is not specified for serverProbe. Fix: state that serverProbe gets its own thin env module reading from `process.env`.
+
+### LOW (6)
+- **L1.** `--network host` widens attack surface but defensible (Tailscale-only). Document.
+- **L2.** PR 1 plan Task 3 has a confused step about verifying tsx invocation then immediately skipping. Remove.
+- **L3.** `--rm` on container destroys non-stdout container logs. Stdout via journald is fine. Document.
+- **L4.** TLS posture: Supabase SDK is HTTPS; no plaintext. Document.
+- **L5.** Standby compose can drift from cloud schema if not maintained. Document watch-out.
+- **L6.** `libraries/ui` is misnamed (holds non-UI Supabase API). Note as future cleanup.
+
+### Action: applying fixes now
+Editing both plan files + bootstrap + .env.example + decisions.md, then running round 2.

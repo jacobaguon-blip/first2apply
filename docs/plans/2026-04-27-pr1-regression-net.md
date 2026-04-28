@@ -1,4 +1,4 @@
-# PR 1 — Regression Net Implementation Plan
+# PR 1 — Regression Net Implementation Plan (v2)
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -6,11 +6,17 @@
 
 **Architecture:** Vitest as the runner (modern, ESM-native, fast). The library extraction in PR 2 needs tests as a tripwire — if `JobScanner.scanLinks()` behaves identically before and after the move, we know the refactor is safe. We test at the orchestrator level, not the parser level (parsers live in Supabase edge functions, not in the desktop code being moved).
 
-**Tech Stack:** vitest, tsx, TypeScript, the existing Electron + Node setup in `apps/desktopProbe`. No new transpiler, no new runner conflicts.
+**Tech Stack:** vitest, vite-tsconfig-paths (resolves the `@/` path alias and workspace refs), tsx, TypeScript, the existing Electron + Node setup in `apps/desktopProbe`.
 
-**Branching:** Work on a fresh branch off `master`. PR 17 (the design doc) does not need to be merged first — this PR has no dependency on it.
+**Branching:** Work on a fresh branch off `master`. PR #17 (the design doc) does not need to be merged first — this PR has no dependency on it.
 
-**Out of scope for PR 1:** Migrating the other 5 inline-harness tests in `apps/desktopProbe` (they protect code that stays in the desktop app, not code being moved). Adding `HtmlDownloader` unit tests (would require pre-injecting `BrowserWindow`, which is PR 2's seam work). Parser regression tests (those live in `apps/backend` and are already partially covered by `jobListParser.test.ts`).
+**Out of scope for PR 1:** Migrating the other 5 inline-harness tests in `apps/desktopProbe`. Adding `HtmlDownloader` unit tests. Parser regression tests.
+
+**Key revisions from v1 (devil's advocate round 1):**
+- C2 fix: vitest config explicitly sets up `vite-tsconfig-paths` so `@/` and `@first2apply/ui` workspace refs resolve.
+- C3 fix: vitest config `include` only the migrated/new tests; `exclude` the legacy inline-harness files until they're migrated.
+- M3 fix: all required mocks pre-baked in Task 4, including `installLinkedInDecorator` and `dispatchPushoverSummary`. No reactive "if it fails, add another mock" steps.
+- L2 fix: removed the inconsistent "verify tsx invocation" step from Task 3.
 
 ---
 
@@ -18,6 +24,7 @@
 
 **Files:**
 - Modify: `apps/desktopProbe/package.json`
+- Modify: `pnpm-lock.yaml`
 
 **Step 1: Branch off master**
 
@@ -28,33 +35,34 @@ git pull --ff-only origin master
 git checkout -b chore/pr1-regression-net
 ```
 
-**Step 2: Install vitest**
+**Step 2: Install vitest + path-alias plugin**
 
 ```bash
-pnpm add -D --filter first2apply-desktop vitest @vitest/expect
+pnpm add -D --filter first2apply-desktop vitest @vitest/expect vite-tsconfig-paths
 ```
 
-Expected: `package.json` gains `"vitest": "^X.Y.Z"` and `"@vitest/expect": "^X.Y.Z"` under `devDependencies`. Lockfile updated.
+If pnpm filter syntax fails (workspace not configured for that filter): fall back to `cd apps/desktopProbe && pnpm add -D vitest @vitest/expect vite-tsconfig-paths`.
+
+Expected: `package.json` gains the three deps under `devDependencies`. Lockfile updated.
 
 **Step 3: Verify install**
 
 ```bash
-cd apps/desktopProbe
-npx vitest --version
+cd apps/desktopProbe && npx vitest --version
 ```
 
-Expected: prints a version number (e.g. `2.x.y`). No errors.
+Expected: prints a version number. No errors.
 
 **Step 4: Commit**
 
 ```bash
 git add apps/desktopProbe/package.json pnpm-lock.yaml
-git commit -m "chore(desktopProbe): add vitest as test runner"
+git commit -m "chore(desktopProbe): add vitest test runner deps"
 ```
 
 ---
 
-## Task 2: Create vitest config
+## Task 2: Create vitest config with explicit include/exclude + path resolution
 
 **Files:**
 - Create: `apps/desktopProbe/vitest.config.ts`
@@ -65,22 +73,39 @@ Create `apps/desktopProbe/vitest.config.ts`:
 
 ```ts
 import { defineConfig } from 'vitest/config';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
+  plugins: [tsconfigPaths()],
   test: {
-    // Match every *.test.ts under src/ — eventually replaces the
-    // hand-rolled tsx-run inline-harness pattern.
-    include: ['src/**/*.test.ts'],
+    // ONLY pick up tests that have been migrated to vitest. The legacy
+    // hand-rolled inline-harness tests (e.g. tailored/builder.test.ts,
+    // masterContent/parse.test.ts, connections/connections.test.ts,
+    // ai/budget.test.ts, keywords/keywords.test.ts) run assertions at
+    // module top level and would corrupt the vitest run on import.
+    // Migrate those files in their own follow-up PR.
+    include: [
+      'src/server/notifications/quietHours.test.ts',
+      'src/server/__tests__/**/*.test.ts',
+    ],
+    exclude: [
+      'node_modules/**',
+      'src/server/tailored/**',
+      'src/server/masterContent/**',
+      'src/server/connections/**',
+      'src/server/ai/**',
+      'src/server/keywords/**',
+    ],
     environment: 'node',
     globals: false,
-    // Electron-coupled modules will be mocked at the test level; we never
-    // import the real `electron` package in unit tests.
+    // Electron-coupled modules are mocked via vi.mock() in test files;
+    // never imported as the real `electron` package.
     server: { deps: { external: ['electron'] } },
   },
 });
 ```
 
-**Step 2: Wire the test script**
+**Step 2: Wire test scripts**
 
 Modify `apps/desktopProbe/package.json` `scripts` section, add:
 
@@ -89,37 +114,37 @@ Modify `apps/desktopProbe/package.json` `scripts` section, add:
     "test:watch": "vitest"
 ```
 
-**Step 3: Verify the runner picks up files**
+**Step 3: Verify the runner picks up the right files**
 
 ```bash
 cd apps/desktopProbe && npx vitest run --reporter verbose 2>&1 | head -30
 ```
 
-Expected: vitest discovers the 6 existing `*.test.ts` files. Most likely all FAIL (they use the inline-harness pattern, not `describe`/`it`). That's expected — we're going to migrate one.
+Expected: vitest finds 1 test file (`quietHours.test.ts`) and reports it has no `describe`/`it` blocks (yet — Task 3 migrates it). The 5 excluded inline-harness files are NOT in the run.
+
+If vitest tries to load any of the excluded files: revisit the `exclude` glob.
 
 **Step 4: Commit**
 
 ```bash
 git add apps/desktopProbe/vitest.config.ts apps/desktopProbe/package.json
-git commit -m "chore(desktopProbe): add vitest config + npm test script"
+git commit -m "chore(desktopProbe): vitest config with path resolution + scoped include"
 ```
 
 ---
 
 ## Task 3: Migrate `quietHours.test.ts` to vitest
 
-The other 5 inline-harness tests stay as-is for now — they test code that doesn't move in PR 2.
-
 **Files:**
 - Modify: `apps/desktopProbe/src/server/notifications/quietHours.test.ts`
 
-**Step 1: Read the existing file**
+**Step 1: Read the existing file to enumerate test cases**
 
 ```bash
 cat apps/desktopProbe/src/server/notifications/quietHours.test.ts
 ```
 
-Note the test cases the inline harness covers — list them. Examples might include "outside window returns false," "inside window returns true," "grace minutes extension," etc.
+List every `test('name', fn)` call from the inline harness. Per `MONDAY-STATUS`, the file claims 7 tests.
 
 **Step 2: Rewrite using vitest's `describe` / `it` / `expect`**
 
@@ -133,10 +158,14 @@ import { isInQuietHours } from './quietHours';
 
 describe('isInQuietHours', () => {
   // (one it() per test case from the inline harness, identical assertions)
+  it('returns false outside any window', () => {
+    // ... preserved assertion
+  });
+  // ...
 });
 ```
 
-**Critical:** preserve every existing assertion. Don't drop any. Don't add new ones.
+**Critical:** preserve every existing assertion. Don't drop any. Don't add new ones (those go in a separate PR).
 
 **Step 3: Run only this file**
 
@@ -144,17 +173,9 @@ describe('isInQuietHours', () => {
 cd apps/desktopProbe && npx vitest run src/server/notifications/quietHours.test.ts --reporter verbose
 ```
 
-Expected: all migrated tests PASS. Same count as the original inline harness reported (per `MONDAY-STATUS`, this was "7/7").
+Expected: all migrated tests PASS, count matches the inline harness's original "7/7."
 
-**Step 4: Verify the original tsx invocation still works**
-
-```bash
-cd apps/desktopProbe && npx tsx src/server/notifications/quietHours.test.ts
-```
-
-Wait — actually the inline harness is GONE after Step 2. Skip this verification; the migration is complete.
-
-**Step 5: Commit**
+**Step 4: Commit**
 
 ```bash
 git add apps/desktopProbe/src/server/notifications/quietHours.test.ts
@@ -163,14 +184,14 @@ git commit -m "test(quietHours): migrate from inline harness to vitest"
 
 ---
 
-## Task 4: Sketch the `JobScanner` test scaffolding
+## Task 4: `JobScanner` test scaffolding (full mock set, no reactive additions)
 
-Before writing the actual orchestration tests, build the mock infrastructure they need. This is one Task because it's all type-mechanical and the file isn't useful without all of it.
+Build the mock infrastructure with all required stubs upfront. The mock-everything-Electron pattern is required because `JobScanner` imports the real `electron` and `installLinkedInDecorator` modules at module load.
 
 **Files:**
 - Create: `apps/desktopProbe/src/server/__tests__/jobScanner.test.ts`
 
-**Step 1: Build the test file with mock factories**
+**Step 1: Write the test file with the full mock set**
 
 Create `apps/desktopProbe/src/server/__tests__/jobScanner.test.ts`:
 
@@ -178,8 +199,7 @@ Create `apps/desktopProbe/src/server/__tests__/jobScanner.test.ts`:
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Job, Link } from '@first2apply/core';
 
-// JobScanner imports `electron` at module load (for `Notification`, `app`).
-// Stub it out before importing JobScanner.
+// JobScanner imports `electron` at module load (Notification, app, powerSaveBlocker).
 vi.mock('electron', () => ({
   Notification: vi.fn().mockImplementation(() => ({
     on: vi.fn(),
@@ -194,6 +214,18 @@ vi.mock('electron', () => ({
   },
 }));
 
+// browserHelpers.installLinkedInDecorator is called by the JobScanner
+// constructor and accesses Electron Session APIs. Stub it.
+vi.mock('../browserHelpers', () => ({
+  installLinkedInDecorator: vi.fn(),
+}));
+
+// dispatchPushoverSummary is the network-side notifier. Mock so tests don't
+// fire real Pushover, and so we can assert it was called with the right shape.
+vi.mock('../notifications/dispatch', () => ({
+  dispatchPushoverSummary: vi.fn().mockResolvedValue({ kind: 'sent' }),
+}));
+
 // Stub fs so the constructor doesn't read settings.json off real disk.
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs');
@@ -201,12 +233,14 @@ vi.mock('fs', async () => {
     ...actual,
     existsSync: vi.fn().mockReturnValue(false),
     readFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
   };
 });
 
+// Imports below this line resolve through the mocks above.
 import { JobScanner } from '../jobScanner';
+import { dispatchPushoverSummary } from '../notifications/dispatch';
 
-// Minimal mocks for the constructor params.
 function makeMocks() {
   const logger = {
     info: vi.fn(),
@@ -261,19 +295,11 @@ describe('JobScanner', () => {
 cd apps/desktopProbe && npx vitest run src/server/__tests__/jobScanner.test.ts --reporter verbose
 ```
 
-Expected: test file is recognized, "no tests" or all-pass with zero tests. No module-load errors.
+Expected: vitest reports the file loaded with 0 tests. No module-load errors.
 
-**Step 3: If it fails on `installLinkedInDecorator`** (which the JobScanner constructor calls), add another mock:
+If a different module fails to resolve at import (e.g. `@/lib/analytics`): the `vite-tsconfig-paths` plugin should handle it. If not, double-check `apps/desktopProbe/tsconfig.json` has the `paths` entry that defines `@/*` and that the plugin is active.
 
-```ts
-vi.mock('../browserHelpers', () => ({
-  installLinkedInDecorator: vi.fn(),
-}));
-```
-
-Re-run.
-
-**Step 4: Commit**
+**Step 3: Commit**
 
 ```bash
 git add apps/desktopProbe/src/server/__tests__/jobScanner.test.ts
@@ -284,8 +310,6 @@ git commit -m "test(jobScanner): scaffold mocks for orchestration tests"
 
 ## Task 5: Test — `scanLinks` happy path
 
-Capture the orchestration: given N links, the scanner calls `loadUrl` once per link, ships the HTML to `scanHtmls`, calls `runPostScanHook`, and fires `showNewJobsNotification` for any new jobs.
-
 **Files:**
 - Modify: `apps/desktopProbe/src/server/__tests__/jobScanner.test.ts`
 
@@ -294,16 +318,27 @@ Capture the orchestration: given N links, the scanner calls `loadUrl` once per l
 ```ts
 it('scanLinks: happy path calls downloader, scanHtmls, postScanHook in order', async () => {
   const links: Link[] = [
-    { id: 1, url: 'https://example.com/jobs', title: 'Test', user_id: 'u1', site_id: 1, created_at: '2026-01-01', scrape_failure_count: 0, last_scraped_at: '2026-01-01', scrape_failure_email_sent: false, scan_frequency: 'hourly', filter_profile_id: null },
+    {
+      id: 1, url: 'https://example.com/jobs', title: 'Test', user_id: 'u1',
+      site_id: 1, created_at: '2026-01-01', scrape_failure_count: 0,
+      last_scraped_at: '2026-01-01', scrape_failure_email_sent: false,
+      scan_frequency: 'hourly', filter_profile_id: null,
+    },
   ];
   const newJobs: Job[] = [
-    { id: 100, user_id: 'u1', externalId: 'ext-1', externalUrl: 'https://example.com/job/1', siteId: 1, title: 'Engineer', companyName: 'Acme', tags: [], status: 'new', labels: [], created_at: new Date(), updated_at: new Date() },
+    {
+      id: 100, user_id: 'u1', externalId: 'ext-1',
+      externalUrl: 'https://example.com/job/1', siteId: 1,
+      title: 'Engineer', companyName: 'Acme', tags: [],
+      status: 'new', labels: [], created_at: new Date(), updated_at: new Date(),
+    },
   ];
 
-  // Set up: downloader returns one batch of new jobs; scanHtmls returns them
-  mocks.normalHtmlDownloader.loadUrl.mockImplementation(async ({ callback }: { callback: (args: { html: string; webPageRuntimeData: unknown; maxRetries: number; retryCount: number }) => Promise<unknown> }) => {
-    return await callback({ html: '<html></html>', webPageRuntimeData: {}, maxRetries: 3, retryCount: 0 });
-  });
+  mocks.normalHtmlDownloader.loadUrl.mockImplementation(
+    async ({ callback }: { callback: (args: { html: string; webPageRuntimeData: unknown; maxRetries: number; retryCount: number }) => Promise<unknown> }) => {
+      return await callback({ html: '<html></html>', webPageRuntimeData: {}, maxRetries: 3, retryCount: 0 });
+    },
+  );
   mocks.supabaseApi.scanHtmls.mockResolvedValue({ newJobs, parseFailed: false });
   mocks.supabaseApi.listJobs.mockResolvedValueOnce({ jobs: newJobs, hasMore: false, nextPageToken: null });
 
@@ -314,45 +349,41 @@ it('scanLinks: happy path calls downloader, scanHtmls, postScanHook in order', a
   expect(mocks.supabaseApi.scanHtmls).toHaveBeenCalledTimes(1);
   expect(mocks.supabaseApi.runPostScanHook).toHaveBeenCalledTimes(1);
   expect(mocks.analytics.trackEvent).toHaveBeenCalledWith('scan_links_start', { links_count: 1 });
-  expect(mocks.analytics.trackEvent).toHaveBeenCalledWith('scan_links_complete', expect.objectContaining({ links_count: 1 }));
+  expect(mocks.analytics.trackEvent).toHaveBeenCalledWith(
+    'scan_links_complete',
+    expect.objectContaining({ links_count: 1 }),
+  );
 });
 ```
 
-**Step 2: Run it**
+**Step 2: Run + commit**
 
 ```bash
 cd apps/desktopProbe && npx vitest run src/server/__tests__/jobScanner.test.ts --reporter verbose -t "happy path"
+git add -u && git commit -m "test(jobScanner): scanLinks happy-path orchestration"
 ```
 
-Expected: PASS. If it fails, debug — common issues:
-- Constructor reads from settings file: confirm `fs.existsSync` mock returns false
-- `installLinkedInDecorator` complaint: confirm the mock added in Task 4 step 3
-- TypeScript errors on `mocks` shape: cast as needed (`as any` is acceptable in tests where type cosmetics don't add safety)
-
-**Step 3: Commit**
-
-```bash
-git add apps/desktopProbe/src/server/__tests__/jobScanner.test.ts
-git commit -m "test(jobScanner): scanLinks happy-path orchestration"
-```
+Expected: PASS.
 
 ---
 
 ## Task 6: Test — `scanLinks` is paused
 
-**Step 1: Add the test**
+**Step 1: Add**
 
 ```ts
 it('scanLinks: returns early when scanner is paused via settings', async () => {
   const scanner = new JobScanner(mocks);
-  // settings.isPaused not exposed publicly; use updateSettings (the public path)
   scanner.updateSettings({ ...scanner.getSettings(), isPaused: true });
 
   await scanner.scanLinks({ links: [], sendNotification: false });
 
   expect(mocks.normalHtmlDownloader.loadUrl).not.toHaveBeenCalled();
   expect(mocks.supabaseApi.scanHtmls).not.toHaveBeenCalled();
-  expect(mocks.analytics.trackEvent).toHaveBeenCalledWith('scan_skipped_paused', expect.any(Object));
+  expect(mocks.analytics.trackEvent).toHaveBeenCalledWith(
+    'scan_skipped_paused',
+    expect.any(Object),
+  );
 });
 ```
 
@@ -363,8 +394,6 @@ npx vitest run src/server/__tests__/jobScanner.test.ts --reporter verbose -t "pa
 git add -u && git commit -m "test(jobScanner): paused short-circuit"
 ```
 
-Expected: PASS.
-
 ---
 
 ## Task 7: Test — `scanLinks` skips concurrent invocation
@@ -373,7 +402,6 @@ Expected: PASS.
 
 ```ts
 it('scanLinks: skips when a scan is already running', async () => {
-  // Set up a long-running first scan we never await
   let resolveFirst: () => void = () => {};
   mocks.normalHtmlDownloader.loadUrl.mockImplementation(
     () => new Promise<unknown[]>((resolve) => { resolveFirst = () => resolve([]); }),
@@ -385,13 +413,12 @@ it('scanLinks: skips when a scan is already running', async () => {
     sendNotification: false,
   });
 
-  // While first is in flight, second should bail
   await scanner.scanAllLinks();
   expect(mocks.normalHtmlDownloader.loadUrl).toHaveBeenCalledTimes(1);
 
   resolveFirst();
   await firstScan;
-});
+}, 5000);
 ```
 
 **Step 2: Run + commit**
@@ -401,40 +428,28 @@ npx vitest run src/server/__tests__/jobScanner.test.ts --reporter verbose -t "co
 git add -u && git commit -m "test(jobScanner): concurrent-scan suppression"
 ```
 
-Expected: PASS. If it hangs: there's likely a missing await in the test; debug with `--reporter verbose` and add a timeout: `it('...', async () => {...}, { timeout: 5000 })`.
-
 ---
 
 ## Task 8: Test — `showNewJobsNotification` routes through `dispatchPushoverSummary`
 
-This test locks in PR #14's wiring (the dispatch path we shipped earlier today).
+The mock for `dispatchPushoverSummary` was pre-baked in Task 4. Just assert against it.
 
 **Files:**
 - Modify: `apps/desktopProbe/src/server/__tests__/jobScanner.test.ts`
 
-**Step 1: Mock the dispatch module**
-
-At the top of the file (with the other `vi.mock` calls):
+**Step 1: Add the test**
 
 ```ts
-vi.mock('../notifications/dispatch', () => ({
-  dispatchPushoverSummary: vi.fn().mockResolvedValue({ kind: 'sent' }),
-}));
-```
-
-**Step 2: Add the test**
-
-```ts
-import { dispatchPushoverSummary } from '../notifications/dispatch';
-
-// ... inside describe block ...
 it('showNewJobsNotification: routes pushover via dispatchPushoverSummary when configured', async () => {
   const newJobs: Job[] = [
-    { id: 100, user_id: 'u1', externalId: 'e', externalUrl: 'https://x', siteId: 1, title: 'Engineer', companyName: 'Acme', tags: [], status: 'new', labels: [], created_at: new Date(), updated_at: new Date() },
+    {
+      id: 100, user_id: 'u1', externalId: 'e',
+      externalUrl: 'https://x', siteId: 1, title: 'Engineer',
+      companyName: 'Acme', tags: [], status: 'new', labels: [],
+      created_at: new Date(), updated_at: new Date(),
+    },
   ];
-  // Stub user + creds
   mocks.supabaseApi.getUser.mockResolvedValue({ user: { id: 'u1' } });
-  // Need to seed pushover config via settings
   const scanner = new JobScanner(mocks);
   scanner.updateSettings({
     ...scanner.getSettings(),
@@ -445,7 +460,7 @@ it('showNewJobsNotification: routes pushover via dispatchPushoverSummary when co
 
   scanner.showNewJobsNotification({ newJobs });
 
-  // dispatchPushoverSummary is fired async (then-chain). Wait a tick.
+  // dispatchPushoverSummary fires async via .then chain. Wait a tick.
   await new Promise((r) => setImmediate(r));
 
   expect(dispatchPushoverSummary).toHaveBeenCalledTimes(1);
@@ -461,40 +476,37 @@ it('showNewJobsNotification: routes pushover via dispatchPushoverSummary when co
 });
 ```
 
-**Step 3: Run + commit**
+**Step 2: Run + commit**
 
 ```bash
 npx vitest run src/server/__tests__/jobScanner.test.ts --reporter verbose -t "dispatchPushoverSummary"
 git add -u && git commit -m "test(jobScanner): pushover routes through dispatchPushoverSummary"
 ```
 
-Expected: PASS.
-
-If env-var override path (`ENV.pushover.appToken`) is consulted before settings, the test will need to mock `../env` too. The current code in `jobScanner.ts:412-414` is `ENV.pushover.appToken || this._settings.pushoverAppToken` — so settings is the fallback. With ENV unmocked in tests, `ENV.pushover.appToken` is `undefined`, settings wins, behavior matches.
+If the test depends on `ENV.pushover.appToken` being unset (`jobScanner.ts:412-414` reads `ENV.pushover.appToken || this._settings.pushoverAppToken`): the `apps/desktopProbe/src/env.ts` module reads `process.env` at import time. Since the test environment has no `PUSHOVER_APP_TOKEN` env var, `ENV.pushover.appToken` is `undefined`, settings wins. No additional mock needed.
 
 ---
 
 ## Task 9: Wire nx target
 
-The `nx run @first2apply/desktopProbe:test` command should run vitest. The desktop project may need a target definition.
-
-**Files:**
-- Inspect: `apps/desktopProbe/project.json` (or `nx.json`)
-
-**Step 1: Find the project config**
+**Step 1: Inspect the nx config**
 
 ```bash
-find apps/desktopProbe -maxdepth 2 -name "project.json" -o -name "package.json" | head
-nx show project first2apply-desktop --json 2>/dev/null | head -40
+cd /Users/jacobaguon/projects/first2apply
+ls apps/desktopProbe/project.json 2>&1
 ```
 
-Expected: existing project config. Note whether targets are defined in `project.json` or inferred from `package.json` scripts.
+If `project.json` exists, check whether it has explicit `test` target. If not (most likely — nx infers from package.json scripts), the `"test": "vitest run"` we added in Task 2 is automatically picked up.
 
-**Step 2: Add `test` target if needed**
+**Step 2: Verify nx picks it up**
 
-If the existing config infers targets from `package.json` (most likely): the `"test": "vitest run"` script we added in Task 2 is automatically picked up. No further wiring needed.
+```bash
+npx nx run first2apply-desktop:test 2>&1 | tail -20
+```
 
-If `project.json` exists and has explicit targets: add a `test` target there:
+Expected: vitest runs, prints PASS for all migrated + new tests. Total count: 7 (quietHours) + 4 (new JobScanner) = 11.
+
+**Step 3: If `project.json` has explicit targets without `test`, add it**
 
 ```json
 "test": {
@@ -503,41 +515,32 @@ If `project.json` exists and has explicit targets: add a `test` target there:
 }
 ```
 
-**Step 3: Verify nx picks it up**
+Commit if changed:
 
 ```bash
-cd /Users/jacobaguon/projects/first2apply
-npx nx run first2apply-desktop:test 2>&1 | tail -20
-```
-
-Expected: vitest runs, prints PASS for all migrated + new tests. Test count should match: 7 (quietHours, originally) + 4 (new JobScanner tests) = 11.
-
-**Step 4: Commit if changes were made**
-
-```bash
-git add -u && git commit -m "build(nx): wire desktopProbe test target to vitest" || true
+git add -u && git commit -m "build(nx): wire desktopProbe test target to vitest"
 ```
 
 ---
 
 ## Task 10: Final verification + push + PR
 
-**Step 1: Run the full project test suite**
+**Step 1: Full project test suite**
 
 ```bash
 cd /Users/jacobaguon/projects/first2apply
 npx nx run first2apply-desktop:test --reporter verbose
 ```
 
-Expected: all green. Note exact pass count for the PR description.
+Expected: 11+ tests PASS.
 
-**Step 2: Run full project typecheck (no regression)**
+**Step 2: Full project typecheck (no regression)**
 
 ```bash
 npx nx run first2apply-desktop:typecheck
 ```
 
-Expected: clean — no new TS errors. If there are: fix before pushing.
+Expected: clean.
 
 **Step 3: Push the branch**
 
@@ -553,7 +556,7 @@ gh pr create --base master --title "chore(test): vitest setup + JobScanner regre
 First of five PRs implementing the server-probe design (#17). Establishes the regression net for PR 2's `libraries/scraper` extraction.
 
 - Adds vitest as the test runner in `apps/desktopProbe` (no test runner existed; six `*.test.ts` files were orphaned, executed via ad-hoc `tsx` invocations).
-- Migrates `quietHours.test.ts` from its hand-rolled inline-harness pattern to vitest. The other 5 inline-harness tests stay as-is — they protect code that doesn't move in PR 2.
+- Migrates `quietHours.test.ts` from its hand-rolled inline-harness pattern to vitest. The other 5 inline-harness tests stay as-is (excluded via vitest config) — they protect code that doesn't move in PR 2.
 - Adds 4 new `JobScanner` orchestration tests covering scanLinks happy-path, paused short-circuit, concurrent-scan suppression, and the PR #14 pushover dispatch routing.
 - Wires `nx run first2apply-desktop:test` to vitest.
 
@@ -570,9 +573,9 @@ EOF
 )"
 ```
 
-**Step 5: Update memory**
+**Step 5: Update memory after PR merges**
 
-After the PR is merged, append to `~/.claude/projects/-Users-jacobaguon-Projects-first2apply/memory/project_session_bootstrap.md`:
+Append to `~/.claude/projects/-Users-jacobaguon-Projects-first2apply/memory/project_session_bootstrap.md`:
 
 ```
 - PR 1 (regression net) merged 2026-04-XX — vitest in desktopProbe, JobScanner tests as tripwire for PR 2.
