@@ -147,7 +147,7 @@ git push <branch>     ───►    docker buildx
   `libnss3 libxss1 libasound2 libatk-bridge2.0-0 libgbm1 fonts-liberation xvfb`
 - Copies built `libraries/{scraper,core}` and `apps/serverProbe`
 - Entrypoint: `entrypoint.sh` starts `Xvfb :99 -screen 0 1280x720x24 &`, exports `DISPLAY=:99`, then execs `electron /app/main.js`. Includes `--selftest` short-circuit (used by CI runtime smoke).
-- `HEALTHCHECK CMD wget -qO- http://127.0.0.1:7878/healthz || exit 1`
+- `HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=300s CMD wget -qO- http://127.0.0.1:7878/healthz || exit 1`. The 5-minute `--start-period` covers container boot + first scan completion before docker starts marking unhealthy attempts as failures.
 
 ### 4.3 Container runtime flags (Chromium sandbox)
 
@@ -177,6 +177,8 @@ ExecStart=/usr/bin/docker run --rm --name f2a-server-probe \
           --env-file /opt/first2apply/.env \
           --network host \
           --shm-size=2g \
+          --memory=4g \
+          --cpus=2.0 \
           ghcr.io/jacobaguon-blip/f2a-server-probe:latest
 ExecStop=/usr/bin/docker stop -t 60 f2a-server-probe
 Restart=on-failure
@@ -272,10 +274,13 @@ Thin Electron shell. Realistic effort: **1.5–2 days** (revised up from "1 day"
 - Add real deps: `electron` (pinned to the same major version as `apps/desktopProbe` to keep the Chromium engine consistent across desktop and server), `@first2apply/scraper`, `@first2apply/core`, `@supabase/supabase-js`
 - Add `libraries/scraper/src/health/healthServer.ts` (§3.3) — used by serverProbe, not desktop
 - Adapter implementations: env-driven `ISettingsProvider`, console+file `ILogger`, no-op `IAnalyticsClient`, hidden-window `IBrowserWindowFactory`
-- `app.commandLine.appendSwitch('no-sandbox')` per §4.3
+- `app.commandLine.appendSwitch('no-sandbox')` per §4.3 (placement above all other Electron API access)
 - Local Xvfb test target: `xvfb-run electron .` on a Linux box; on Mac, run inside the Docker image via `docker run -it`
-- `--probe-once` mode preserved; add `--selftest` mode (verifies Electron + Xvfb start, exits 0)
-- **Pass condition:** `serverProbe --probe-once` runs end-to-end against the production Supabase account inside Docker (Pi or laptop) — pollutes prod DB with one scan, accepted
+- Three CLI modes:
+  - `--selftest` — verifies Electron + Xvfb start, exits 0. No supabase calls. Used by CI runtime smoke.
+  - `--dry-run` — performs a full scrape against cloud Supabase to validate the path, but skips ALL writes (`runPostScanHook`, `scanHtmls` upserts) AND skips notifications. Read-only validation. Used for PR 3 pass condition.
+  - `--probe-once` — full end-to-end one-shot: writes to prod DB, fires real Pushover. Use only when intentionally seeding/testing prod state.
+- **Pass condition:** `serverProbe --dry-run` runs end-to-end against the production Supabase account inside Docker (Pi or laptop). No prod data is written. Confirm via `journalctl` log of "would have written N jobs."
 
 ### PR 4 — Dockerfile + Pi systemd unit update
 

@@ -193,3 +193,24 @@ Re-reading the v2 docs adversarially with fresh eyes.
 - **R2-L2.** Migration ordering risk: if PR 1 merges and PR 2 stalls, master is in "vitest configured, legacy tests excluded" state. No regression but document.
 
 ### Action: applying fixes inline.
+
+---
+
+## 2026-04-27T20:05-07:00 — Devil's advocate round 3
+
+### HIGH (4)
+- **R3-H1.** `--probe-once` against prod cloud DB (a) creates new `jobs` rows in user's account, (b) fires real Pushover (if F2A_PUSHOVER_MOCK=0). Design says "accepted v0 risk" but doesn't gate the test mode. Fix: add a `--dry-run` flag to serverProbe that skips writes + skips notifications, used for verification runs. Keep `--probe-once` as the "I really mean it" mode.
+- **R3-H2.** Dockerfile `HEALTHCHECK` doesn't specify `--start-period`. Default 0s means healthcheck starts firing immediately, and the bootstrap grace window in the endpoint logic doesn't help if Docker has already marked the container unhealthy. Fix: `HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=300s`.
+- **R3-H3.** `ENV.pushover.appToken` precedence in `jobScanner.ts:412-414` reads from desktop's env module. After PR 2's library extraction, the lib doesn't have access to env. Fix: pushover creds must come through `ISettingsProvider` (each app's adapter merges env+settings).
+- **R3-H4.** Container has no `--memory` / `--cpus` limits. Chromium leak + Pi running other services = OOM risk. Fix: `--memory=4g --cpus=2.0` in systemd unit.
+
+### MEDIUM (7)
+- **R3-M1.** GHA cache (`type=gha`) requires action permissions setup. Plan must specify the cache action wiring.
+- **R3-M2.** `linux/arm64` builds on GHA amd64 runners use QEMU. Even with cache, cold builds 5-10 min. Document the slowness; consider a follow-up to use BuildJet/depot if it becomes painful.
+- **R3-M3.** Log rotation/level config absent. If serverProbe runs DEBUG, journald fills fast. Fix: config-driven log level (default INFO, env override).
+- **R3-M4.** Settings refresh from Supabase `user_settings` is on a 5-min tick. Up to 5 min lag when user changes quiet hours via desktop. Acceptable v0 but flag.
+- **R3-M5.** No volume mount for `/opt/first2apply/logs/`. If serverProbe ever writes file-side logs, they're container-ephemeral. Add mount or document "stdout-only logging."
+- **R3-M6.** Bootstrap grace window unbounded (`2 * cronIntervalMs`). If cron is hourly, healthz lies for 2h on container start. Cap at `min(2 * cronIntervalMs, 10 * 60 * 1000)`.
+- **R3-M7.** PR 1 plan Task 9 assumes `project.json` exists. Verify nx config shape; handle the "no project.json, only package.json" case.
+
+### Action: applying fixes inline.
