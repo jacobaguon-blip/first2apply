@@ -8,7 +8,7 @@ import os from 'os';
 
 import { IAnalyticsClient } from '../lib/analytics';
 import { F2aAutoUpdater } from './autoUpdater';
-import { JobScanner } from './jobScanner';
+import { JobScanner } from '@first2apply/scraper';
 import { logger } from './logger';
 import { OverlayBrowserView } from './overlayBrowserView';
 import { getStripeConfig } from './stripeConfig';

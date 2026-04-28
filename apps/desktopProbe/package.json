@@ -61,6 +61,7 @@
   },
   "dependencies": {
     "@first2apply/core": "workspace:*",
+    "@first2apply/scraper": "workspace:*",
     "@first2apply/ui": "workspace:*"
   }
 }

@@ -9,14 +9,21 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+import { JobScanner } from '@first2apply/scraper';
+import { promiseAllSequence } from '@first2apply/scraper';
+
+import { installLinkedInDecorator } from './server/browserHelpers';
 import { AmplitudeAnalyticsClient } from './server/amplitude';
 import { F2aAutoUpdater } from './server/autoUpdater';
-import { promiseAllSequence } from './server/helpers';
 import { HtmlDownloader } from './server/htmlDownloader';
-import { JobScanner } from './server/jobScanner';
 import { logger } from './server/logger';
 import { OverlayBrowserView } from './server/overlayBrowserView';
 import { initRendererIpcApi } from './server/rendererIpcApi';
+import {
+  ElectronNativeNotifier,
+  ElectronSleepPreventer,
+  FileSettingsProvider,
+} from './server/scraperAdapters';
 import { getSupabaseConfig } from './server/supabaseConfig';
 import { TrayMenu } from './server/trayMenu';
 
@@ -247,7 +254,7 @@ async function bootstrap() {
     htmlDownloaders.forEach((htmlDownloader) => htmlDownloader.init());
     const [normalHtmlDownloader, incognitoHtmlDownloader] = htmlDownloaders;
 
-    // init the job scanner
+    // init the job scanner with desktop adapters
     jobScanner = new JobScanner({
       logger,
       supabaseApi,
@@ -255,6 +262,15 @@ async function bootstrap() {
       incognitoHtmlDownloader,
       onNavigate: navigate,
       analytics,
+      sessionDecorator: (session) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        installLinkedInDecorator(session as any);
+      },
+      nativeNotifier: new ElectronNativeNotifier(logger),
+      sleepPreventer: new ElectronSleepPreventer(logger),
+      settingsProvider: new FileSettingsProvider(logger),
+      isExternallyPaused: () => ENV.pauseScans,
+      pushoverEnv: ENV.pushover,
     });
 
     // init the renderer IPC API

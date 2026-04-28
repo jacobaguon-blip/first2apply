@@ -3,7 +3,7 @@ import { BrowserWindow, Session } from 'electron';
 import { backOff } from 'exponential-backoff';
 
 import { consumeRuntimeData } from './browserHelpers';
-import { sleep, waitRandomBetween } from './helpers';
+import { sleep, waitRandomBetween } from '@first2apply/scraper';
 import { ILogger } from './logger';
 import { WorkerQueue } from './workerQueue';
 

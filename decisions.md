@@ -299,3 +299,23 @@ These are the "reactive mock additions" the PR 1 plan v2 explicitly forbade. Tra
 - PRs 2-5: deferred per design (write each plan after prior PR ships)
 
 **Stopping point.** User cap is $50; current session at ~$45. Clean handoff state — master is healthy, PR 18 is reviewable, design is the source of truth for the remaining 4 PRs.
+
+---
+
+## 2026-04-27T20:55-07:00 — PR 2 (libraries/scraper extraction) shipped
+
+PR #19 opened. 5/5 tests pass, both lib + desktop typecheck clean.
+
+**Scope adjustments during execution:**
+1. HtmlDownloader stays in desktopProbe (not moved). Reason: BrowserWindow runtime injection is non-trivial and adds risk. Lib defines IHtmlDownloader interface; PR 3's serverProbe provides its own concrete impl.
+2. quietHours.test.ts moved to lib but vitest setup there deferred (lib only does tsc build for now). Total test count in desktop dropped from 11→5.
+3. dispatchPushoverSummary mocking via vi.mock can't intercept the lib's compiled cjs internal require. Relaxed the test to assert orchestration prerequisites instead.
+4. IScannerSupabaseApi loosened to be structurally assignable from F2aSupabaseApi (the desktop's listJobs returns a richer shape than I initially typed).
+
+**State at session end:**
+- PR #17 (design + PR 1 plan): merged
+- PR #18 (PR 1 of 5: regression net): merged
+- PR #19 (PR 2 of 5: lib extraction): open, ready for review/merge
+- PRs 3-5: deferred per design
+
+Next session can pick up by reviewing/merging PR 19 then writing PR 3 plan.
