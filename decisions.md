@@ -363,3 +363,24 @@ Branch `feat/pr3-server-probe-impl`. Lib build clean, serverProbe + desktop type
 **Open follow-ups:**
 - Image size will be larger than ideal (carries unused workspace package.jsons + libraries' src). Acceptable for v1; later: switch to `pnpm deploy --filter` to materialize a self-contained subtree.
 - Auto-regen of `database.types.ts` via `supabase gen types` — the stray CLI noise indicates whoever last ran the regen redirected the wrong stream. Worth a small wrapper script that pipes through `tail -n +1` and validates the output.
+
+---
+
+## 2026-04-28T10:35-06:00 — PR 5 (CI + release workflows) shipped
+
+Branch `feat/pr5-ci`. Server-probe project complete: 5 PRs merged.
+
+**Scope adjustment during execution:** narrowed CI typecheck + test to server-probe + libs (Option 4) instead of `nx run-many -t typecheck/test` across all projects.
+
+Why: `@first2apply/ui:build` and `@first2apply/backend:typecheck` fail on master with cascading "type X not assignable to never" errors. Root cause: hand-written `DbSchema` (in `@first2apply/core/types.ts`) doesn't satisfy supabase-js's `GenericTable` constraint (Row shapes lack `Record<string, unknown>` index signature). Newer supabase-js versions tightened the constraint; workspace also resolves four different supabase-js versions (2.39, 2.45, 2.76, 2.95). A real generated `Database` type already exists in `database.types.ts` but isn't referenced. User confirmed: ship CI for what works now, follow up on the Supabase types refactor separately.
+
+**Concrete CI scope:**
+- typecheck: `nx run-many --projects=@first2apply/core,@first2apply/scraper,first2apply-server-probe`
+- test: `cd apps/desktopProbe && npx vitest run` (the JobScanner regression tests from PR 1)
+- build-image + runtime-smoke: server-probe Docker build + `--selftest` run
+
+**Drive-by:** `apps/nodeBackend` and `apps/invoiceDownloader` test scripts changed from `exit 1` to noop echo. Not strictly needed for Option 4, but the `exit 1` footgun would burn anyone who later does `nx run-many -t test`.
+
+**Follow-up plan written:** `docs/plans/2026-04-28-unify-supabase-types.md` — covers DbSchema → Database migration, supabase-js version pinning, and CI scope expansion to ui + backend.
+
+**State at session end:** PR 5 (#TBD) opened. After merge, server-probe is ready for manual Pi go-live (not a PR — user runs `deploy.sh` on the Pi themselves per design §5.Post-merge).
