@@ -35,8 +35,8 @@ Deno.serve(async (req) => {
 
     const mailer = new MailersendMailer(
       env.mailerSendApiKey ?? throwError('Mailersend API key is missing'),
-      'contact@first2apply.com',
-      'First 2 Apply',
+      env.mailerFromEmail,
+      env.mailerFromName,
     );
 
     logger.info(`running post scan hook ${JSON.stringify(body)}  ...`);
