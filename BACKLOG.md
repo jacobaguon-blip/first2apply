@@ -12,7 +12,7 @@
 - Auto-apply via Playwright Chrome extension — drive job applications through a Playwright-backed Chrome extension (form fill, upload tailored resume/cover letter, submit).
 - Approve job applications via Pushover — before auto-submit, send a Pushover notification with the tailored resume/cover letter + JD summary; submission only proceeds on user approval.
 - LinkedIn connections CSV import — upload the user's exported LinkedIn connections CSV, parse contacts (name, relationship, company, position), then enrich each row by resolving the company's LinkedIn page and official company website for outreach/networking workflows.
-- Tailscale on both Macs to make household deploys travel-proof — currently `deploy-to-her.sh` relies on `Jacobs-MacBook-Pro-2.local` (mDNS/LAN-only), so deploys break when either Mac is off the home Wi-Fi. Install Tailscale on both, switch `TARGET` to the Tailscale hostname. ~10 min, free. (H3 from 2026-04-28 devil's advocate audit.)
+- Tailscale on both Macs to make household deploys travel-proof. **Scripts done** (`deploy-to-her.sh` now reads `~/.f2a/deploy.config` with a TARGETS array, probes Tailscale-first then `.local` fallback). **Remaining manual:** install Tailscale on her Mac per `apps/desktopProbe/packagers/household/TAILSCALE_SETUP.md` (she signs in once with the same identity used on yours). After that, dry-run from any network should resolve the Tailscale hostname.
 
 ## Bugs
 
