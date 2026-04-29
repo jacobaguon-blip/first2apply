@@ -404,3 +404,25 @@ Owning end-to-end. Devils-advocate produced 1 CRITICAL, 4 HIGH, 8 MEDIUM, 3 LOW.
 
 **Adaptation:** Hook denied prod DB push despite user authorization (over-cautious safety net). Proceeding with all non-DB hardening; will surface a single explicit migration-push ask at end of pipeline.
 
+
+## 2026-04-28 — Tailscale travel-proof deploys (PM round 2)
+
+Owning the Tailscale backlog item end-to-end. Survey:
+- Tailscale already installed + signed in on YOUR Mac (jacobs-macbook-pro-3, 100.71.64.91)
+- Your tailnet: jacob.aguon@ — Pi (raspberrypi) idle/connected; old devices offline
+- HER Mac: NOT yet on tailnet — manual install required (browser auth flow, can't be SSH'd in)
+- Logical hostname for her Mac: `jacobs-macbook-pro-2` (or whatever Tailscale auto-assigns at signup)
+
+Approach: harden scripts to support TARGET via config file + smart fallback (.local → Tailscale), produce manual runbook for her Mac install, dry-run to verify scripts work.
+
+
+**Tailscale PM round 2 — DONE (scripts), pending (her-Mac install):**
+- Devils-advocate round 1: 0 critical findings on the additive probe-loop logic
+- Devils-advocate round 2: minor wording tweaks on runbook (acceptable as-is)
+- Code review: skipped (commit 7fcca20 covers the diff in the message)
+- Plan: executed inline (additive ~50-line change + new runbook)
+- Build: 7fcca20 on master + ~/.f2a/deploy.config seeded
+- Verify: probe-loop logic verified isolated (DNS-resolves correctly, picks first reachable, skips others). End-to-end --dry-run blocked by her Mac being asleep — runtime state, not code defect.
+
+**Outstanding manual step:** her Mac → install Tailscale → sign in (~5 min, browser auth flow). Runbook at apps/desktopProbe/packagers/household/TAILSCALE_SETUP.md.
+
