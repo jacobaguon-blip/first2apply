@@ -301,6 +301,32 @@ export async function updateReview({
 }
 
 /**
+ * Upsert the master resume or master cover letter for the current user's account.
+ */
+export async function upsertMasterContent({
+  kind,
+  content,
+  filename,
+}: {
+  kind: 'resume' | 'cover_letter';
+  content: unknown;
+  filename: string | null;
+}): Promise<unknown> {
+  return await _mainProcessApiCall('upsert-master-content', { kind, content, filename });
+}
+
+/**
+ * Get the master resume or master cover letter for the current user's account, or null if not yet uploaded.
+ */
+export async function getMasterContent({
+  kind,
+}: {
+  kind: 'resume' | 'cover_letter';
+}): Promise<{ content_jsonb: unknown; uploaded_filename: string | null; updated_at: string } | null> {
+  return await _mainProcessApiCall('get-master-content', { kind });
+}
+
+/**
  * Get a job by id.
  */
 export async function getJobById(jobId: number): Promise<Job> {
