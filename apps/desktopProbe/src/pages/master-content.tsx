@@ -3,8 +3,9 @@
 
 import { Button } from '@first2apply/ui';
 import { Label } from '@first2apply/ui';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
+import { upsertMasterContent, getMasterContent } from '../lib/electronMainSdk';
 import { DefaultLayout } from './defaultLayout';
 
 type Section = 'resume' | 'cover_letter';
@@ -16,6 +17,21 @@ export function MasterContentPage() {
   const [filename, setFilename] = useState<string | null>(null);
   const [status, setStatus] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [resume, cover] = await Promise.all([
+          getMasterContent({ kind: 'resume' }),
+          getMasterContent({ kind: 'cover_letter' }),
+        ]);
+        if (resume?.content_jsonb) setResumeJson(JSON.stringify(resume.content_jsonb, null, 2));
+        if (cover?.content_jsonb) setCoverJson(JSON.stringify(cover.content_jsonb, null, 2));
+      } catch (e) {
+        setStatus({ kind: 'err', msg: e instanceof Error ? e.message : String(e) });
+      }
+    })();
+  }, []);
 
   const onFile = async (f: File) => {
     setStatus(null);
@@ -40,10 +56,8 @@ export function MasterContentPage() {
       const raw = tab === 'resume' ? resumeJson : coverJson;
       const parsed = JSON.parse(raw);
       if (parsed.version !== 1) throw new Error('JSON must include "version": 1');
-      // TODO(monday): wire to electronMainSdk.upsertMasterContent({ kind: tab, content: parsed, filename }).
-      // eslint-disable-next-line no-console
-      console.info('[master-content] save (stub)', { kind: tab, filename, parsed });
-      setStatus({ kind: 'ok', msg: 'Saved (stub) — persistence wired Monday.' });
+      await upsertMasterContent({ kind: tab, content: parsed, filename });
+      setStatus({ kind: 'ok', msg: 'Saved.' });
     } catch (e) {
       setStatus({ kind: 'err', msg: e instanceof Error ? e.message : String(e) });
     } finally {
