@@ -177,17 +177,11 @@ export function initRendererIpcApi({
   ipcMain.handle('get-user-review', async () => _apiCall(async () => supabaseApi.getUserReview()));
 
   ipcMain.handle('upsert-master-content', async (event, { kind, content, filename }) =>
-    _apiCall(async () => {
-      const data = await supabaseApi.upsertMasterContent({ kind, content, filename });
-      return { data };
-    }),
+    _apiCall(() => supabaseApi.upsertMasterContent({ kind, content, filename })),
   );
 
   ipcMain.handle('get-master-content', async (event, { kind }) =>
-    _apiCall(async () => {
-      const data = await supabaseApi.getMasterContent({ kind });
-      return { data };
-    }),
+    _apiCall(() => supabaseApi.getMasterContent({ kind })),
   );
 
   ipcMain.handle('update-user-review', async (event, { id, title, description, rating }) =>
