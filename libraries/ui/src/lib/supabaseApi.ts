@@ -547,11 +547,12 @@ export class F2aSupabaseApi {
     } = await this._supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    const { data: membership } = await this._supabase
+    const { data: membership, error: memberErr } = await this._supabase
       .from('account_members')
       .select('account_id')
       .eq('user_id', user.id)
       .maybeSingle()
+    if (memberErr) throw memberErr
     if (!membership) return null
 
     const table =

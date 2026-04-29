@@ -10,9 +10,9 @@ function makeStubSupabase(opts: {
   const calls: { table: string; op: string; args: unknown }[] = [];
   const builder = (table: string) => ({
     select: (cols: string) => ({
-      eq: (_col: string, _val: string) => ({
+      eq: (col: string, val: string) => ({
         maybeSingle: async () => {
-          calls.push({ table, op: 'select', args: { cols } });
+          calls.push({ table, op: 'select', args: { cols, eq: { col, val } } });
           if (table === 'account_members') {
             return { data: opts.accountId ? { account_id: opts.accountId } : null, error: null };
           }
@@ -81,5 +81,29 @@ describe('F2aSupabaseApi master content', () => {
     const api = new F2aSupabaseApi(supabase as never);
     const result = await api.getMasterContent({ kind: 'resume' });
     expect(result).toBeNull();
+  });
+
+  it('getMasterContent reads from the right table filtered by account_id', async () => {
+    const seeded = {
+      content_jsonb: { version: 1 },
+      uploaded_filename: null,
+      updated_at: '2026-01-01T00:00:00Z',
+    };
+    const { supabase, calls } = makeStubSupabase({
+      userId: 'u1',
+      accountId: 'a1',
+      selectResult: seeded,
+    });
+    const api = new F2aSupabaseApi(supabase as never);
+    const result = await api.getMasterContent({ kind: 'cover_letter' });
+    const selectCall = calls.find(
+      (c) => c.op === 'select' && c.table === 'account_master_cover_letter',
+    );
+    expect(selectCall).toBeDefined();
+    expect(selectCall?.table).toBe('account_master_cover_letter');
+    const args = selectCall?.args as { eq: { col: string; val: string } };
+    expect(args.eq.col).toBe('account_id');
+    expect(args.eq.val).toBe('a1');
+    expect(result).toEqual(seeded);
   });
 });
