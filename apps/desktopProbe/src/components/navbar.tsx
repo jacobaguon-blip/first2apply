@@ -1,6 +1,7 @@
 import {
   ChatBubbleIcon,
   Crosshair2Icon,
+  FileTextIcon,
   GearIcon,
   HomeIcon,
   MagnifyingGlassIcon,
@@ -35,6 +36,11 @@ export function Navbar() {
       name: 'AI Filters',
       path: '/filters',
       icon: <Crosshair2Icon className="h-7 w-7" />,
+    },
+    {
+      name: 'Master Content',
+      path: '/master-content',
+      icon: <FileTextIcon className="h-7 w-7" />,
     },
     {
       name: 'Feedback',
