@@ -3,11 +3,16 @@
 # and triggers the remote apply-update.sh over SSH.
 #
 # Usage:
-#   TARGET="jacobaguon@Jacobs-MacBook-Pro-2.local" \
-#     bash deploy-to-her.sh
-#   bash deploy-to-her.sh --dry-run
+#   bash deploy-to-her.sh                  # uses ~/.f2a/deploy.config
+#   bash deploy-to-her.sh --dry-run        # preflight checks only, no push
+#   TARGET="user@host" bash deploy-to-her.sh  # one-off override
 #
-# Override RELEASE_DIR if your stage path differs (default: ~/f2a-releases/latest).
+# Config file (~/.f2a/deploy.config) — shell-style assignments, e.g.:
+#   TARGETS=("jacobaguon@jacobs-macbook-pro-2" "jacobaguon@Jacobs-MacBook-Pro-2.local")
+#   RELEASE_DIR="$HOME/f2a-releases/latest"
+# Multiple TARGETS are tried in order; first one that responds wins.
+# This lets you list a Tailscale hostname first (travel-proof) and a .local
+# hostname second (LAN fallback) without touching the script.
 set -euo pipefail
 
 DRY_RUN=0
@@ -15,7 +20,27 @@ if [ "${1:-}" = "--dry-run" ]; then
   DRY_RUN=1
 fi
 
-: "${TARGET:?Set TARGET, e.g. user@host.local}"
+CONFIG_FILE="$HOME/.f2a/deploy.config"
+if [ -f "$CONFIG_FILE" ]; then
+  # shellcheck source=/dev/null
+  source "$CONFIG_FILE"
+fi
+
+# If TARGET wasn't set via env or config, but TARGETS array was, probe each
+# in order and pick the first reachable one.
+SSH_OPTS=(-o ConnectTimeout=5 -o BatchMode=yes)
+if [ -z "${TARGET:-}" ] && [ "${#TARGETS[@]:-0}" -gt 0 ]; then
+  for candidate in "${TARGETS[@]}"; do
+    echo "Probing $candidate ..."
+    if ssh "${SSH_OPTS[@]}" "$candidate" 'echo ok' >/dev/null 2>&1; then
+      TARGET="$candidate"
+      echo "Selected $TARGET"
+      break
+    fi
+  done
+fi
+
+: "${TARGET:?No reachable TARGET. Set TARGET=user@host or populate TARGETS=(...) in $CONFIG_FILE}"
 
 RELEASE_DIR="${RELEASE_DIR:-$HOME/f2a-releases/latest}"
 REMOTE_APPLY='$HOME/.f2a/apply-update.sh'
