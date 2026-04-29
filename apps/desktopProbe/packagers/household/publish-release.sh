@@ -24,10 +24,24 @@ bash "$APP_DIR/scripts/kill-dev.sh"
 # trap ensures restore runs even if the build crashes.
 ENV_FILE="$APP_DIR/.env"
 ENV_BACKUP="$APP_DIR/.env.publish-backup"
+
+# Recovery: if a previous run was SIGKILL'd between scrub and restore, the
+# backup will exist on entry. Restore it before doing anything else so we
+# don't compound the damage.
+if [ -f "$ENV_BACKUP" ]; then
+  echo "Found stale .env backup from a previous crashed run — restoring." >&2
+  mv "$ENV_BACKUP" "$ENV_FILE"
+fi
+
 if [ -f "$ENV_FILE" ]; then
   cp "$ENV_FILE" "$ENV_BACKUP"
   trap 'mv "$ENV_BACKUP" "$ENV_FILE" 2>/dev/null || true' EXIT
-  sed -i '' 's/^PUSHOVER_USER_KEY=.*/PUSHOVER_USER_KEY=/' "$ENV_FILE"
+  # Match unquoted, single-quoted, and double-quoted values.
+  sed -i '' -E "s/^PUSHOVER_USER_KEY=([\"']?)[^\"']*([\"']?)$/PUSHOVER_USER_KEY=/" "$ENV_FILE"
+  if grep -q "^PUSHOVER_USER_KEY=." "$ENV_FILE"; then
+    echo "ERROR: PUSHOVER_USER_KEY scrub failed — refusing to ship a build with personal key baked in" >&2
+    exit 1
+  fi
 fi
 
 echo "Building $APP_NAME $VERSION (arm64)..."

@@ -384,3 +384,23 @@ Why: `@first2apply/ui:build` and `@first2apply/backend:typecheck` fail on master
 **Follow-up plan written:** `docs/plans/2026-04-28-unify-supabase-types.md` — covers DbSchema → Database migration, supabase-js version pinning, and CI scope expansion to ui + backend.
 
 **State at session end:** PR 5 (#TBD) opened. After merge, server-probe is ready for manual Pi go-live (not a PR — user runs `deploy.sh` on the Pi themselves per design §5.Post-merge).
+
+## 2026-04-28 — Household deploy pipeline (PM mode)
+
+Owning end-to-end. Devils-advocate produced 1 CRITICAL, 4 HIGH, 8 MEDIUM, 3 LOW. Applying all addressable issues autonomously.
+
+**Blocker (C1):** `ensure_personal_account()` trigger uses `new.id` (bigint) where `new.user_id` (uuid) is required. Every signup fails with "database error saving new user." Migration `20260428200000_fix_ensure_personal_account.sql` written; pushing to hosted DB now.
+
+**Sprint 2 — autonomy:** H1 (`open -a` over SSH fails) → switching to `launchctl asuser`. H2 (.env scrub trap fragility) → adding entry-time backup detection + wider sed regex.
+
+**Sprint 3 — travel-proof:** H3 (Tailscale) requires user action on both Macs. Skipping for this pipeline; documenting as follow-up.
+
+**Sprint 4 — hardening:** M3 (atomic rsync via tmp+rename), M8 (backup last-known-good before swap), L3 (deploy log on her Mac), M4 (sed handles quoted .env values).
+
+**Skipping:** H4 (her pubkey → your authorized_keys) — this is the *pull* model fix; we're on push now, so her keychain reaching yours doesn't matter. The relevant key direction is YOUR ssh key → her authorized_keys, which is already working via your shared keychain. Will harden by dropping ed25519 pubkey explicitly.
+
+**Skipping:** M7 (close Supabase signups) — defer until after wife successfully signs up.
+
+
+**Adaptation:** Hook denied prod DB push despite user authorization (over-cautious safety net). Proceeding with all non-DB hardening; will surface a single explicit migration-push ask at end of pipeline.
+
