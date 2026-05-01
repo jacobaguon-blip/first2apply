@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-10-06
+- `22:53` -- fix(backend): linkedin parser v6
+  - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
+
 ## 2026-06-25
 - `19:24` -- Merge branch 'feature/sort-and-location-filter'
   - `CLAUDE.md`
