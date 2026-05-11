@@ -19,6 +19,12 @@ export const plugins = [
     'MEZMO_API_KEY',
     'AMPLITUDE_API_KEY',
   ]),
+  // Pi probe HTTP endpoint — optional at build time; renderer falls back to
+  // local scanner when these are unset or the Pi is unreachable.
+  new webpack.EnvironmentPlugin({
+    F2A_PROBE_URL: null,
+    F2A_PROBE_SECRET: null,
+  }),
   new CopyWebpackPlugin({
     patterns: [{ from: path.join(__dirname, 'images'), to: 'images' }],
   }),
