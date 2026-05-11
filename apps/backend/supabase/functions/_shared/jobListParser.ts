@@ -147,8 +147,13 @@ export async function parseJobsListUrl({
   // dependencies
   context: EdgeFunctionAuthorizedContext;
 }) {
+  // Callers (scan-urls, create-link) are responsible for ensuring `user` is
+  // populated — scan-urls synthesizes one from the link owner when invoked
+  // with service-role, so a null here is a programming bug, not a runtime
+  // service-role case.
+  const effectiveUser = context.user ?? throwError('jobListParser: context.user is null');
   const { hasCustomJobsParsing } = await checkUserSubscription({
-    userId: context.user.id,
+    userId: effectiveUser.id,
     ...context,
   });
 
@@ -157,7 +162,7 @@ export async function parseJobsListUrl({
 
   if (site.provider === SiteProvider.custom && !hasCustomJobsParsing) {
     context.logger.info(
-      `User ${context.user.id} tried to parse a custom job site without having the required subscription.`,
+      `User ${effectiveUser.id} tried to parse a custom job site without having the required subscription.`,
     );
     // don't throw an error here, just return no jobs
     return { jobs: [], site, parseFailed: false };
@@ -170,6 +175,7 @@ export async function parseJobsListUrl({
     webPageRuntimeData,
     url,
     ...context,
+    user: effectiveUser,
   });
 
   const parseFailed = !listFound || (elementsCount > 0 && jobs.length === 0);

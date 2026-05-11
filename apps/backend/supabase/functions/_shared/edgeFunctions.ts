@@ -14,7 +14,10 @@ export type EdgeFunctionAnonymousContext = {
   env: First2ApplyBackendEnv;
 };
 export type EdgeFunctionAuthorizedContext = Omit<EdgeFunctionAnonymousContext, 'user'> & {
-  user: User; // non-optional when checkAuthorization is true
+  // May be null when the caller used a service-role JWT (probe / cron / Pi
+  // control-server). In that case the function is responsible for deriving
+  // the effective user from request payload (e.g. links[i].user_id).
+  user: User | null;
 };
 
 /**
@@ -67,17 +70,29 @@ export async function getEdgeFunctionContext({
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: userData, error: getUserError } = await supabaseClient.auth.getUser();
-    if (getUserError) {
-      throw new Error(getUserError.message);
-    }
+    // Detect service-role JWT (probe / cron / control-server callers). The
+    // service-role token has `role: service_role` and no `sub` claim, so
+    // auth.getUser() returns "invalid claim: missing sub claim". In that case
+    // we leave `user` null and require the caller to derive the effective
+    // user from request payload (e.g. links[i].user_id in scan-urls).
+    const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+    const isServiceRole = decodeJwtRole(bearerToken) === 'service_role';
 
-    user = {
-      id: userData?.user?.id ?? '',
-      email: userData?.user?.email ?? '',
-    };
-    logger.addMeta('user_id', user?.id ?? '');
-    logger.addMeta('user_email', user?.email ?? '');
+    if (!isServiceRole) {
+      const { data: userData, error: getUserError } = await supabaseClient.auth.getUser();
+      if (getUserError) {
+        throw new Error(getUserError.message);
+      }
+
+      user = {
+        id: userData?.user?.id ?? '',
+        email: userData?.user?.email ?? '',
+      };
+      logger.addMeta('user_id', user?.id ?? '');
+      logger.addMeta('user_email', user?.email ?? '');
+    } else {
+      logger.addMeta('caller', 'service_role');
+    }
   }
 
   return {
@@ -87,4 +102,24 @@ export async function getEdgeFunctionContext({
     supabaseAdminClient,
     env,
   };
+}
+
+/**
+ * Decode the `role` claim from a Supabase JWT without verifying the
+ * signature. Safe here because Supabase's gateway has already validated the
+ * token via `verify_jwt = true` before our function ran. Returns null on any
+ * decode failure so callers fall back to the user-token path.
+ */
+function decodeJwtRole(token: string): string | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = payloadB64 + '='.repeat((4 - (payloadB64.length % 4)) % 4);
+    const json = atob(padded);
+    const parsed = JSON.parse(json) as { role?: string };
+    return typeof parsed.role === 'string' ? parsed.role : null;
+  } catch {
+    return null;
+  }
 }

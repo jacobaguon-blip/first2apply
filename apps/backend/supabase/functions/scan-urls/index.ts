@@ -46,7 +46,16 @@ Deno.serve(async (req) => {
     const links = linksData as Link[];
     logger.info(`found ${links.length} links`);
 
-    const userId = user.id;
+    // When invoked with a service-role JWT (probe / Pi control-server),
+    // `user` is null. Derive the effective user from the link's owner; all
+    // links in a single invocation must belong to the same user.
+    const userId = user?.id ?? links[0]?.user_id;
+    if (!userId) {
+      logger.error('no user context: not authenticated and no links resolved');
+      return new Response(JSON.stringify({ newJobs: [], parseFailed: false }), {
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+      });
+    }
     const { subscriptionHasExpired } = await checkUserSubscription({
       userId,
       ...context,
@@ -57,6 +66,14 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       });
     }
+
+    // Effective context: downstream parsers (jobListParser, parseCustomJobs)
+    // require a non-null user. When invoked with service-role we synthesize
+    // one from the link's owner so the per-user code paths work uniformly.
+    const effectiveContext: EdgeFunctionAuthorizedContext = {
+      ...context,
+      user: context.user ?? { id: userId, email: '' },
+    };
 
     // list all job sites from db
     const { data: jobSitesData, error: jobSitesError } = await supabaseClient.from('sites').select('*');
@@ -76,7 +93,7 @@ Deno.serve(async (req) => {
               allJobSites,
               isLastRetry,
               links,
-              context,
+              context: effectiveContext,
             });
             if (currentUrlParseFailed) {
               parseFailed = true;

@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
       req,
       checkAuthorization: true,
     });
-    const { supabaseClient, supabaseAdminClient } = context;
+    const { supabaseClient, supabaseAdminClient, user } = context;
 
     const body: {
       jobId: number;
@@ -56,12 +56,15 @@ Deno.serve(async (req) => {
       // parse the job description
       logger.info(`[${site.provider}] parsing job description for ${jobId} ...`);
 
-      // update the job with the description
+      // update the job with the description. When invoked by service-role
+      // (probe / Pi control), `user` is null — derive from the job's owner.
+      const effectiveUser = user ?? { id: (job as { user_id: string }).user_id, email: '' };
       const updates = await parseJobDescriptionUpdates({
         site,
         job,
         html,
         ...context,
+        user: effectiveUser,
       });
       const isLastRetry = retryCount === maxRetries;
       updatedJob = {

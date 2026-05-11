@@ -1,5 +1,5 @@
 import { DbSchema, Job, Link, WebPageRuntimeData } from '@first2apply/core';
-import { getExceptionMessage } from '@first2apply/core';
+import { getExceptionMessage, throwError } from '@first2apply/core';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.48.1';
 
 import { CORS_HEADERS } from '../_shared/cors.ts';
@@ -23,7 +23,8 @@ Deno.serve(async (req) => {
       req,
       checkAuthorization: true,
     });
-    const { user, supabaseClient } = context;
+    const { supabaseClient } = context;
+    const user = context.user ?? throwError('create-link requires user context (no service-role calls)');
 
     const { title, url, html, webPageRuntimeData, force, scanFrequency, filter_profile_id } = (await req.json()) as {
       title: string;

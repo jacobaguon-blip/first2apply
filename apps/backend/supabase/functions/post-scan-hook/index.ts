@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 async function checkBrokenLinks({ context, mailer }: { context: EdgeFunctionAuthorizedContext; mailer: IMailer }) {
   const { logger, supabaseClient, user } = context;
 
-  if (!user.email) {
+  if (!user?.email) {
     logger.info('user email not found');
     return;
   }
@@ -109,10 +109,10 @@ async function checkBrokenLinks({ context, mailer }: { context: EdgeFunctionAuth
     const site = jobSites.find((site) => site.id === link.site_id) ?? throwError('Site not found');
     return { title: link.title, site_name: site.name };
   });
-  logger.info(`sending email to ${user.email} for ${affectedLinks.length} links: ${JSON.stringify(affectedLinks)}`);
+  logger.info(`sending email to ${user!.email} for ${affectedLinks.length} links: ${JSON.stringify(affectedLinks)}`);
   await mailer.sendEmail({
     logger,
-    to: user.email,
+    to: user!.email,
     template: {
       type: EmailTemplateType.searchParsingFailure,
       templateId: '3z0vklorkzpl7qrx',
@@ -155,7 +155,7 @@ async function sendNewJobLinksEmail({
     return;
   }
 
-  if (!user.email) {
+  if (!user?.email) {
     logger.info(`user email not set`);
     return;
   }
@@ -177,10 +177,10 @@ async function sendNewJobLinksEmail({
   const siteMap = new Map(jobSites.map((site) => [site.id, site]));
 
   // send the email
-  logger.info(`sending email to ${user.email} for ${newJobs.length} new jobs ...`);
+  logger.info(`sending email to ${user!.email} for ${newJobs.length} new jobs ...`);
   await mailer.sendEmail({
     logger,
-    to: user.email,
+    to: user!.email,
     template: {
       type: EmailTemplateType.newJobAlert,
       templateId: 'pr9084z32r8lw63d',
