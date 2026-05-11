@@ -9,10 +9,36 @@ import os from 'os';
 import { IAnalyticsClient } from '../lib/analytics';
 import { F2aAutoUpdater } from './autoUpdater';
 import { JobScanner } from '@first2apply/scraper';
+import { ENV } from '../env';
 import { logger } from './logger';
 import { OverlayBrowserView } from './overlayBrowserView';
 import { getStripeConfig } from './stripeConfig';
 import { getSupabaseConfig, setSupabaseConfig, testSupabaseConnection } from './supabaseConfig';
+
+/**
+ * POST to the Pi probe's control endpoint. Returns true if the Pi accepted
+ * the scan, false on any failure (Pi offline, Tailscale down, bad secret,
+ * missing config) — caller is responsible for falling back to a local scan.
+ */
+async function tryProbeScan(path: string): Promise<boolean> {
+  const url = ENV.probe.url;
+  const secret = ENV.probe.secret;
+  if (!url || !secret) return false;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${url.replace(/\/$/, '')}${path}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    return res.ok;
+  } catch (err) {
+    console.warn(`[probe] scan request to ${path} failed: ${(err as Error).message}`);
+    return false;
+  }
+}
 
 /**
  * Helper methods used to centralize error handling.
@@ -325,7 +351,28 @@ export function initRendererIpcApi({
     return res;
   });
 
-  ipcMain.handle('scan-link', async (event, { linkId }) => _apiCall(() => jobScanner.scanLink({ linkId })));
+  ipcMain.handle('scan-link', async (event, { linkId }) =>
+    _apiCall(async () => {
+      const ok = await tryProbeScan(`/scan/link/${linkId}`);
+      if (!ok) {
+        await jobScanner.scanLink({ linkId });
+      }
+      return { triggeredVia: ok ? 'pi' : 'local' };
+    }),
+  );
+
+  ipcMain.handle('scan-all-my-links', async () =>
+    _apiCall(async () => {
+      const { user } = await supabaseApi.getUser();
+      if (!user) throw new Error('not logged in');
+      const ok = await tryProbeScan(`/scan/user/${user.id}`);
+      if (!ok) {
+        const links = (await supabaseApi.listLinks()) ?? [];
+        await jobScanner.scanLinks({ links });
+      }
+      return { triggeredVia: ok ? 'pi' : 'local' };
+    }),
+  );
 
   ipcMain.handle('open-overlay-browser-view', async (event, { url }) => {
     return _apiCall(async () => overlayBrowserView.open(url));

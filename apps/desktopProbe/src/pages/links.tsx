@@ -7,10 +7,10 @@ import { LinksList } from '@/components/linksList';
 import { LinksListSkeleton } from '@/components/skeletons/linksListSkeleton';
 import { useAppState } from '@/hooks/appState';
 import { useError } from '@/hooks/error';
-import { listFilterProfiles, scanLink } from '@/lib/electronMainSdk';
+import { listFilterProfiles, scanAllMyLinks, scanLink } from '@/lib/electronMainSdk';
 import { AiFilterProfile, throwError } from '@first2apply/core';
 import { useLinks } from '@first2apply/ui';
-import { toast } from '@first2apply/ui';
+import { Button, toast } from '@first2apply/ui';
 
 import { DefaultLayout } from './defaultLayout';
 
@@ -47,10 +47,28 @@ export function LinksPage() {
 
   const handleScanLinkNow = async (linkId: number) => {
     try {
-      await scanLink(linkId);
+      const { triggeredVia } = await scanLink(linkId);
       toast({
-        title: 'Scanning URL in background ...',
-        description: 'The link will be scanned in the background. You will be notified if there are new jobs.',
+        title: triggeredVia === 'pi' ? 'Pi is scanning ...' : 'Scanning locally ...',
+        description:
+          triggeredVia === 'pi'
+            ? 'The Raspberry Pi will scan this link and surface new jobs shortly.'
+            : 'Pi unreachable; scanning on this machine instead.',
+      });
+    } catch (error) {
+      handleError({ error });
+    }
+  };
+
+  const handleScanAllNow = async () => {
+    try {
+      const { triggeredVia } = await scanAllMyLinks();
+      toast({
+        title: triggeredVia === 'pi' ? 'Pi is scanning all your links ...' : 'Scanning all your links locally ...',
+        description:
+          triggeredVia === 'pi'
+            ? 'New jobs from your searches and target pages will appear shortly.'
+            : 'Pi unreachable; scanning on this machine instead.',
       });
     } catch (error) {
       handleError({ error });
@@ -76,7 +94,6 @@ export function LinksPage() {
       toast({
         title: 'Scanning URL in background ...',
         description: 'The link will be scanned in the background. You will be notified if there are new jobs.',
-        // variant: 'success',
       });
     } catch (error) {
       handleError({ error });
@@ -120,7 +137,14 @@ export function LinksPage() {
           {isScanning && <span className="ml-4 pb-1 text-xs">( currently scanning for new jobs )</span>}
         </div>
 
-        {links.length > 0 && <CreateLink profiles={profiles} />}
+        {links.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="lg" className="px-6 text-base" onClick={handleScanAllNow} disabled={isScanning}>
+              Scan all now
+            </Button>
+            <CreateLink profiles={profiles} />
+          </div>
+        )}
       </div>
 
       {links.length === 0 && (

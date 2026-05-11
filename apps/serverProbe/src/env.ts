@@ -22,6 +22,9 @@ export type ServerProbeEnv = {
   cronRule: string;
   logFile: boolean;
   tz?: string;
+  probeSecret?: string;
+  probePort: number;
+  probeBind: string;
 };
 
 export function validateEnv(opts: { skip?: boolean } = {}): ServerProbeEnv | undefined {
@@ -48,5 +51,8 @@ export function validateEnv(opts: { skip?: boolean } = {}): ServerProbeEnv | und
     cronRule: process.env.F2A_CRON_RULE ?? '0 * * * *',
     logFile: process.env.F2A_LOG_FILE === '1',
     tz: process.env.TZ,
+    probeSecret: process.env.F2A_PROBE_SECRET,
+    probePort: process.env.F2A_PROBE_PORT ? Number(process.env.F2A_PROBE_PORT) : 7879,
+    probeBind: process.env.F2A_PROBE_BIND ?? '0.0.0.0',
   };
 }

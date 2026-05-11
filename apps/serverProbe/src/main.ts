@@ -26,6 +26,7 @@ import { validateEnv } from './env';
 import { ConsoleLogger, EnvSettingsProvider, NoopAnalytics } from './adapters';
 import { HiddenWindowDownloader } from './htmlDownloader';
 import { ServerSupabaseApi } from './supabaseApi';
+import { startControlServer } from './controlServer';
 
 type CliMode = 'selftest' | 'dry-run' | 'scan-once' | 'serve';
 
@@ -161,11 +162,28 @@ async function main() {
   });
   logger.info('health server listening on http://127.0.0.1:7878/healthz');
 
+  let control: { close: () => Promise<void>; port: number } | undefined;
+  if (env.probeSecret) {
+    control = startControlServer({
+      port: env.probePort,
+      host: env.probeBind,
+      authSecret: env.probeSecret,
+      scanner,
+      supabase,
+      getLastScanAt: () => lastScanAt,
+      logger,
+    });
+    logger.info(`control server listening on http://${env.probeBind}:${control.port}`);
+  } else {
+    logger.info('control server disabled (F2A_PROBE_SECRET not set)');
+  }
+
   const shutdown = async (sig: string) => {
     logger.info(`received ${sig}, shutting down`);
     scanner.close();
     await waitForScansToFinish(scanner);
     await health.close().catch(() => {});
+    await control?.close().catch(() => {});
     await Promise.all([normal.close(), incognito.close()]);
     app.exit(0);
   };

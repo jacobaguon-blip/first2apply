@@ -12,4 +12,8 @@ export const ENV = {
     userKey: process.env.PUSHOVER_USER_KEY,
   },
   pauseScans: /^(1|true|yes)$/i.test(process.env.F2A_PAUSE_SCANS ?? ''),
+  probe: {
+    url: process.env.F2A_PROBE_URL,
+    secret: process.env.F2A_PROBE_SECRET,
+  },
 };

@@ -74,7 +74,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 ENV DISPLAY=:99
 ENV PATH=/app/apps/serverProbe/node_modules/.bin:/app/node_modules/.bin:$PATH
 
-EXPOSE 7878
+EXPOSE 7878 7879
 
 # start-period covers cold-start (Electron + Xvfb boot, JobScanner first scan).
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=300s \

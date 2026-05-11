@@ -504,8 +504,17 @@ export async function updateGlobalBlacklist(companies: string[]): Promise<string
 /**
  * Scan a link to fetch new jobs.
  */
-export async function scanLink(linkId: number): Promise<void> {
-  await _mainProcessApiCall('scan-link', { linkId });
+export async function scanLink(linkId: number): Promise<{ triggeredVia: 'pi' | 'local' }> {
+  return (await _mainProcessApiCall('scan-link', { linkId })) as { triggeredVia: 'pi' | 'local' };
+}
+
+/**
+ * Trigger a scan of every link belonging to the current user. Prefers the
+ * Pi probe over Tailscale; falls back to the local desktop scanner if the
+ * Pi is unreachable.
+ */
+export async function scanAllMyLinks(): Promise<{ triggeredVia: 'pi' | 'local' }> {
+  return (await _mainProcessApiCall('scan-all-my-links', {})) as { triggeredVia: 'pi' | 'local' };
 }
 
 /**
