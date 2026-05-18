@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-PI_SSH_TARGET="${PI_SSH_TARGET:-first2apply@raspberrypi}"
+PI_SSH_TARGET="${PI_SSH_TARGET:-maadkal@100.93.137.31}"
 PI_BUILD_DIR="${PI_BUILD_DIR:-/opt/first2apply/builds/web-ui}"
 PI_ENV_FILE="${PI_ENV_FILE:-/opt/first2apply/.env}"
 SERVICE_NAME="${SERVICE_NAME:-f2a-web-ui.service}"
