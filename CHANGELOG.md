@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-18
+- `15:10` -- feat(pi): front PWA with Caddy at first2apply.maadcloud.com _(session `0cd0d67c`)_
+  - `apps/webapp/README.md`
+  - `deploy/pi/systemd/f2a-web-ui.service`
 - `14:02` -- docs(session): pwa-on-pi session record + backlog updates _(session `5087e999`)_
   - `BACKLOG.md`
   - `docs/sessions/2026-05-18-pwa-on-pi.md`
