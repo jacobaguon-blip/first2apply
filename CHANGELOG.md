@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-18
+- `12:21` -- feat(webapp): host PWA on the Raspberry Pi via Next.js standalone _(session `51817e59`)_
+  - `.claude/plans/2026-05-18-pwa-pi-deploy.md`
+  - `apps/webapp/README.md`
+  - `apps/webapp/next.config.ts`
+  - `apps/webapp/package.json`
+  - `apps/webapp/public/sw.js`
 - `12:10` -- feat(desktop): iPhone Sharing settings panel (tokens + endpoint copy) _(session `51817e59`)_
   - `apps/desktopProbe/src/components/iphoneShareSettings.tsx`
   - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
