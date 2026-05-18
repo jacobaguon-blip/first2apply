@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-17
+- `21:32` -- feat(webapp): installable PWA with offline shell and kill switch _(session `e459dfcd`)_
+  - `apps/webapp/README.md`
+  - `apps/webapp/next.config.ts`
+  - `apps/webapp/package.json`
+  - `apps/webapp/public/manifest.webmanifest`
+  - `apps/webapp/public/sw.js`
 - `21:07` -- docs(webapp): add PWA design plan v2 _(session `e459dfcd`)_
   - `docs/plans/2026-05-17-webapp-pwa-design.md`
 
