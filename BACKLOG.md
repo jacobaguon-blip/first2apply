@@ -17,6 +17,9 @@
 - Validate REI Custom Job Board (Beta) parser — large HTML (373KB) yields zero jobs via GPT-4o extraction. Parser-quality issue, separate from auth fix. *Source: session 2026-05-11.*
 - Fix `publish-release.sh` dmg-maker crash (`NODE_MODULE_VERSION 137 vs 141` on `macos-alias`). `pnpm rebuild macos-alias` or pin Node version. *Source: session 2026-05-11.*
 - Lock Pi control endpoint port 7879 to Tailscale interface only via Pi firewall (`ufw`/iptables). Currently `--network host` exposes on all interfaces; bearer secret is the only network-layer auth. *Source: session 2026-05-11.*
+- **[P2]** Generate real PWA icon set for `apps/webapp` from a brand SVG (currently reusing favicons). Use `pwa-asset-generator` in icons-only mode (do not pass `--manifest` / `--index` — those clobber hand-edited files). *Source: session 2026-05-18.*
+- **[P3]** Decide on the dormant `apps/serverWebUI` scaffold — delete or claim a separate port (e.g. 3031) for a future operator UI. The `f2a-web-ui` systemd slot is now used by `apps/webapp`. *Source: session 2026-05-18.*
+- **[P3]** If sharing the PWA outside the tailnet is ever wanted, enable Tailscale Funnel **or** stand up Let's Encrypt + public DNS for the Pi. Explicit one-way door — currently out of scope. *Source: session 2026-05-18.*
 
 ## Bugs
 
