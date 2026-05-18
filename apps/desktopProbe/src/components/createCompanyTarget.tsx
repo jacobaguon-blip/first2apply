@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useError } from '@/hooks/error';
+import { CompanyTargetValidation, validateCompanyTargetUrl } from '@/lib/electronMainSdk';
 import { getExceptionMessage } from '@first2apply/core';
 import { useForm } from '@first2apply/ui';
 import { useLinks } from '@first2apply/ui';
@@ -34,6 +35,9 @@ export function CreateCompanyTarget() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validation, setValidation] = useState<CompanyTargetValidation | null>(null);
+  const [validatedUrl, setValidatedUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const form = useForm({
@@ -41,7 +45,15 @@ export function CreateCompanyTarget() {
     defaultValues: { title: '', url: '' },
   });
 
-  const onSubmit = async (data: { title: string; url: string }) => {
+  const watchedUrl = form.watch('url');
+  useEffect(() => {
+    if (validatedUrl !== null && watchedUrl.trim() !== validatedUrl) {
+      setValidation(null);
+      setValidatedUrl(null);
+    }
+  }, [watchedUrl, validatedUrl]);
+
+  const doCreate = async (data: { title: string; url: string }, force: boolean) => {
     setIsSubmitting(true);
     setErrorMessage(null);
     try {
@@ -50,7 +62,7 @@ export function CreateCompanyTarget() {
         url: data.url.trim(),
         html: '',
         webPageRuntimeData: {},
-        force: false,
+        force,
         scanFrequency: 'daily',
       });
       toast({
@@ -58,6 +70,8 @@ export function CreateCompanyTarget() {
         description: `${createdLink.title} will be crawled once per day.`,
       });
       form.reset();
+      setValidation(null);
+      setValidatedUrl(null);
       setIsOpen(false);
     } catch (error) {
       setErrorMessage(getExceptionMessage(error, true));
@@ -66,13 +80,57 @@ export function CreateCompanyTarget() {
     }
   };
 
+  const onSubmit = async (data: { title: string; url: string }) => {
+    const url = data.url.trim();
+    if (validation && validatedUrl === url) {
+      // already validated this URL — proceed (jobs_list happy path)
+      if (validation.verdict === 'jobs_list') return doCreate(data, false);
+      // otherwise the alert is showing; explicit user choice required
+      return;
+    }
+    setIsValidating(true);
+    setErrorMessage(null);
+    try {
+      const result = await validateCompanyTargetUrl(url);
+      setValidation(result);
+      setValidatedUrl(url);
+      if (result.verdict === 'jobs_list') {
+        await doCreate(data, false);
+      }
+    } catch (error) {
+      // SDK shouldn't reject (main wraps everything) but stay defensive
+      setValidation({ verdict: 'unrelated', reason: getExceptionMessage(error, true) });
+      setValidatedUrl(url);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const useSuggested = () => {
+    if (!validation?.suggestedUrl) return;
+    form.setValue('url', validation.suggestedUrl, { shouldValidate: true });
+    setValidation(null);
+    setValidatedUrl(null);
+    // user can click Add Target again
+  };
+
+  const addAnyway = () => {
+    const data = form.getValues();
+    void doCreate(data, true);
+  };
+
   const onOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (!open) {
       form.reset();
       setErrorMessage(null);
+      setValidation(null);
+      setValidatedUrl(null);
     }
   };
+
+  const showValidationAlert =
+    validation && validatedUrl === watchedUrl.trim() && validation.verdict !== 'jobs_list';
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -93,6 +151,35 @@ export function CreateCompanyTarget() {
                 <AlertDescription>{errorMessage}</AlertDescription>
               </Alert>
             )}
+            {showValidationAlert && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertTitle>
+                  {validation.verdict === 'single_job' && 'This looks like a single job posting'}
+                  {validation.verdict === 'careers_landing' && 'This looks like a landing page, not a jobs list'}
+                  {validation.verdict === 'unrelated' && "We couldn't find a jobs list on this page"}
+                  {validation.verdict === 'invalid' && 'That URL looks invalid'}
+                </AlertTitle>
+                <AlertDescription>
+                  {validation.suggestedUrl ? (
+                    <>
+                      Did you mean <code className="break-all">{validation.suggestedUrl}</code>?
+                    </>
+                  ) : (
+                    validation.reason
+                  )}
+                  <div className="mt-3 flex flex-row gap-2">
+                    {validation.suggestedUrl && (
+                      <Button size="sm" variant="default" type="button" onClick={useSuggested}>
+                        Use suggested URL
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" type="button" onClick={addAnyway} disabled={isSubmitting}>
+                      Add anyway
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -110,7 +197,7 @@ export function CreateCompanyTarget() {
                         id="title"
                         type="text"
                         placeholder="Anthropic careers"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isValidating}
                         {...field}
                       />
                     </FormControl>
@@ -129,7 +216,7 @@ export function CreateCompanyTarget() {
                         id="url"
                         type="url"
                         placeholder="https://www.anthropic.com/careers"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isValidating}
                         {...field}
                       />
                     </FormControl>
@@ -139,15 +226,25 @@ export function CreateCompanyTarget() {
             </div>
 
             <div className="flex flex-row items-center justify-between pt-3">
-              <Button variant="outline" type="button" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => onOpenChange(false)}
+                disabled={isSubmitting || isValidating}
+              >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={!form.formState.isValid || isSubmitting}
+                disabled={!form.formState.isValid || isSubmitting || isValidating}
                 className="ml-auto flex items-center justify-center gap-2"
               >
-                {isSubmitting ? (
+                {isValidating ? (
+                  <>
+                    <Icons.spinner2 className="h-4 w-4 animate-spin" />
+                    Checking...
+                  </>
+                ) : isSubmitting ? (
                   <>
                     <Icons.spinner2 className="h-4 w-4 animate-spin" />
                     Adding...

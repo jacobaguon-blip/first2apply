@@ -18,6 +18,8 @@ import { OverlayBrowserView } from './overlayBrowserView';
 import { PendingLinkDrainer } from './pendingLinkDrainer';
 import { getStripeConfig } from './stripeConfig';
 import { getSupabaseConfig, setSupabaseConfig, testSupabaseConnection } from './supabaseConfig';
+import { validateCompanyTargetUrl } from './targetValidator';
+import { makeSingleShotFetcher } from './targetValidator/singleShotFetcher';
 
 const PENDING_DRAIN_INTERVAL_MS = 60_000;
 const PENDING_LINKS_UI_HORIZON_DAYS = 14;
@@ -261,6 +263,16 @@ export function initRendererIpcApi({
       return { link };
     }),
   );
+
+  ipcMain.handle('validate-company-target-url', async (_e, { url }: { url: string }) => {
+    try {
+      const result = await validateCompanyTargetUrl({ url, fetcher: makeSingleShotFetcher() });
+      return { data: result };
+    } catch (err) {
+      logger.error(`validator failed for ${url}: ${getExceptionMessage(err)}`);
+      return { data: { verdict: 'unrelated' as const, reason: 'validator error: ' + getExceptionMessage(err) } };
+    }
+  });
 
   ipcMain.handle('update-link', async (event, { linkId, title, url, filter_profile_id }) => {
     const res = await _apiCall(() => supabaseApi.updateLink({ linkId, title, url, filter_profile_id }));

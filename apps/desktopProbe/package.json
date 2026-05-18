@@ -62,6 +62,7 @@
   "dependencies": {
     "@first2apply/core": "workspace:*",
     "@first2apply/scraper": "workspace:*",
-    "@first2apply/ui": "workspace:*"
+    "@first2apply/ui": "workspace:*",
+    "node-html-parser": "^7.1.0"
   }
 }

@@ -90,6 +90,20 @@ export async function getUser(): Promise<User | null> {
 }
 
 /**
+ * Validate that a URL points to a real jobs-list page.
+ * Returns a verdict and optional suggested URL.
+ */
+export type CompanyTargetValidation = {
+  verdict: 'jobs_list' | 'single_job' | 'careers_landing' | 'unrelated' | 'invalid';
+  reason: string;
+  suggestedUrl?: string;
+};
+
+export async function validateCompanyTargetUrl(url: string): Promise<CompanyTargetValidation> {
+  return await _mainProcessApiCall<CompanyTargetValidation>('validate-company-target-url', { url });
+}
+
+/**
  * Function used to create a new link.
  */
 export async function createLink({
@@ -619,6 +633,7 @@ export class ElectronApiSdk implements First2ApplyApiSdk {
   // Links
   listLinks = listLinks;
   createLink = createLink;
+  validateCompanyTargetUrl = validateCompanyTargetUrl;
   updateLink = updateLink;
   deleteLink = deleteLink;
 

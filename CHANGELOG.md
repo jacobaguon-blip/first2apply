@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-17
+- `21:50` -- feat(desktop): validate company target URLs before saving; recommend correct jobs-list URL when the pasted link is a single job, careers landing, or unrelated page
+  - `apps/desktopProbe/src/server/targetValidator/urlShape.ts`
+  - `apps/desktopProbe/src/server/targetValidator/domSignals.ts`
+  - `apps/desktopProbe/src/server/targetValidator/index.ts`
+  - `apps/desktopProbe/src/server/targetValidator/singleShotFetcher.ts`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/components/createCompanyTarget.tsx`
 - `21:35` -- feat: iOS share-sheet queue → desktop drain → targeted website _(session `e459dfcd`)_
   - `apps/backend/supabase/functions/_shared/cors.ts`
   - `apps/backend/supabase/functions/queue-pending-link/deno.json`
