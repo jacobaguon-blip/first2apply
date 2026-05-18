@@ -61,7 +61,9 @@ Design: `.claude/plans/2026-05-18-pwa-pi-deploy.md`.
 
 The webapp runs on the Pi as a Next.js standalone bundle under the existing
 `f2a-web-ui.service` systemd unit (port 3030, `EnvironmentFile=/opt/first2apply/.env`).
-Public access is over Tailscale only — no public DNS, no Let's Encrypt.
+The Pi already fronts `*.maadcloud.com` with a Caddy container using Cloudflare
+DNS-01 Let's Encrypt certs. The PWA is reachable at
+**https://first2apply.maadcloud.com** for any device on the maadcloud tailnet.
 
 ### One-time Pi setup
 
@@ -80,15 +82,31 @@ Public access is over Tailscale only — no public DNS, no Let's Encrypt.
    ```
    first2apply ALL=(ALL) NOPASSWD: /bin/systemctl restart f2a-web-ui.service, /bin/systemctl stop f2a-web-ui.service, /bin/systemctl start f2a-web-ui.service
    ```
-5. Enable Tailscale serve so the Pi's tailnet hostname terminates HTTPS at the
-   app:
+5. Add a Caddy site block for the PWA in `/home/maadkal/maadcloud/Caddyfile`:
    ```
-   sudo tailscale serve --bg --https=443 127.0.0.1:3030
+   first2apply.maadcloud.com {
+       import cloudflare_tls
+       reverse_proxy 172.17.0.1:3030   # docker bridge gateway to host
+
+       header /sw.js Cache-Control "no-cache, no-store, must-revalidate"
+       header /sw.js Service-Worker-Allowed "/"
+       header /manifest.webmanifest Cache-Control "no-cache"
+   }
    ```
-   Verify from another tailnet device:
+   Reload Caddy:
    ```
-   curl -I https://<pi-tailnet-name>.ts.net/
+   docker exec maadcloud-caddy caddy reload --config /etc/caddy/Caddyfile
    ```
+   If the bind-mounted Caddyfile change doesn't reflect inside the container,
+   `docker restart maadcloud-caddy` forces a re-read.
+
+   Note: `f2a-web-ui.service` binds to `0.0.0.0:3030` (not loopback) so the
+   dockerized Caddy can reach it via the docker bridge gateway `172.17.0.1`.
+   The Pi sits behind NAT and only :80/:443 are publicly exposed via Caddy,
+   so raw :3030 stays internal to the Pi.
+6. Cloudflare DNS: add an A record `first2apply.maadcloud.com → 100.93.137.31`
+   (the Pi's tailnet IP), DNS-only (grey cloud). Caddy obtains the LE cert via
+   DNS-01 within ~30s of the next request.
 
 ### Deploying
 

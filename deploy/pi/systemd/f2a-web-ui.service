@@ -10,7 +10,11 @@ Group=first2apply
 WorkingDirectory=/opt/first2apply/builds/web-ui
 EnvironmentFile=/opt/first2apply/.env
 Environment=PORT=3030
-Environment=HOSTNAME=127.0.0.1
+# Bind on all interfaces so the dockerized maadcloud-caddy container can
+# reach the service via the docker bridge gateway (172.17.0.1). Loopback-only
+# binding would be invisible to containers. The Pi sits behind a NAT and only
+# Caddy holds :443; raw :3030 is not exposed off-host.
+Environment=HOSTNAME=0.0.0.0
 # Next.js standalone server entry. The deploy script rsyncs
 # apps/webapp/.next/standalone/ into WorkingDirectory, so this resolves to
 # /opt/first2apply/builds/web-ui/apps/webapp/server.js.
