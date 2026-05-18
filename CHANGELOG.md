@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-18
+- `12:59` -- chore(webapp): gitignore Serwist build outputs _(session `5087e999`)_
+  - `apps/webapp/.gitignore`
 - `12:57` -- chore(webapp): untrack Serwist build outputs (regenerated each build) _(session `5087e999`)_
   - `apps/webapp/public/sw.js`
   - `apps/webapp/public/swe-worker-f61931bc2770d10b.js`
