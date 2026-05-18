@@ -682,5 +682,51 @@ export async function setSupabaseConfig({ url, key }: { url: string; key: string
   await _mainProcessApiCall('set-supabase-config', { url, key });
 }
 
+// ---- iPhone Share-Sheet personal tokens & pending-links queue ----
+
+export type ApiToken = {
+  id: number;
+  label: string;
+  scopes: string[];
+  last_used_at: string | null;
+  created_at: string;
+  revoked_at: string | null;
+};
+
+export type PendingLinkRow = {
+  id: number;
+  url: string;
+  title: string | null;
+  status: 'pending' | 'failed';
+  attempts: number;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function listApiTokens(): Promise<{ tokens: ApiToken[] }> {
+  return _mainProcessApiCall<{ tokens: ApiToken[] }>('list-api-tokens');
+}
+
+export async function createApiToken(label?: string): Promise<{ token: string }> {
+  return _mainProcessApiCall<{ token: string }>('create-api-token', { label });
+}
+
+export async function revokeApiToken(id: number): Promise<{ ok: true }> {
+  return _mainProcessApiCall<{ ok: true }>('revoke-api-token', { id });
+}
+
+export async function listPendingLinks(): Promise<{ rows: PendingLinkRow[] }> {
+  return _mainProcessApiCall<{ rows: PendingLinkRow[] }>('list-pending-links');
+}
+
+export async function retryPendingLink(id: number): Promise<{ ok: true }> {
+  return _mainProcessApiCall<{ ok: true }>('retry-pending-link', { id });
+}
+
+export async function deletePendingLink(id: number): Promise<{ ok: true }> {
+  return _mainProcessApiCall<{ ok: true }>('delete-pending-link', { id });
+}
+
 /** Singleton instance of the Electron API SDK */
 export const electronApiSdk = new ElectronApiSdk();

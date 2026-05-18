@@ -1,4 +1,5 @@
 import { CronSchedule } from '@/components/cronSchedule';
+import { IPhoneShareSettings } from '@/components/iphoneShareSettings';
 import { SettingsSkeleton } from '@/components/skeletons/SettingsSkeleton';
 import { useAppState } from '@/hooks/appState';
 import { useError } from '@/hooks/error';
@@ -531,6 +532,8 @@ export function SettingsPage() {
           </Button>
         </div>
       </div>
+
+      <IPhoneShareSettings supabaseUrl={backendUrl || backendConfig?.url || ''} />
 
       <div className="flex justify-end pt-4">
         <Button className="w-fit" variant="destructive" onClick={onLogout}>
