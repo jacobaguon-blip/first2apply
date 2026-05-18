@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-17
+- `22:29` -- feat(desktop): company target URL validator + sweep _(session `02a8c8d0`)_
+  - `docs/sessions/2026-05-11-pi-manual-scan-and-service-role-auth-fix.md`
+  - `recon-build-notes-phase2-prompt.md`
 - `22:28` -- feat(desktop): validate company target URLs before saving with smart suggestions _(session `02a8c8d0`)_
   - `apps/desktopProbe/package.json`
   - `apps/desktopProbe/src/components/createCompanyTarget.tsx`
