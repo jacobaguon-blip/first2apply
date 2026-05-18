@@ -84,6 +84,11 @@ log "Smoke (from the Pi, against ${SMOKE_URL})"
 SMOKE_SCRIPT=$(cat <<'EOSMOKE'
 set -euo pipefail
 URL="$1"
+# Wait up to 10s for the new server to start accepting connections.
+for i in $(seq 1 20); do
+  if curl -s -o /dev/null --max-time 1 "${URL}/" 2>/dev/null; then break; fi
+  sleep 0.5
+done
 fail=0
 for p in / /sw.js /manifest.webmanifest /offline /sw-reset; do
   code=$(curl -s -o /dev/null -w '%{http_code}' "${URL}${p}" || echo 000)
