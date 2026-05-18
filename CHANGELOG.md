@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-17
+- `21:35` -- feat: iOS share-sheet queue → desktop drain → targeted website _(session `e459dfcd`)_
+  - `apps/backend/supabase/functions/_shared/cors.ts`
+  - `apps/backend/supabase/functions/queue-pending-link/deno.json`
+  - `apps/backend/supabase/functions/queue-pending-link/index.ts`
+  - `apps/backend/supabase/migrations/20260517120000_pending_links.sql`
+  - `apps/backend/supabase/migrations/20260517120100_user_api_tokens.sql`
 - `21:32` -- feat(webapp): installable PWA with offline shell and kill switch _(session `e459dfcd`)_
   - `apps/webapp/README.md`
   - `apps/webapp/next.config.ts`
