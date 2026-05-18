@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-18
+- `12:57` -- chore(webapp): untrack Serwist build outputs (regenerated each build) _(session `5087e999`)_
+  - `apps/webapp/public/sw.js`
+  - `apps/webapp/public/swe-worker-f61931bc2770d10b.js`
 - `12:53` -- fix(deploy): default PI_SSH_TARGET to maadkal@<tailscale-ip> _(session `c1ddff3e`)_
   - `scripts/deploy-webapp-to-pi.sh`
 - `12:21` -- feat(webapp): host PWA on the Raspberry Pi via Next.js standalone _(session `51817e59`)_
