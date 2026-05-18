@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-05-18
+- `12:10` -- feat(desktop): iPhone Sharing settings panel (tokens + endpoint copy) _(session `51817e59`)_
+  - `apps/desktopProbe/src/components/iphoneShareSettings.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/pages/settings.tsx`
+
 ## 2026-05-17
 - `22:29` -- feat(desktop): company target URL validator + sweep _(session `02a8c8d0`)_
   - `docs/sessions/2026-05-11-pi-manual-scan-and-service-role-auth-fix.md`
