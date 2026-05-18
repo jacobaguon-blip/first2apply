@@ -1,5 +1,5 @@
 [Unit]
-Description=first2apply server web UI (Next.js)
+Description=first2apply web app (Next.js standalone, PWA)
 After=network-online.target
 Wants=network-online.target
 
@@ -10,7 +10,11 @@ Group=first2apply
 WorkingDirectory=/opt/first2apply/builds/web-ui
 EnvironmentFile=/opt/first2apply/.env
 Environment=PORT=3030
-ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -p ${PORT}
+Environment=HOSTNAME=127.0.0.1
+# Next.js standalone server entry. The deploy script rsyncs
+# apps/webapp/.next/standalone/ into WorkingDirectory, so this resolves to
+# /opt/first2apply/builds/web-ui/apps/webapp/server.js.
+ExecStart=/usr/bin/node apps/webapp/server.js
 Restart=on-failure
 RestartSec=10
 NoNewPrivileges=true

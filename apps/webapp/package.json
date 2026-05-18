@@ -6,7 +6,9 @@
     "dev": "next dev --webpack --port=3002",
     "typecheck": "tsc --noEmit",
     "build": "next build --webpack",
+    "build:standalone": "next build --webpack && node scripts/assemble-standalone.mjs",
     "start": "next start",
+    "start:standalone": "node .next/standalone/apps/webapp/server.js",
     "lint": "eslint",
     "prettier": "npx prettier --check \"src/**/*.{ts,tsx}\""
   },

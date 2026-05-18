@@ -26,9 +26,10 @@ export async function updateSession(request: NextRequest) {
 
   const isAuthPage = request.nextUrl.pathname === '/';
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/');
+  const isPwaPublic = request.nextUrl.pathname === '/offline' || request.nextUrl.pathname === '/sw-reset';
 
   // Unauthenticated → redirect to login
-  if (!user && !isAuthPage && !isAuthCallback) {
+  if (!user && !isAuthPage && !isAuthCallback && !isPwaPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);

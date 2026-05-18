@@ -55,6 +55,70 @@ If a bad SW reaches production:
 1. **Per-user recovery:** send the user to `https://<host>/?nosw=1` — the SW unregisters and the page reloads clean. Or send them to `/sw-reset`.
 2. **Fleet-wide recovery:** flip `KILL_SW = true` in `src/app/sw.ts`, bump the version, ship. Installed clients self-unregister on next activation.
 
+## Hosted on the Raspberry Pi
+
+Design: `.claude/plans/2026-05-18-pwa-pi-deploy.md`.
+
+The webapp runs on the Pi as a Next.js standalone bundle under the existing
+`f2a-web-ui.service` systemd unit (port 3030, `EnvironmentFile=/opt/first2apply/.env`).
+Public access is over Tailscale only — no public DNS, no Let's Encrypt.
+
+### One-time Pi setup
+
+1. Copy the updated systemd unit:
+   ```
+   sudo cp deploy/pi/systemd/f2a-web-ui.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable f2a-web-ui.service
+   ```
+2. Ensure the `first2apply` user exists and owns `/opt/first2apply/builds/web-ui`.
+3. Ensure `/opt/first2apply/.env` on the Pi contains both
+   `SUPABASE_URL=…` and `SUPABASE_ANON_KEY=…` for the cloud Supabase project
+   users should connect to.
+4. Add a sudoers stanza so the deploy can restart the unit without a password
+   (`sudo visudo -f /etc/sudoers.d/f2a-web-ui`):
+   ```
+   first2apply ALL=(ALL) NOPASSWD: /bin/systemctl restart f2a-web-ui.service, /bin/systemctl stop f2a-web-ui.service, /bin/systemctl start f2a-web-ui.service
+   ```
+5. Enable Tailscale serve so the Pi's tailnet hostname terminates HTTPS at the
+   app:
+   ```
+   sudo tailscale serve --bg --https=443 127.0.0.1:3030
+   ```
+   Verify from another tailnet device:
+   ```
+   curl -I https://<pi-tailnet-name>.ts.net/
+   ```
+
+### Deploying
+
+From this repo on your laptop:
+
+```
+./scripts/deploy-webapp-to-pi.sh
+```
+
+Override the SSH target if needed: `PI_SSH_TARGET=user@host ./scripts/deploy-webapp-to-pi.sh`.
+
+The script will:
+- Refuse to deploy if `apps/webapp` has uncommitted changes (commit first).
+- Refuse to deploy if the Pi's env file is missing Supabase keys.
+- Build `apps/webapp` standalone, rsync, restart the unit, and run a deep smoke
+  against `/`, `/sw.js`, `/manifest.webmanifest`, `/offline`, `/sw-reset` —
+  verifying the SW body contains the `sw-activated` literal so we know we
+  served the real worker.
+
+### Kill switch on the hosted version
+
+Same flow as the desktop dev version, plus a redeploy:
+
+1. Edit `apps/webapp/src/app/sw.ts`: set `KILL_SW = true`, bump `SW_VERSION`.
+2. Commit.
+3. `./scripts/deploy-webapp-to-pi.sh`.
+
+All installed iPhone clients will self-unregister on next activation. For an
+individual user, send them `https://<host>/?nosw=1` or `https://<host>/sw-reset`.
+
 ### Regenerating icons
 
 Hand-edit `public/manifest.webmanifest`. For new icon sets:
