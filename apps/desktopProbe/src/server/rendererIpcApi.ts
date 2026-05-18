@@ -6,14 +6,25 @@ import fs from 'fs';
 import { json2csv } from 'json-2-csv';
 import os from 'os';
 
+import crypto from 'crypto';
+
 import { IAnalyticsClient } from '../lib/analytics';
 import { F2aAutoUpdater } from './autoUpdater';
+import { HtmlDownloader } from './htmlDownloader';
 import { JobScanner } from '@first2apply/scraper';
 import { ENV } from '../env';
 import { logger } from './logger';
 import { OverlayBrowserView } from './overlayBrowserView';
+import { PendingLinkDrainer } from './pendingLinkDrainer';
 import { getStripeConfig } from './stripeConfig';
 import { getSupabaseConfig, setSupabaseConfig, testSupabaseConnection } from './supabaseConfig';
+
+const PENDING_DRAIN_INTERVAL_MS = 60_000;
+const PENDING_LINKS_UI_HORIZON_DAYS = 14;
+
+function sha256Hex(input: string): string {
+  return crypto.createHash('sha256').update(input).digest('hex');
+}
 
 /**
  * POST to the Pi probe's control endpoint. Returns true if the Pi accepted
@@ -64,6 +75,7 @@ export function initRendererIpcApi({
   overlayBrowserView,
   nodeEnv,
   analytics,
+  normalHtmlDownloader,
 }: {
   supabaseApi: F2aSupabaseApi;
   jobScanner: JobScanner;
@@ -71,7 +83,127 @@ export function initRendererIpcApi({
   overlayBrowserView: OverlayBrowserView;
   nodeEnv: string;
   analytics: IAnalyticsClient;
+  normalHtmlDownloader: HtmlDownloader;
 }) {
+  // --- iOS share-sheet pending-links drainer ---
+  const drainer = new PendingLinkDrainer(
+    logger,
+    supabaseApi,
+    normalHtmlDownloader,
+    (failures) => {
+      try {
+        // Aggregated toast — never per-row
+        new (require('electron').Notification)({
+          title: 'First 2 Apply',
+          body: `${failures} shared link(s) failed — see dashboard`,
+        }).show();
+      } catch (err) {
+        logger.error(`pending-link toast failed: ${getExceptionMessage(err)}`);
+      }
+    },
+  );
+
+  setInterval(() => {
+    drainer.drain().catch((e) => logger.error(`drain tick error: ${getExceptionMessage(e)}`));
+  }, PENDING_DRAIN_INTERVAL_MS);
+
+  // Fire once at startup
+  setTimeout(() => drainer.drain().catch((): void => undefined), 10_000);
+
+  // ---- IPC: pending links ----
+  ipcMain.handle('list-pending-links', async () =>
+    _apiCall(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      const { data: u } = await supabase.auth.getUser();
+      if (!u?.user?.id) return { rows: [] };
+      const horizon = new Date(Date.now() - PENDING_LINKS_UI_HORIZON_DAYS * 86_400_000).toISOString();
+      const { data, error } = await supabase
+        .from('pending_links')
+        .select('id, url, title, status, attempts, error_message, created_at, updated_at')
+        .eq('user_id', u.user.id)
+        .in('status', ['pending', 'failed'])
+        .gte('created_at', horizon)
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return { rows: data ?? [] };
+    }),
+  );
+
+  ipcMain.handle('retry-pending-link', async (_e, { id }) =>
+    _apiCall(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      const { error } = await supabase
+        .from('pending_links')
+        .update({ status: 'pending', attempts: 0, error_message: null, updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+      drainer.drain().catch((): void => undefined);
+      return { ok: true };
+    }),
+  );
+
+  ipcMain.handle('delete-pending-link', async (_e, { id }) =>
+    _apiCall(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      const { error } = await supabase.from('pending_links').delete().eq('id', id);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }),
+  );
+
+  // ---- IPC: personal tokens ----
+  ipcMain.handle('list-api-tokens', async () =>
+    _apiCall(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      const { data: u } = await supabase.auth.getUser();
+      if (!u?.user?.id) return { tokens: [] };
+      const { data, error } = await supabase
+        .from('user_api_tokens')
+        .select('id, label, scopes, last_used_at, created_at, revoked_at')
+        .eq('user_id', u.user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return { tokens: data ?? [] };
+    }),
+  );
+
+  ipcMain.handle('create-api-token', async (_e, { label }: { label?: string }) =>
+    _apiCall(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      const { data: u } = await supabase.auth.getUser();
+      if (!u?.user?.id) throw new Error('not-authenticated');
+      const raw = crypto.randomBytes(32).toString('base64url');
+      const token_hash = sha256Hex(raw);
+      const { error } = await supabase.from('user_api_tokens').insert({
+        user_id: u.user.id,
+        label: (label ?? 'iPhone Share').slice(0, 64),
+        token_hash,
+        scopes: ['queue-link'],
+      });
+      if (error) throw new Error(error.message);
+      // Raw token returned exactly once; never persisted client-side.
+      return { token: raw };
+    }),
+  );
+
+  ipcMain.handle('revoke-api-token', async (_e, { id }) =>
+    _apiCall(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      const { error } = await supabase
+        .from('user_api_tokens')
+        .update({ revoked_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }),
+  );
+
   ipcMain.handle('get-os-type', () =>
     _apiCall(async () => {
       return os.platform();

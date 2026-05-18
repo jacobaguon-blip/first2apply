@@ -1,0 +1,7 @@
+{
+  "nodeModules": "auto",
+  "imports": {
+    "@first2apply/core": "../../../../../libraries/core/src/index.deno.ts",
+    "npm:@logdna/logger": "npm:@logdna/logger@2.6.11"
+  }
+}
