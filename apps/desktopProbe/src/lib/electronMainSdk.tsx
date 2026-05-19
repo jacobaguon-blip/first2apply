@@ -728,5 +728,26 @@ export async function deletePendingLink(id: number): Promise<{ ok: true }> {
   return _mainProcessApiCall<{ ok: true }>('delete-pending-link', { id });
 }
 
+export type ShortcutInstallPayload = {
+  url: string;
+  qrPngDataUrl: string;
+  expiresAt: number;
+};
+
+export async function startShortcutInstall(args: {
+  endpoint: string;
+  token: string;
+}): Promise<ShortcutInstallPayload> {
+  return _mainProcessApiCall<ShortcutInstallPayload>('start-shortcut-install', args);
+}
+
+export async function stopShortcutInstall(): Promise<{ ok: true }> {
+  return _mainProcessApiCall<{ ok: true }>('stop-shortcut-install');
+}
+
+export async function saveShortcutFile(args: { endpoint: string; token: string }): Promise<{ path: string }> {
+  return _mainProcessApiCall<{ path: string }>('save-shortcut-file', args);
+}
+
 /** Singleton instance of the Electron API SDK */
 export const electronApiSdk = new ElectronApiSdk();

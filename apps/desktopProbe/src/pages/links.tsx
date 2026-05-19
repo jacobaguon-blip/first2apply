@@ -4,6 +4,7 @@ import { BrowserWindow, BrowserWindowHandle } from '@/components/browserWindow';
 import { CreateCompanyTarget } from '@/components/createCompanyTarget';
 import { CreateLink } from '@/components/createLink';
 import { LinksList } from '@/components/linksList';
+import { PendingFromIphone } from '@/components/pendingFromIphone';
 import { LinksListSkeleton } from '@/components/skeletons/linksListSkeleton';
 import { useAppState } from '@/hooks/appState';
 import { useError } from '@/hooks/error';
@@ -199,6 +200,8 @@ export function LinksPage() {
           </p>
         )}
       </section>
+
+      <PendingFromIphone />
 
       <BrowserWindow
         ref={browserWindowRef}

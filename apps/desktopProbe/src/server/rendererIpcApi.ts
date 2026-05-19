@@ -1,7 +1,7 @@
 import { getExceptionMessage } from '@first2apply/core';
 import { Job } from '@first2apply/core';
 import { F2aSupabaseApi } from '@first2apply/ui';
-import { app, dialog, ipcMain, shell } from 'electron';
+import { app, dialog, ipcMain, Notification, shell } from 'electron';
 import fs from 'fs';
 import { json2csv } from 'json-2-csv';
 import os from 'os';
@@ -16,6 +16,9 @@ import { ENV } from '../env';
 import { logger } from './logger';
 import { OverlayBrowserView } from './overlayBrowserView';
 import { PendingLinkDrainer } from './pendingLinkDrainer';
+import { buildShortcutPlist, ShortcutInstallServer } from './shortcutInstaller';
+import fsExtra from 'fs';
+import pathLib from 'path';
 import { getStripeConfig } from './stripeConfig';
 import { getSupabaseConfig, setSupabaseConfig, testSupabaseConnection } from './supabaseConfig';
 import { validateCompanyTargetUrl } from './targetValidator';
@@ -95,7 +98,7 @@ export function initRendererIpcApi({
     (failures) => {
       try {
         // Aggregated toast — never per-row
-        new (require('electron').Notification)({
+        new Notification({
           title: 'First 2 Apply',
           body: `${failures} shared link(s) failed — see dashboard`,
         }).show();
@@ -190,6 +193,35 @@ export function initRendererIpcApi({
       if (error) throw new Error(error.message);
       // Raw token returned exactly once; never persisted client-side.
       return { token: raw };
+    }),
+  );
+
+  // ---- IPC: save .shortcut file to Downloads + reveal in Finder for AirDrop ----
+  ipcMain.handle(
+    'save-shortcut-file',
+    async (_e, { endpoint, token }: { endpoint: string; token: string }) =>
+      _apiCall(async () => {
+        const file = buildShortcutPlist({ endpoint, token });
+        const downloads = app.getPath('downloads');
+        const filePath = pathLib.join(downloads, 'First2Apply.shortcut');
+        fsExtra.writeFileSync(filePath, file);
+        // Open with Shortcuts.app — macOS will show an "Add Shortcut" preview
+        // which, once accepted, syncs to iPhone via iCloud within ~30s.
+        const openErr = await shell.openPath(filePath);
+        if (openErr) logger.error(`openPath failed: ${openErr}`);
+        return { path: filePath };
+      }),
+  );
+
+  // ---- IPC: one-tap install server (Shortcut + QR) ----
+  const installServer = new ShortcutInstallServer(logger);
+  ipcMain.handle('start-shortcut-install', async (_e, { endpoint, token }: { endpoint: string; token: string }) =>
+    _apiCall(async () => installServer.start({ endpoint, token })),
+  );
+  ipcMain.handle('stop-shortcut-install', async () =>
+    _apiCall(async () => {
+      installServer.stop();
+      return { ok: true };
     }),
   );
 

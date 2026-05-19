@@ -1,6 +1,10 @@
 // Drains the `pending_links` table (rows queued from the iOS Share Sheet)
 // by opening each URL in the existing HtmlDownloader and routing through
 // the normal createLink flow. Self-healing: reaps stuck 'claimed' rows.
+//
+// Auto-discovery: when the shared URL doesn't look like a careers/jobs
+// page, the drainer parses the HTML for a Careers/Jobs link in the nav
+// or footer and follows it once before calling createLink.
 
 import { F2aSupabaseApi } from '@first2apply/ui';
 import { getExceptionMessage } from '@first2apply/core';
@@ -19,6 +23,57 @@ type PendingRow = {
 const STUCK_CLAIM_MINUTES = 10;
 const MAX_ATTEMPTS = 3;
 const DRAIN_BATCH = 5;
+
+// Path tokens that indicate the URL is already a careers/jobs page.
+const CAREERS_PATH_HINTS = ['/careers', '/career', '/jobs', '/job', '/work-with-us', '/join-us', '/joinus', '/opportunities'];
+
+// Anchor text tokens for auto-discovery on company front pages.
+const CAREERS_ANCHOR_TEXT = ['careers', 'career', 'jobs', 'open positions', 'open roles', 'work with us', 'join us', 'we’re hiring', 'we are hiring', 'hiring'];
+
+function looksLikeCareersUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const path = (u.pathname + (u.hash || '')).toLowerCase();
+    return CAREERS_PATH_HINTS.some((hint) => path.includes(hint));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Scan the captured HTML of a company front page for an anchor that points
+ * at the careers/jobs page. Returns an absolute URL or null if nothing found.
+ */
+function discoverCareersUrl(html: string, baseUrl: string): string | null {
+  // Find every <a ... href="..." ...>text</a>
+  const re = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const candidates: Array<{ href: string; text: string; score: number }> = [];
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html)) !== null) {
+    const href = match[1].trim();
+    const rawText = match[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const text = rawText.toLowerCase();
+    if (!href) continue;
+
+    let score = 0;
+    for (const tok of CAREERS_ANCHOR_TEXT) {
+      if (text === tok) score += 100;
+      else if (text.includes(tok)) score += 50;
+    }
+    if (looksLikeCareersUrl(href)) score += 30;
+    if (score > 0) candidates.push({ href, text: rawText, score });
+  }
+
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  const winner = candidates[0];
+
+  try {
+    return new URL(winner.href, baseUrl).toString();
+  } catch {
+    return null;
+  }
+}
 
 export class PendingLinkDrainer {
   private _draining = false;
@@ -40,9 +95,12 @@ export class PendingLinkDrainer {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const supabase = this.supabaseApi.getSupabaseClient() as any;
       const { data: user } = await supabase.auth.getUser();
-      if (!user?.user?.id) return;
+      if (!user?.user?.id) {
+        this.logger.info('drain: no logged-in user, skipping');
+        return;
+      }
 
-      // 0. Reap stuck 'claimed' rows (desktop crashed mid-drain)
+      // 0. Reap stuck 'claimed' rows
       const stuckCutoff = new Date(Date.now() - STUCK_CLAIM_MINUTES * 60 * 1000).toISOString();
       await supabase
         .from('pending_links')
@@ -63,6 +121,8 @@ export class PendingLinkDrainer {
       if (candErr) throw candErr;
       if (!candidates?.length) return;
 
+      this.logger.info(`drain: ${candidates.length} pending row(s) to process`);
+
       for (const cand of candidates as PendingRow[]) {
         // 2. Atomic claim
         const { data: claimed, error: claimErr } = await supabase
@@ -80,18 +140,21 @@ export class PendingLinkDrainer {
           this.logger.error(`claim failed for ${cand.id}: ${claimErr.message}`);
           continue;
         }
-        if (!claimed) continue; // another client got it
+        if (!claimed) continue;
 
         const row = claimed as PendingRow;
         const isTerminal = row.attempts >= MAX_ATTEMPTS;
 
         try {
-          await this.processOne(row);
+          const result = await this.processOne(row);
           await supabase.from('pending_links').delete().eq('id', row.id);
-          this.logger.info(`pending_link ${row.id} drained successfully`);
+          this.logger.info(
+            `pending_link ${row.id} drained successfully — final url=${result.finalUrl} link_id=${result.linkId} discovered=${result.discovered}`,
+          );
         } catch (e) {
-          const msg = getExceptionMessage(e);
-          this.logger.error(`pending_link ${row.id} drain failed (attempt ${row.attempts}): ${msg}`);
+          const fullMsg = getExceptionMessage(e);
+          const msg = fullMsg.split('\n')[0].replace(/^Error:\s*/, '');
+          this.logger.error(`pending_link ${row.id} drain failed (attempt ${row.attempts}): ${fullMsg}`);
 
           if (isTerminal) {
             terminalFailures += 1;
@@ -100,7 +163,6 @@ export class PendingLinkDrainer {
               .update({ status: 'failed', error_message: msg, updated_at: new Date().toISOString() })
               .eq('id', row.id);
           } else {
-            // back to pending; will be retried next drain cycle
             await supabase
               .from('pending_links')
               .update({ status: 'pending', error_message: msg, updated_at: new Date().toISOString() })
@@ -116,25 +178,72 @@ export class PendingLinkDrainer {
     }
   }
 
-  private async processOne(row: PendingRow): Promise<void> {
-    await this.normalHtmlDownloader.loadUrl({
-      url: row.url,
+  private async processOne(row: PendingRow): Promise<{ finalUrl: string; linkId: number | string; discovered: boolean }> {
+    const sharedUrl = row.url;
+    const shouldDiscover = !looksLikeCareersUrl(sharedUrl);
+
+    let urlToUse = sharedUrl;
+    let discovered = false;
+
+    if (shouldDiscover) {
+      this.logger.info(`pending_link ${row.id}: ${sharedUrl} doesn't look like a careers page, attempting auto-discovery`);
+      let found: string | null = null;
+      try {
+        found = await this.normalHtmlDownloader.loadUrl({
+          url: sharedUrl,
+          callback: async ({ html }) => discoverCareersUrl(html, sharedUrl),
+        });
+      } catch (e) {
+        this.logger.error(`pending_link ${row.id}: discovery load failed: ${getExceptionMessage(e)}`);
+        throw new Error(`Couldn't load ${sharedUrl} to look for a careers page: ${getExceptionMessage(e)}`);
+      }
+
+      if (found && found !== sharedUrl) {
+        this.logger.info(`pending_link ${row.id}: discovered careers page → ${found}`);
+        urlToUse = found;
+        discovered = true;
+      } else {
+        const host = (() => { try { return new URL(sharedUrl).hostname; } catch { return sharedUrl; } })();
+        throw new Error(`Couldn't find a Careers or Jobs link on ${host}. Try sharing the careers page directly.`);
+      }
+    }
+
+    // Now load the (possibly discovered) URL and call createLink.
+    return await this.normalHtmlDownloader.loadUrl({
+      url: urlToUse,
       callback: async ({ html, webPageRuntimeData }) => {
-        // derive title from <title> if the share didn't pass one
         let title = row.title?.trim() || '';
         if (!title) {
-          const match = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-          title = match?.[1]?.trim().slice(0, 256) || row.url;
+          const m = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+          title = m?.[1]?.trim().slice(0, 256) || urlToUse;
         }
 
-        await this.supabaseApi.createLink({
-          title,
-          url: row.url,
-          html,
-          webPageRuntimeData,
-          force: true,
-          scanFrequency: 'daily',
-        });
+        this.logger.info(`pending_link ${row.id}: calling createLink for ${urlToUse} (title="${title}")`);
+        let createResult: { link?: { id: number | string } } = {};
+        try {
+          createResult = (await this.supabaseApi.createLink({
+            title,
+            url: urlToUse,
+            html,
+            webPageRuntimeData,
+            force: true,
+            scanFrequency: 'daily',
+          })) as { link?: { id: number | string } };
+        } catch (e) {
+          this.logger.error(`pending_link ${row.id}: createLink threw: ${getExceptionMessage(e)}`);
+          throw e;
+        }
+
+        const linkId = createResult?.link?.id ?? '<no-link-in-response>';
+        this.logger.info(`pending_link ${row.id}: createLink returned link_id=${linkId}`);
+
+        if (!createResult?.link?.id) {
+          throw new Error(
+            `createLink returned no link object (server bailed silently). Response: ${JSON.stringify(createResult).slice(0, 200)}`,
+          );
+        }
+
+        return { finalUrl: urlToUse, linkId, discovered };
       },
     });
   }

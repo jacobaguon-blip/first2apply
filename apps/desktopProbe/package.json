@@ -63,6 +63,9 @@
     "@first2apply/core": "workspace:*",
     "@first2apply/scraper": "workspace:*",
     "@first2apply/ui": "workspace:*",
-    "node-html-parser": "^7.1.0"
+    "@types/qrcode": "^1.5.6",
+    "bplist-creator": "^0.1.1",
+    "node-html-parser": "^7.1.0",
+    "qrcode": "^1.5.4"
   }
 }

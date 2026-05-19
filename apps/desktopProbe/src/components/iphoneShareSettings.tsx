@@ -4,6 +4,10 @@ import {
   listApiTokens,
   revokeApiToken,
   openExternalUrl,
+  startShortcutInstall,
+  stopShortcutInstall,
+  ShortcutInstallPayload,
+  saveShortcutFile,
 } from '@/lib/electronMainSdk';
 import { Button, Input, Label } from '@first2apply/ui';
 import { useEffect, useState } from 'react';
@@ -17,6 +21,9 @@ export function IPhoneShareSettings({ supabaseUrl }: { supabaseUrl: string }) {
   const [newToken, setNewToken] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [install, setInstall] = useState<ShortcutInstallPayload | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
+  const [now, setNow] = useState(Date.now());
 
   const endpoint = `${supabaseUrl.replace(/\/$/, '')}/functions/v1/queue-pending-link`;
 
@@ -36,6 +43,51 @@ export function IPhoneShareSettings({ supabaseUrl }: { supabaseUrl: string }) {
   useEffect(() => {
     refresh();
   }, []);
+
+  useEffect(() => {
+    if (!install) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [install]);
+
+  const onShowInstallQR = async () => {
+    setInstallError(null);
+    try {
+      const { token } = await createApiToken('iPhone Share (QR install)');
+      setNewToken(token); // also surface raw token in case user wants manual fallback
+      const payload = await startShortcutInstall({ endpoint, token });
+      setInstall(payload);
+      await refresh();
+    } catch (e) {
+      setInstallError((e as Error).message);
+    }
+  };
+
+  const [airdropPath, setAirdropPath] = useState<string | null>(null);
+  const onAirdrop = async () => {
+    setInstallError(null);
+    setAirdropPath(null);
+    try {
+      const { token } = await createApiToken('iPhone Share (AirDrop)');
+      setNewToken(token);
+      const { path } = await saveShortcutFile({ endpoint, token });
+      setAirdropPath(path);
+      await refresh();
+    } catch (e) {
+      setInstallError((e as Error).message);
+    }
+  };
+
+  const onCloseInstall = async () => {
+    setInstall(null);
+    try {
+      await stopShortcutInstall();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const remainingSec = install ? Math.max(0, Math.floor((install.expiresAt - now) / 1000)) : 0;
 
   const onCreate = async () => {
     setCreating(true);
@@ -74,18 +126,32 @@ export function IPhoneShareSettings({ supabaseUrl }: { supabaseUrl: string }) {
       <div className="space-y-1">
         <h2 className="text-lg">iPhone Sharing</h2>
         <p className="text-sm font-light">
-          Generate a personal token, paste it into the First 2 Apply iOS Shortcut, then share any URL from Safari to add it
-          to your dashboard.{' '}
-          <a
-            className="cursor-pointer text-primary underline"
-            onClick={(e) => {
-              e.preventDefault();
-              openExternalUrl(SHORTCUT_DOC_URL);
-            }}
-          >
-            Setup walkthrough →
-          </a>
+          Build a small iOS Shortcut once, then sharing any URL from Safari adds it to your dashboard.
         </p>
+        <ol className="list-decimal space-y-1 pl-5 pt-2 text-sm">
+          <li>
+            On iPhone, open <span className="font-medium">Shortcuts</span> → tap <span className="font-medium">+</span>.
+          </li>
+          <li>
+            Add action <span className="font-medium">"Receive from Share Sheet"</span> → input type <span className="font-medium">URLs</span>.
+          </li>
+          <li>
+            Add action <span className="font-medium">"Get Contents of URL"</span>:
+            URL = the endpoint below; Method = <span className="font-medium">POST</span>;
+            Headers: <span className="font-mono text-xs">x-f2a-token</span> = the generated token,{' '}
+            <span className="font-mono text-xs">Content-Type</span> = <span className="font-mono text-xs">application/json</span>;
+            Body: JSON, one field <span className="font-mono text-xs">url</span> = magic variable <span className="font-medium">Shortcut Input</span>.
+          </li>
+          <li>
+            Add action <span className="font-medium">"Show Notification"</span> with text "Queued for First 2 Apply".
+          </li>
+          <li>
+            Rename to <span className="font-medium">First2Apply</span> → tap (i) → toggle <span className="font-medium">Use with Share Sheet</span> ON.
+          </li>
+          <li>
+            Test: Safari → any URL → Share → First2Apply → look for "Queued" toast → check your dashboard ~60s later.
+          </li>
+        </ol>
       </div>
 
       <div className="space-y-1">
@@ -113,12 +179,16 @@ export function IPhoneShareSettings({ supabaseUrl }: { supabaseUrl: string }) {
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
+      {installError && <p className="text-sm text-destructive">{installError}</p>}
+
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <Label>Active tokens</Label>
-          <Button onClick={onCreate} disabled={creating}>
-            {creating ? 'Generating…' : 'Generate iPhone token'}
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={onCreate} disabled={creating}>
+              {creating ? 'Generating…' : 'Generate iPhone token'}
+            </Button>
+          </div>
         </div>
 
         {loading ? (
