@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-19
+- `07:42` -- feat(desktop): 2-hop discovery — follow careers page to ATS when needed _(session `24196dcd`)_
+  - `apps/desktopProbe/src/server/pendingLinkDrainer.ts`
 - `07:27` -- feat(desktop): editable pending entries + 7-day completed history + more ATS hints _(session `70538a86`)_
   - `apps/backend/supabase/migrations/20260519000000_pending_links_history.sql`
   - `apps/desktopProbe/src/components/pendingFromIphone.tsx`
