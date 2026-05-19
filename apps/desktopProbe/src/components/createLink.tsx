@@ -2,6 +2,7 @@ import { InfoCircledIcon } from '@radix-ui/react-icons/dist';
 import { useRef, useState } from 'react';
 
 import { useError } from '@/hooks/error';
+import { looksLikeCareersUrl } from '@/lib/careersUrl';
 import { OverlayBrowserViewResult } from '@/lib/types';
 import { AiFilterProfile, JobSite, Link, getExceptionMessage } from '@first2apply/core';
 import { useForm } from '@first2apply/ui';
@@ -33,6 +34,8 @@ import { Icons } from './icons';
 export function CreateLink({ profiles = [] }: { profiles?: AiFilterProfile[] }) {
   const [jobBoardModalResponse, setJobBoardModalResponse] = useState<OverlayBrowserViewResult>();
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
+  const [isCareersChooserOpen, setIsCareersChooserOpen] = useState(false);
+  const [isAddingTarget, setIsAddingTarget] = useState(false);
   const browserWindowRef = useRef<BrowserWindowHandle>(null);
 
   const { handleError } = useError();
@@ -73,10 +76,56 @@ export function CreateLink({ profiles = [] }: { profiles?: AiFilterProfile[] }) 
     try {
       const jobSearchInfo = await browserWindowRef.current?.finish();
       setJobBoardModalResponse(jobSearchInfo);
-      setIsConfirmationDialogOpen(true);
+      // If the captured URL looks like a company careers page or ATS, steer
+      // the user toward Add Target (daily) instead of silently making it an
+      // hourly Job Search. Otherwise proceed with the normal confirmation.
+      if (jobSearchInfo?.url && looksLikeCareersUrl(jobSearchInfo.url)) {
+        setIsCareersChooserOpen(true);
+      } else {
+        setIsConfirmationDialogOpen(true);
+      }
     } catch (error) {
       handleError({ error, title: 'Could not save this search' });
     }
+  };
+
+  const onChooseTargetPage = async () => {
+    if (!jobBoardModalResponse) {
+      setIsCareersChooserOpen(false);
+      return;
+    }
+    setIsAddingTarget(true);
+    try {
+      const createdLink = await createLink({
+        url: jobBoardModalResponse.url,
+        title: jobBoardModalResponse.title || jobBoardModalResponse.url,
+        html: jobBoardModalResponse.html,
+        webPageRuntimeData: jobBoardModalResponse.webPageRuntimeData,
+        force: true,
+        scanFrequency: 'daily',
+      });
+      toast({
+        title: 'Target added',
+        description: `${createdLink.title} will be crawled once per day.`,
+      });
+      setIsCareersChooserOpen(false);
+      setJobBoardModalResponse(undefined);
+      setIsOpen(false);
+    } catch (error) {
+      handleError({ error, title: 'Could not add target page' });
+    } finally {
+      setIsAddingTarget(false);
+    }
+  };
+
+  const onChooseJobSearchAnyway = () => {
+    setIsCareersChooserOpen(false);
+    setIsConfirmationDialogOpen(true);
+  };
+
+  const onCancelCareersChooser = () => {
+    setIsCareersChooserOpen(false);
+    setJobBoardModalResponse(undefined);
   };
 
   /**
@@ -183,6 +232,46 @@ export function CreateLink({ profiles = [] }: { profiles?: AiFilterProfile[] }) 
           tooltip: 'Click when you are done browsing and want to save this search',
         }}
       ></BrowserWindow>
+
+      {/* careers-page chooser: surfaces when the captured URL looks like an ATS/careers page */}
+      <Dialog open={isCareersChooserOpen} onOpenChange={(o) => !o && onCancelCareersChooser()}>
+        <DialogContent className="w-[90vw] p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-medium tracking-wide">This looks like a careers page</DialogTitle>
+            <DialogDescription>
+              <p>
+                <code className="break-all">{jobBoardModalResponse?.url}</code> looks like a company careers page or
+                ATS listing. Those work better as a Target Company Page (scanned once per day) than as an hourly Job
+                Search.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex flex-row gap-2">
+            <Button
+              variant="default"
+              type="button"
+              onClick={onChooseTargetPage}
+              disabled={isAddingTarget}
+              className="flex items-center gap-2"
+            >
+              {isAddingTarget ? (
+                <>
+                  <Icons.spinner2 className="h-4 w-4 animate-spin" />
+                  Adding…
+                </>
+              ) : (
+                'Add as Target (daily)'
+              )}
+            </Button>
+            <Button variant="outline" type="button" onClick={onChooseJobSearchAnyway} disabled={isAddingTarget}>
+              Continue as Job Search (hourly)
+            </Button>
+            <Button variant="ghost" type="button" onClick={onCancelCareersChooser} disabled={isAddingTarget}>
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* render the confirmation dialog */}
       <JobSearchSubmitDialog

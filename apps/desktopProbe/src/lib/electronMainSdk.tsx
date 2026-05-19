@@ -797,6 +797,26 @@ export async function tailorCv(jobId: number): Promise<{ tailored_cv?: string }>
   return _mainProcessApiCall('tailor-cv', { jobId });
 }
 
+export type JobEvaluationBlocks = {
+  role_summary: string;
+  cv_match: string;
+  level_strategy: string;
+  comp_research: string;
+  personalization: string;
+  interview_prep: string;
+};
+
+export type JobEvaluationResult = {
+  score: number;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  archetype: string;
+  blocks: JobEvaluationBlocks;
+};
+
+export async function evaluateJob(jobId: number): Promise<JobEvaluationResult> {
+  return _mainProcessApiCall('evaluate-job', { jobId });
+}
+
 export async function exportCvPdf(args: {
   markdown: string;
   company: string;

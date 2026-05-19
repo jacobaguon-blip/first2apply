@@ -8,6 +8,7 @@
 
 import { F2aSupabaseApi } from '@first2apply/ui';
 import { getExceptionMessage } from '@first2apply/core';
+import { CAREERS_HOST_HINTS, looksLikeCareersUrl } from '../lib/careersUrl';
 import { HtmlDownloader } from './htmlDownloader';
 import { ILogger } from './logger';
 
@@ -24,40 +25,8 @@ const STUCK_CLAIM_MINUTES = 10;
 const MAX_ATTEMPTS = 3;
 const DRAIN_BATCH = 5;
 
-// Path tokens that indicate the URL is already a careers/jobs page —
-// includes common ATS path patterns (Greenhouse boards, Workday wd, Lever
-// jobs, Paylocity recruiting, Ashby, Rippling, etc.) so a user-provided
-// ATS URL skips auto-discovery.
-const CAREERS_PATH_HINTS = [
-  '/careers', '/career', '/jobs', '/job', '/work-with-us', '/join-us', '/joinus',
-  '/opportunities', '/positions', '/openings', '/recruiting', '/recruit',
-  '/boards', '/board', '/embed/job_board', '/hiring', '/we-are-hiring',
-  '/wd1', '/wd2', '/wd3', '/wd5',
-];
-
-// Host tokens that indicate the URL is a recognized ATS — used by manual
-// overrides where the path alone doesn't make it obvious.
-const CAREERS_HOST_HINTS = [
-  'greenhouse.io', 'lever.co', 'workday.com', 'myworkdayjobs.com', 'ashbyhq.com',
-  'jobvite.com', 'smartrecruiters.com', 'taleo.net', 'icims.com', 'paylocity.com',
-  'rippling.com', 'breezy.hr', 'recruitee.com', 'bamboohr.com', 'recruiterbox.com',
-];
-
 // Anchor text tokens for auto-discovery on company front pages.
 const CAREERS_ANCHOR_TEXT = ['careers', 'career', 'jobs', 'open positions', 'open roles', 'work with us', 'join us', 'we’re hiring', 'we are hiring', 'hiring'];
-
-function looksLikeCareersUrl(url: string): boolean {
-  try {
-    const u = new URL(url);
-    const path = (u.pathname + (u.hash || '')).toLowerCase();
-    const host = u.hostname.toLowerCase();
-    if (CAREERS_PATH_HINTS.some((hint) => path.includes(hint))) return true;
-    if (CAREERS_HOST_HINTS.some((hint) => host === hint || host.endsWith('.' + hint))) return true;
-    return false;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Decode a DuckDuckGo result href. Some look like `//duckduckgo.com/l/?uddg=...`

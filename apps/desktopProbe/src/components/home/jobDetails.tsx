@@ -8,7 +8,90 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 
 import { useCareerOps } from '../../hooks/careerOps';
-import { exportCvPdf, getMasterCv, tailorCv } from '../../lib/electronMainSdk';
+import {
+  evaluateJob,
+  exportCvPdf,
+  getMasterCv,
+  tailorCv,
+  type JobEvaluationResult,
+} from '../../lib/electronMainSdk';
+
+/**
+ * Fit evaluation panel — runs evaluate-job and shows score / grade / archetype
+ * plus the 6-block breakdown. Hidden unless career_ops is on.
+ */
+function FitEvaluationPanel({ job }: { job: Job }) {
+  const { enabled } = useCareerOps();
+  const [result, setResult] = useState<JobEvaluationResult | null>(null);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!enabled) return null;
+
+  const onEvaluate = async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      const res = await evaluateJob(job.id);
+      setResult(res);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const gradeColor =
+    result?.grade === 'A'
+      ? 'text-green-600'
+      : result?.grade === 'B'
+        ? 'text-emerald-600'
+        : result?.grade === 'C'
+          ? 'text-yellow-600'
+          : result?.grade === 'D'
+            ? 'text-orange-600'
+            : 'text-red-600';
+
+  return (
+    <div className="my-6 rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h3 className="text-base font-medium">Fit Evaluation</h3>
+          {result && (
+            <>
+              <span className={`text-2xl font-semibold ${gradeColor}`}>{result.grade}</span>
+              <span className="text-sm text-muted-foreground">{result.score}/100</span>
+              <span className="rounded-full border px-2 py-0.5 text-xs">{result.archetype}</span>
+            </>
+          )}
+        </div>
+        <Button size="sm" onClick={onEvaluate} disabled={running}>
+          {running ? 'Evaluating…' : result ? 'Re-evaluate' : 'Evaluate fit'}
+        </Button>
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {result && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {(
+            [
+              ['Role summary', result.blocks.role_summary],
+              ['CV match', result.blocks.cv_match],
+              ['Level strategy', result.blocks.level_strategy],
+              ['Comp research', result.blocks.comp_research],
+              ['Personalization', result.blocks.personalization],
+              ['Interview prep', result.blocks.interview_prep],
+            ] as const
+          ).map(([label, body]) => (
+            <div key={label} className="rounded-md border p-3">
+              <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+              <p className="text-sm leading-relaxed">{body || '—'}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Tailored-CV panel rendered inside the job detail view. Hidden unless the
@@ -271,6 +354,7 @@ export function JobDetails({ job, isScrapingDescription }: { job: Job; isScrapin
         {job.description}
       </Markdown>
       <div className="pl-[25px] pr-2">
+        <FitEvaluationPanel job={job} />
         <TailoredCvPanel job={job} />
       </div>
     </div>

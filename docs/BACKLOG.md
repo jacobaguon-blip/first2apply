@@ -8,11 +8,17 @@ Last updated: 2026-05-19
 - (none)
 
 ### P1
-- **Package & ship a new desktop release including Scan now button.** The installed `/Applications/First 2 Apply.app` is still on the prior bundle; dev only. *Source: session 2026-05-18.*
+- (none)
+
+### Done (P1)
+- ~~Package & ship a new desktop release including Scan now button~~ — 2.4.0 built, staged, installed locally, and deployed to her Mac via `deploy-to-her.sh`. *Resolved: 2026-05-19.*
 
 ### P2
-- **UX: route careers-page URLs from Add Search → Add Target.** Currently a careers URL pasted into Add Search silently becomes an hourly Job Search instead of a daily Target Company Page; this confused the user. Either detect and steer, or surface a chooser. *Source: session 2026-05-18.*
-- **Resolve pre-existing `chatgpt_prompt` TS errors.** `apps/desktopProbe/src/lib/electronMainSdk.tsx` and `apps/desktopProbe/src/pages/filters.tsx` reference a `chatgpt_prompt` field that no longer exists on `AdvancedMatchingConfig`. *Source: session 2026-05-18.*
+- (none)
+
+### Done (P2)
+- ~~UX: route careers-page URLs from Add Search → Add Target~~ — shipped in 2.4.1. Chooser dialog surfaces when the captured URL matches `looksLikeCareersUrl`. *Resolved: 2026-05-19.*
+- ~~Resolve pre-existing `chatgpt_prompt` TS errors~~ — verified clean; references type against `AiFilterProfile` (which still has the field), not `AdvancedMatchingConfig`. Backlog item was stale. *Resolved: 2026-05-19.*
 
 ### P3
 - (none)

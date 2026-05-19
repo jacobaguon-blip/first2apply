@@ -732,6 +732,29 @@ export function initRendererIpcApi({
     }),
   );
 
+  ipcMain.handle('evaluate-job', async (_e, { jobId }: { jobId: number }) =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data, error } = await supabase.functions.invoke<{
+        score?: number;
+        grade?: 'A' | 'B' | 'C' | 'D' | 'F';
+        archetype?: string;
+        blocks?: {
+          role_summary: string;
+          cv_match: string;
+          level_strategy: string;
+          comp_research: string;
+          personalization: string;
+          interview_prep: string;
+        };
+        error?: { code: string; message: string };
+      }>('evaluate-job', { body: { job_id: jobId } });
+      if (error) throw error;
+      if (data?.error) throw new Error(`${data.error.code}: ${data.error.message}`);
+      return data;
+    }),
+  );
+
   ipcMain.handle(
     'export-cv-pdf',
     async (
