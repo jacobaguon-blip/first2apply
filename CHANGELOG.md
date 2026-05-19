@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-19
+- `07:27` -- feat(desktop): editable pending entries + 7-day completed history + more ATS hints _(session `70538a86`)_
+  - `apps/backend/supabase/migrations/20260519000000_pending_links_history.sql`
+  - `apps/desktopProbe/src/components/pendingFromIphone.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/server/pendingLinkDrainer.ts`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
 - `05:14` -- fix(desktop): require careers-looking path in DDG fallback results _(session `18f75bd9`)_
   - `apps/desktopProbe/src/server/pendingLinkDrainer.ts`
 
