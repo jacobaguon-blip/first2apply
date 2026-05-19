@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-19
+- `14:51` -- feat(career-ops): Tier 1 — master CV + tailored CV + PDF export _(session `63bcbdd6`)_
+  - `apps/backend/supabase/functions/_shared/careerOpsPrompts.ts`
+  - `apps/backend/supabase/functions/parse-cv/deno.json`
+  - `apps/backend/supabase/functions/parse-cv/index.ts`
+  - `apps/backend/supabase/functions/tailor-cv/deno.json`
+  - `apps/backend/supabase/functions/tailor-cv/index.ts`
 - `07:42` -- feat(desktop): 2-hop discovery — follow careers page to ATS when needed _(session `24196dcd`)_
   - `apps/desktopProbe/src/server/pendingLinkDrainer.ts`
 - `07:27` -- feat(desktop): editable pending entries + 7-day completed history + more ATS hints _(session `70538a86`)_
