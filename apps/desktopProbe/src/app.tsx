@@ -22,6 +22,7 @@ import { Home } from './pages/home';
 import { LinksPage } from './pages/links';
 import { LoginPage } from './pages/login';
 import { MasterContentPage } from './pages/master-content';
+import { MyCvPage } from './pages/myCv';
 import { ResetPasswordPage } from './pages/resetPassword';
 import { SettingsPage } from './pages/settings';
 import { SignupPage } from './pages/signup';
@@ -42,6 +43,7 @@ const router = createMemoryRouter(
       <Route path="/links" element={<AuthGuardedComponent component={LinksPage} />}></Route>
       <Route path="/filters" element={<AuthGuardedComponent component={FiltersPage} />}></Route>
       <Route path="/master-content" element={<AuthGuardedComponent component={MasterContentPage} />} />
+      <Route path="/my-cv" element={<AuthGuardedComponent component={MyCvPage} />} />
       <Route path="/settings" element={<AuthGuardedComponent component={SettingsPage} />}></Route>
       <Route path="/help" element={<AuthGuardedComponent component={HelpPage} />} />
       <Route path="/feedback" element={<AuthGuardedComponent component={FeedbackPage} />} />

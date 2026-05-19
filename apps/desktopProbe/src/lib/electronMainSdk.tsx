@@ -757,3 +757,50 @@ export async function saveShortcutFile(args: { endpoint: string; token: string }
 
 /** Singleton instance of the Electron API SDK */
 export const electronApiSdk = new ElectronApiSdk();
+
+// ---- Career Ops Tier 1 ----
+
+export type MasterCv = {
+  markdown: string;
+  source_filename: string | null;
+  updated_at: string;
+} | null;
+
+export async function getCareerOpsFlag(): Promise<{ enabled: boolean }> {
+  return _mainProcessApiCall<{ enabled: boolean }>('career-ops-flag');
+}
+
+export async function setCareerOpsFlag(enabled: boolean): Promise<{ enabled: boolean }> {
+  return _mainProcessApiCall<{ enabled: boolean }>('career-ops-set-flag', { enabled });
+}
+
+export async function getMasterCv(): Promise<MasterCv> {
+  return _mainProcessApiCall<MasterCv>('get-master-cv');
+}
+
+export async function saveMasterCv(args: {
+  markdown: string;
+  source_filename?: string | null;
+}): Promise<unknown> {
+  return _mainProcessApiCall('save-master-cv', args);
+}
+
+export async function parseCv(args: {
+  filename: string;
+  mimetype?: string;
+  contentBase64: string;
+}): Promise<{ markdown?: string; source_filename?: string; warning?: string }> {
+  return _mainProcessApiCall('parse-cv', args);
+}
+
+export async function tailorCv(jobId: number): Promise<{ tailored_cv?: string }> {
+  return _mainProcessApiCall('tailor-cv', { jobId });
+}
+
+export async function exportCvPdf(args: {
+  markdown: string;
+  company: string;
+  role: string;
+}): Promise<{ path: string }> {
+  return _mainProcessApiCall<{ path: string }>('export-cv-pdf', args);
+}

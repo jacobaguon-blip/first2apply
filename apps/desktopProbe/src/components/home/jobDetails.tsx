@@ -1,10 +1,243 @@
+import { useEffect, useMemo, useState } from 'react';
 import Markdown from 'react-markdown';
 
 import { Job } from '@first2apply/core';
-import { useSites } from '@first2apply/ui';
+import { Button, useSites } from '@first2apply/ui';
 import { Skeleton } from '@first2apply/ui';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
+
+import { useCareerOps } from '../../hooks/careerOps';
+import { exportCvPdf, getMasterCv, tailorCv } from '../../lib/electronMainSdk';
+
+/**
+ * Tailored-CV panel rendered inside the job detail view. Hidden unless the
+ * career_ops feature flag is on for the current user (or forced via
+ * F2A_FORCE_CAREER_OPS at build time).
+ */
+type CvView = 'preview' | 'edit' | 'diff';
+
+function TailoredCvPanel({ job }: { job: Job }) {
+  const { enabled } = useCareerOps();
+  const [tailored, setTailored] = useState<string>('');
+  const [master, setMaster] = useState<string>('');
+  const [generating, setGenerating] = useState(false);
+  const [view, setView] = useState<CvView>('preview');
+  const [error, setError] = useState<string | null>(null);
+  const [savedPath, setSavedPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    getMasterCv()
+      .then((r) => {
+        if (!cancelled && r) setMaster(r.markdown ?? '');
+      })
+      .catch((): void => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  const diff = useMemo(() => (tailored ? diffLines(master, tailored) : []), [master, tailored]);
+  const diffStats = useMemo(() => {
+    let added = 0;
+    let removed = 0;
+    for (const ln of diff) {
+      if (ln.kind === 'add') added++;
+      else if (ln.kind === 'del') removed++;
+    }
+    return { added, removed };
+  }, [diff]);
+
+  if (!enabled) return null;
+
+  const onGenerate = async () => {
+    setGenerating(true);
+    setError(null);
+    setSavedPath(null);
+    try {
+      const res = await tailorCv(job.id);
+      setTailored(res.tailored_cv ?? '');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const onExport = async () => {
+    setError(null);
+    try {
+      const res = await exportCvPdf({
+        markdown: tailored,
+        company: (job as Job & { companyName?: string }).companyName ?? 'Company',
+        role: job.title ?? 'Role',
+      });
+      setSavedPath(res.path);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  return (
+    <div className="my-6 rounded-lg border p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-medium">Tailored CV</h3>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={onGenerate} disabled={generating}>
+            {generating ? 'Generating…' : tailored ? 'Regenerate' : 'Generate Tailored CV'}
+          </Button>
+          {tailored && (
+            <>
+              <Button
+                size="sm"
+                variant={view === 'preview' ? 'default' : 'outline'}
+                onClick={() => setView('preview')}
+              >
+                Preview
+              </Button>
+              <Button
+                size="sm"
+                variant={view === 'edit' ? 'default' : 'outline'}
+                onClick={() => setView('edit')}
+              >
+                Edit
+              </Button>
+              <Button
+                size="sm"
+                variant={view === 'diff' ? 'default' : 'outline'}
+                onClick={() => setView('diff')}
+                disabled={!master}
+                title={master ? '' : 'Upload a master CV in My CV to see a diff'}
+              >
+                Diff
+                {master && (diffStats.added || diffStats.removed) ? (
+                  <span className="ml-1 text-xs">
+                    <span className="text-green-600">+{diffStats.added}</span>{' '}
+                    <span className="text-red-600">-{diffStats.removed}</span>
+                  </span>
+                ) : null}
+              </Button>
+              <Button size="sm" variant="outline" onClick={onExport}>
+                Download PDF
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {savedPath && <p className="text-sm text-green-600">Saved to {savedPath}</p>}
+      {tailored && view === 'edit' && (
+        <textarea
+          className="font-mono w-full min-h-[40vh] rounded-md border p-3 text-sm"
+          value={tailored}
+          onChange={(e) => setTailored(e.target.value)}
+          spellCheck={false}
+        />
+      )}
+      {tailored && view === 'preview' && (
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <Markdown remarkPlugins={[remarkGfm]}>{tailored}</Markdown>
+        </div>
+      )}
+      {tailored && view === 'diff' && (
+        <DiffView lines={diff} stats={diffStats} hasMaster={!!master} />
+      )}
+    </div>
+  );
+}
+
+type DiffLine = { kind: 'eq' | 'add' | 'del'; text: string };
+
+function DiffView({
+  lines,
+  stats,
+  hasMaster,
+}: {
+  lines: DiffLine[];
+  stats: { added: number; removed: number };
+  hasMaster: boolean;
+}) {
+  if (!hasMaster) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Upload a master CV in <strong>My CV</strong> to see what changed.
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-3 text-xs text-muted-foreground">
+        <span>
+          <span className="font-medium text-green-600">+{stats.added}</span> added
+        </span>
+        <span>
+          <span className="font-medium text-red-600">-{stats.removed}</span> removed
+        </span>
+      </div>
+      <pre className="font-mono text-xs rounded-md border overflow-x-auto">
+        {lines.map((ln, i) => {
+          const base = 'block px-3 py-0.5 whitespace-pre-wrap break-words';
+          if (ln.kind === 'add')
+            return (
+              <span key={i} className={`${base} bg-green-50 text-green-900 dark:bg-green-950/40 dark:text-green-200`}>
+                + {ln.text || ' '}
+              </span>
+            );
+          if (ln.kind === 'del')
+            return (
+              <span key={i} className={`${base} bg-red-50 text-red-900 line-through dark:bg-red-950/40 dark:text-red-200`}>
+                - {ln.text || ' '}
+              </span>
+            );
+          return (
+            <span key={i} className={`${base} text-muted-foreground`}>
+              &nbsp;&nbsp;{ln.text || ' '}
+            </span>
+          );
+        })}
+      </pre>
+    </div>
+  );
+}
+
+/**
+ * Minimal LCS-based line diff. O(n*m) memory — fine for ~few-hundred-line CVs.
+ * Returns an in-order array of equal / added / deleted lines suitable for a
+ * single-pane diff view.
+ */
+function diffLines(a: string, b: string): DiffLine[] {
+  const A = a.split('\n');
+  const B = b.split('\n');
+  const n = A.length;
+  const m = B.length;
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const out: DiffLine[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (A[i] === B[j]) {
+      out.push({ kind: 'eq', text: A[i] });
+      i++;
+      j++;
+    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+      out.push({ kind: 'del', text: A[i] });
+      i++;
+    } else {
+      out.push({ kind: 'add', text: B[j] });
+      j++;
+    }
+  }
+  while (i < n) out.push({ kind: 'del', text: A[i++] });
+  while (j < m) out.push({ kind: 'add', text: B[j++] });
+  return out;
+}
 
 /**
  * Job details component.
@@ -33,9 +266,14 @@ export function JobDetails({ job, isScrapingDescription }: { job: Job; isScrapin
     </div>
   ) : job.description ? (
     // Description has been fetched
-    <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} className="job-description-md pl-[25px] pr-2">
-      {job.description}
-    </Markdown>
+    <div>
+      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]} className="job-description-md pl-[25px] pr-2">
+        {job.description}
+      </Markdown>
+      <div className="pl-[25px] pr-2">
+        <TailoredCvPanel job={job} />
+      </div>
+    </div>
   ) : (
     // Description failed to fetch
     <div className="mt-20 text-center">

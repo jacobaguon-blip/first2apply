@@ -1,3 +1,4 @@
+import { LayoutGridIcon, ListIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { BrowserWindow, BrowserWindowHandle } from '@/components/browserWindow';
@@ -22,6 +23,13 @@ export function LinksPage() {
   const browserWindowRef = useRef<BrowserWindowHandle>(null);
   const [currentDebugLinkId, setCurrentDebugLinkId] = useState<number | null>(null);
   const [profiles, setProfiles] = useState<AiFilterProfile[]>([]);
+  const [targetViewMode, setTargetViewMode] = useState<'card' | 'list'>(
+    () => (localStorage.getItem('targetPagesViewMode') as 'card' | 'list') || 'card',
+  );
+
+  useEffect(() => {
+    localStorage.setItem('targetPagesViewMode', targetViewMode);
+  }, [targetViewMode]);
 
   // refresh links on component mount
   useEffect(() => {
@@ -181,7 +189,31 @@ export function LinksPage() {
               Company career pages crawled once per day (e.g. <span className="font-mono">anthropic.com/careers</span>).
             </p>
           </div>
-          <CreateCompanyTarget />
+          <div className="flex items-center gap-2">
+            {dailyLinks.length > 0 && (
+              <div className="flex items-center rounded-md border border-border bg-card p-0.5">
+                <Button
+                  variant={targetViewMode === 'card' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setTargetViewMode('card')}
+                  title="Card view"
+                >
+                  <LayoutGridIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={targetViewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setTargetViewMode('list')}
+                  title="List view"
+                >
+                  <ListIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <CreateCompanyTarget />
+          </div>
         </div>
 
         {dailyLinks.length > 0 ? (
@@ -193,6 +225,7 @@ export function LinksPage() {
             onUpdateLink={handleUpdateLink}
             profiles={profiles}
             onUpdateLinkProfile={handleUpdateLinkProfile}
+            viewMode={targetViewMode}
           />
         ) : (
           <p className="mt-6 text-sm text-muted-foreground">

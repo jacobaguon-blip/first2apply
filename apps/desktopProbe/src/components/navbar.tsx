@@ -14,6 +14,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { Icons } from '@/components/icons';
 import { useAppState } from '@/hooks/appState';
+import { useCareerOps } from '@/hooks/careerOps';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@first2apply/ui';
 import { useTheme } from 'next-themes';
 
@@ -22,6 +23,7 @@ export function Navbar() {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
   const { isScanning, newUpdate } = useAppState();
+  const { enabled: careerOpsEnabled } = useCareerOps();
 
   const hasUpdate = !!newUpdate;
 
@@ -42,6 +44,15 @@ export function Navbar() {
       path: '/master-content',
       icon: <FileTextIcon className="h-7 w-7" />,
     },
+    ...(careerOpsEnabled
+      ? [
+          {
+            name: 'My CV',
+            path: '/my-cv',
+            icon: <FileTextIcon className="h-7 w-7" />,
+          },
+        ]
+      : []),
     {
       name: 'Feedback',
       path: '/feedback',

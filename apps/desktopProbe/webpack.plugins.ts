@@ -24,6 +24,7 @@ export const plugins = [
   new webpack.EnvironmentPlugin({
     F2A_PROBE_URL: null,
     F2A_PROBE_SECRET: null,
+    F2A_FORCE_CAREER_OPS: null,
   }),
   new CopyWebpackPlugin({
     patterns: [{ from: path.join(__dirname, 'images'), to: 'images' }],

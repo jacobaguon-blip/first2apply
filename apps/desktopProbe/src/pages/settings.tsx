@@ -2,9 +2,11 @@ import { CronSchedule } from '@/components/cronSchedule';
 import { IPhoneShareSettings } from '@/components/iphoneShareSettings';
 import { SettingsSkeleton } from '@/components/skeletons/SettingsSkeleton';
 import { useAppState } from '@/hooks/appState';
+import { useCareerOps } from '@/hooks/careerOps';
 import { useError } from '@/hooks/error';
 import { useSession } from '@/hooks/session';
 import { useSettings } from '@/hooks/settings';
+import { setCareerOpsFlag } from '@/lib/electronMainSdk';
 import {
   applyAppUpdate,
   getSupabaseConfig,
@@ -535,11 +537,58 @@ export function SettingsPage() {
 
       <IPhoneShareSettings supabaseUrl={backendUrl || backendConfig?.url || ''} />
 
+      <ExperimentalFeaturesSection />
+
+
       <div className="flex justify-end pt-4">
         <Button className="w-fit" variant="destructive" onClick={onLogout}>
           Logout
         </Button>
       </div>
     </DefaultLayout>
+  );
+}
+
+function ExperimentalFeaturesSection() {
+  const { dbEnabled, loading, refresh } = useCareerOps();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const onToggle = async (next: boolean) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await setCareerOpsFlag(next);
+      refresh();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border p-6 space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-lg">Experimental features</h2>
+        <p className="text-sm font-light">
+          Dev-only previews. May change or be removed.
+        </p>
+      </div>
+      <div className="flex items-center justify-between gap-6">
+        <div className="space-y-1">
+          <p className="text-sm font-medium">Career Ops (master CV + tailored CV)</p>
+          <p className="text-xs text-muted-foreground">
+            Upload a master CV, generate a tailored version per job, and export as an ATS-safe PDF.
+          </p>
+        </div>
+        <Switch
+          checked={dbEnabled}
+          disabled={loading || busy}
+          onCheckedChange={(c) => onToggle(!!c)}
+        />
+      </div>
+      {err && <p className="text-sm text-destructive">{err}</p>}
+    </div>
   );
 }

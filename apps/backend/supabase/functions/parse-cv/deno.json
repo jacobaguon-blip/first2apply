@@ -1,0 +1,12 @@
+{
+  "nodeModules": "auto",
+  "imports": {
+    "@first2apply/core": "../../../../../libraries/core/src/index.deno.ts",
+    "npm:@logdna/logger": "npm:@logdna/logger@2.6.11",
+    "openai": "npm:openai@6.7.0",
+    "@supabase/supabasefork": "npm:@supabase/supabase-js@2.48.1",
+    "npm:jszip": "npm:jszip@3.10.1",
+    "npm:pdf-parse": "npm:pdf-parse@1.1.1",
+    "zod": "npm:zod@3.25.1"
+  }
+}

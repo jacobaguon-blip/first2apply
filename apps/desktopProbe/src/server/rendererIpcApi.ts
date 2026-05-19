@@ -1,10 +1,11 @@
 import { getExceptionMessage } from '@first2apply/core';
 import { Job } from '@first2apply/core';
 import { F2aSupabaseApi } from '@first2apply/ui';
-import { app, dialog, ipcMain, Notification, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from 'electron';
 import fs from 'fs';
 import { json2csv } from 'json-2-csv';
 import os from 'os';
+import path from 'path';
 
 import crypto from 'crypto';
 
@@ -627,4 +628,206 @@ export function initRendererIpcApi({
       return { ok: true };
     }),
   );
+
+  // ---- Career Ops Tier 1 (feature-flagged in renderer) ----
+
+  ipcMain.handle('career-ops-flag', async () =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u?.user?.id;
+      if (!uid) return { enabled: false };
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('career_ops_enabled')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      return { enabled: !!(data as { career_ops_enabled?: boolean } | null)?.career_ops_enabled };
+    }),
+  );
+
+  ipcMain.handle('career-ops-set-flag', async (_e, { enabled }: { enabled: boolean }) =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u?.user?.id;
+      if (!uid) throw new Error('not authenticated');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ career_ops_enabled: enabled } as never)
+        .eq('user_id', uid);
+      if (error) throw error;
+      return { enabled };
+    }),
+  );
+
+  ipcMain.handle('get-master-cv', async () =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data: u } = await supabase.auth.getUser();
+      const uid = u?.user?.id;
+      if (!uid) throw new Error('not authenticated');
+      const { data, error } = await supabase
+        .from('user_cv_profiles' as never)
+        .select('markdown, source_filename, updated_at')
+        .eq('user_id', uid)
+        .maybeSingle();
+      if (error) throw error;
+      return data ?? null;
+    }),
+  );
+
+  ipcMain.handle(
+    'save-master-cv',
+    async (_e, { markdown, source_filename }: { markdown: string; source_filename?: string | null }) =>
+      _apiCall(async () => {
+        const supabase = supabaseApi.getSupabaseClient();
+        const { data: u } = await supabase.auth.getUser();
+        const uid = u?.user?.id;
+        if (!uid) throw new Error('not authenticated');
+        const { data, error } = await supabase
+          .from('user_cv_profiles' as never)
+          .upsert(
+            { user_id: uid, markdown, source_filename: source_filename ?? null, updated_at: new Date().toISOString() } as never,
+            { onConflict: 'user_id' },
+          )
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      }),
+  );
+
+  ipcMain.handle(
+    'parse-cv',
+    async (
+      _e,
+      { filename, mimetype, contentBase64 }: { filename: string; mimetype?: string; contentBase64: string },
+    ) =>
+      _apiCall(async () => {
+        const supabase = supabaseApi.getSupabaseClient();
+        const { data, error } = await supabase.functions.invoke<{
+          markdown?: string;
+          source_filename?: string;
+          warning?: string;
+          error?: { code: string; message: string };
+        }>('parse-cv', { body: { filename, mimetype, contentBase64 } });
+        if (error) throw error;
+        if (data?.error) throw new Error(`${data.error.code}: ${data.error.message}`);
+        return data;
+      }),
+  );
+
+  ipcMain.handle('tailor-cv', async (_e, { jobId }: { jobId: number }) =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data, error } = await supabase.functions.invoke<{
+        tailored_cv?: string;
+        error?: { code: string; message: string };
+      }>('tailor-cv', { body: { job_id: jobId } });
+      if (error) throw error;
+      if (data?.error) throw new Error(`${data.error.code}: ${data.error.message}`);
+      return data;
+    }),
+  );
+
+  ipcMain.handle(
+    'export-cv-pdf',
+    async (
+      _e,
+      { markdown, company, role }: { markdown: string; company: string; role: string },
+    ) =>
+      _apiCall(async () => {
+        const html = renderCvPrintHtml(markdown);
+        const win = new BrowserWindow({
+          show: false,
+          webPreferences: { offscreen: true, javascript: false, nodeIntegration: false, contextIsolation: true },
+        });
+        try {
+          await win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html));
+          const pdfBuffer = await win.webContents.printToPDF({
+            pageSize: 'Letter',
+            printBackground: false,
+            margins: { top: 0.5, bottom: 0.5, left: 0.6, right: 0.6 },
+          });
+          const safe = (s: string) => (s || '').replace(/[^\w.-]+/g, '_').slice(0, 60) || 'CV';
+          const fileName = `${safe(company)}_${safe(role)}_CV.pdf`;
+          const outPath = path.join(app.getPath('downloads'), fileName);
+          fs.writeFileSync(outPath, pdfBuffer);
+          await shell.openPath(outPath);
+          return { path: outPath };
+        } finally {
+          win.destroy();
+        }
+      }),
+  );
+}
+
+/**
+ * Minimal markdown → HTML for the ATS-safe print template. Avoids adding a
+ * markdown dep to the main process. Handles headings (# ##), bullets, bold,
+ * italic, links, and paragraphs — which is what our tailored CVs use.
+ */
+function renderCvPrintHtml(markdown: string): string {
+  const escape = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const inline = (s: string) =>
+    escape(s)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+
+  const lines = markdown.replace(/\r/g, '').split('\n');
+  const out: string[] = [];
+  let inList = false;
+  const closeList = () => {
+    if (inList) {
+      out.push('</ul>');
+      inList = false;
+    }
+  };
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (!line.trim()) {
+      closeList();
+      continue;
+    }
+    let m: RegExpMatchArray | null;
+    if ((m = line.match(/^#\s+(.*)$/))) {
+      closeList();
+      out.push(`<h1>${inline(m[1])}</h1>`);
+    } else if ((m = line.match(/^##\s+(.*)$/))) {
+      closeList();
+      out.push(`<h2>${inline(m[1])}</h2>`);
+    } else if ((m = line.match(/^###\s+(.*)$/))) {
+      closeList();
+      out.push(`<h3>${inline(m[1])}</h3>`);
+    } else if ((m = line.match(/^[-*]\s+(.*)$/))) {
+      if (!inList) {
+        out.push('<ul>');
+        inList = true;
+      }
+      out.push(`<li>${inline(m[1])}</li>`);
+    } else {
+      closeList();
+      out.push(`<p>${inline(line)}</p>`);
+    }
+  }
+  closeList();
+
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><title>CV</title>
+<style>
+  @page { size: Letter; margin: 0.5in 0.6in; }
+  body { font-family: Inter, Helvetica, Arial, sans-serif; font-size: 11pt; color: #000; background: #fff; line-height: 1.35; margin: 0; }
+  h1 { font-size: 14pt; margin: 0 0 6pt 0; border-bottom: 1px solid #000; padding-bottom: 2pt; text-transform: uppercase; letter-spacing: 0.5pt; }
+  h2 { font-size: 12pt; margin: 10pt 0 3pt 0; }
+  h3 { font-size: 11pt; margin: 8pt 0 2pt 0; font-weight: 600; }
+  p { margin: 2pt 0; }
+  ul { margin: 2pt 0 6pt 18pt; padding: 0; }
+  li { margin: 1pt 0; }
+  a { color: #000; text-decoration: underline; }
+</style></head>
+<body>${out.join('\n')}</body></html>`;
 }

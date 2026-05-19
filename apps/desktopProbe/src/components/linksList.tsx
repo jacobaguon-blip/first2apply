@@ -21,6 +21,7 @@ export function LinksList({
   onUpdateLink,
   profiles,
   onUpdateLinkProfile,
+  viewMode = 'card',
 }: {
   links: Link[];
   onDeleteLink: (linkId: number) => void;
@@ -29,6 +30,7 @@ export function LinksList({
   onUpdateLink: (data: { linkId: number; title: string; url: string }) => Promise<void>;
   profiles: AiFilterProfile[];
   onUpdateLinkProfile: (linkId: number, filterProfileId: number | null) => Promise<void>;
+  viewMode?: 'card' | 'list';
 }) {
   const { siteLogos, sites } = useSites();
   const sitesMap = useMemo(() => new Map(sites.map((s) => [s.id, s])), [sites]);
@@ -51,6 +53,109 @@ export function LinksList({
     if (nextId === (link.filter_profile_id ?? null)) return;
     void onUpdateLinkProfile(link.id, nextId);
   };
+
+  if (viewMode === 'list') {
+    return (
+      <>
+        <ul className="mt-4 divide-y divide-border rounded-lg border border-border bg-card shadow-sm">
+          {links.map((link) => (
+            <li
+              key={link.id}
+              className={`flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-muted/40 ${isInFailureState(link) ? 'border-l-2 border-destructive' : ''}`}
+              onClick={() => onDebugLink(link.id)}
+            >
+              <Avatar className="h-7 w-7 shrink-0">
+                <AvatarImage src={siteLogos[link.site_id]} />
+                <AvatarFallback className="text-xs">LI</AvatarFallback>
+              </Avatar>
+
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm leading-tight">{link.title}</p>
+                <p className="truncate text-xs text-muted-foreground">{sitesMap.get(link.site_id)?.name}</p>
+              </div>
+
+              <div className="hidden shrink-0 text-xs text-muted-foreground md:block">
+                <ReactTimeAgo date={new Date(link.last_scraped_at)} locale="en-US" />
+              </div>
+
+              <div onClick={(evt) => evt.stopPropagation()} className="hidden w-48 shrink-0 lg:block">
+                <Select value={profileSelectValue(link)} onValueChange={(v) => onProfileChange(link, v)}>
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {defaultProfile ? (
+                      <SelectItem value={NULL_SENTINEL}>
+                        <span>— Default — </span>
+                        <span className="text-muted-foreground">({defaultProfile.name})</span>
+                      </SelectItem>
+                    ) : (
+                      <SelectItem value={NULL_SENTINEL}>— No profile —</SelectItem>
+                    )}
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name}
+                        {p.is_default ? ' (default)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1" onClick={(evt) => evt.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => onScanLink(link.id)}
+                  title="Scan now"
+                >
+                  <ReloadIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => navigator.clipboard.writeText(link.url)}
+                  title="Copy URL"
+                >
+                  <CopyIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setEditedLink(link)}
+                  title="Edit"
+                >
+                  <Pencil1Icon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10"
+                  onClick={() => onDeleteLink(link.id)}
+                  title="Delete"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <EditLink
+          isOpen={!!editedLink}
+          link={editedLink}
+          onUpdateLink={async (data) => {
+            if (!editedLink) return;
+            await onUpdateLink({ linkId: editedLink.id, title: data.title, url: data.url });
+            setEditedLink(null);
+          }}
+          onCancel={() => setEditedLink(null)}
+        />
+      </>
+    );
+  }
 
   return (
     <>
