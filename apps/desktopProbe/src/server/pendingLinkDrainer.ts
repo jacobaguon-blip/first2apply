@@ -105,6 +105,87 @@ function pickResultMatchingHost(html: string, targetHostname: string): string | 
   return null;
 }
 
+// CTA anchor text for the 2nd-hop "the real jobs live elsewhere" discovery.
+const JOBS_CTA_TEXT = [
+  'view open positions',
+  'see all jobs',
+  'see open jobs',
+  'browse jobs',
+  'all openings',
+  'current openings',
+  'open positions',
+  'open roles',
+  'view all openings',
+  'view all jobs',
+  'search positions',
+  'search jobs',
+  'apply now',
+];
+
+/**
+ * Given the HTML of a careers landing page, look for an outbound link to an
+ * ATS (Paylocity, Greenhouse, Workday, etc.) or a "View open positions"-style
+ * CTA pointing to a deeper job-list URL. Returns the URL to follow next, or
+ * null if the current page is already the real job list.
+ */
+function discoverJobsListUrl(html: string, baseUrl: string): string | null {
+  // Iframes first — many companies embed their ATS via iframe.
+  const iframeRe = /<iframe\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/gi;
+  let im: RegExpExecArray | null;
+  while ((im = iframeRe.exec(html)) !== null) {
+    try {
+      const absolute = new URL(im[1], baseUrl).toString();
+      const host = new URL(absolute).hostname.toLowerCase();
+      if (CAREERS_HOST_HINTS.some((h) => host === h || host.endsWith('.' + h))) {
+        return absolute;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+
+  // Anchors with scoring.
+  const re = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  const candidates: Array<{ url: string; score: number; text: string }> = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const href = m[1].trim();
+    const rawText = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const text = rawText.toLowerCase();
+    if (!href || href.startsWith('#') || href.startsWith('mailto:')) continue;
+
+    let url: string;
+    try {
+      url = new URL(href, baseUrl).toString();
+    } catch {
+      continue;
+    }
+    let host: string;
+    try {
+      host = new URL(url).hostname.toLowerCase();
+    } catch {
+      continue;
+    }
+
+    let score = 0;
+    // ATS host = strongest signal.
+    if (CAREERS_HOST_HINTS.some((h) => host === h || host.endsWith('.' + h))) score += 200;
+    // CTA text.
+    for (const tok of JOBS_CTA_TEXT) {
+      if (text === tok) score += 80;
+      else if (text.includes(tok)) score += 50;
+    }
+    // Path looks job-list-y AND text suggests an action.
+    if (looksLikeCareersUrl(url) && /position|opening|role|job/.test(text)) score += 40;
+
+    if (score >= 80) candidates.push({ url, score, text: rawText });
+  }
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0].url;
+}
+
 /**
  * Scan the captured HTML of a company front page for an anchor that points
  * at the careers/jobs page. Returns an absolute URL or null if nothing found.
@@ -302,7 +383,26 @@ export class PendingLinkDrainer {
       }
     }
 
-    // Now load the (possibly discovered) URL and call createLink.
+    // Optional 2nd hop: the careers page might be a marketing landing page
+    // that links to an ATS or "View open positions" page where the real jobs
+    // live. Only attempt when we ended up on a careers-like URL via discovery
+    // (or when the user explicitly shared a careers URL — Kong case).
+    const visited = new Set<string>([sharedUrl, urlToUse]);
+    try {
+      const deeper = await this.normalHtmlDownloader.loadUrl({
+        url: urlToUse,
+        callback: async ({ html }) => discoverJobsListUrl(html, urlToUse),
+      });
+      if (deeper && !visited.has(deeper)) {
+        this.logger.info(`pending_link ${row.id}: careers page links to ATS/job-list → following one more hop to ${deeper}`);
+        urlToUse = deeper;
+        visited.add(deeper);
+      }
+    } catch (e) {
+      this.logger.error(`pending_link ${row.id}: 2nd-hop probe failed: ${getExceptionMessage(e)} (continuing with current URL)`);
+    }
+
+    // Final load + createLink call.
     return await this.normalHtmlDownloader.loadUrl({
       url: urlToUse,
       callback: async ({ html, webPageRuntimeData }) => {
