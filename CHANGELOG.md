@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-19
+- `17:28` -- feat(backend): remove per-user link caps (no subscriptions in this fork) _(session `ffe92ae1`)_
+  - `apps/backend/supabase/functions/create-link/index.ts`
 - `16:57` -- chore(backend): bump queue-pending-link cap 30 → 200 _(session `b13081bb`)_
   - `apps/backend/supabase/functions/queue-pending-link/index.ts`
 - `16:28` -- feat(career-ops): Tier 2 evaluate-job + careers-page chooser _(session `ffe92ae1`)_
