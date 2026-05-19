@@ -71,8 +71,12 @@ function pickResultMatchingHost(html: string, targetHostname: string): string | 
     const resolved = decodeDuckDuckGoHref(match[1]);
     if (!resolved) continue;
     try {
-      const host = new URL(resolved).hostname.replace(/^www\./, '').toLowerCase();
-      if (host === target || host.endsWith('.' + target)) {
+      const u = new URL(resolved);
+      const host = u.hostname.replace(/^www\./, '').toLowerCase();
+      const hostMatches = host === target || host.endsWith('.' + target);
+      // Require the result URL to actually look like a careers page — otherwise
+      // a `site:example.com careers` query just returns example.com's homepage.
+      if (hostMatches && looksLikeCareersUrl(resolved)) {
         return resolved;
       }
     } catch {
