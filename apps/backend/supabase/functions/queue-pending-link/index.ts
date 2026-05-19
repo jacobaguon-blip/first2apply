@@ -49,8 +49,18 @@ Deno.serve(async (req) => {
     if (!tokenRow.scopes?.includes('queue-link')) return json({ error: 'insufficient-scope' }, 403);
 
     const body = (await req.json().catch(() => ({}))) as { url?: string; title?: string };
-    const url = (body.url ?? '').trim();
-    if (!/^https?:\/\//i.test(url) || url.length > 2048) return json({ error: 'invalid-url' }, 400);
+    let url = (body.url ?? '').trim();
+    if (!url) return json({ error: 'invalid-url' }, 400);
+    // Tolerate URLs missing scheme (Safari/Shortcut Input often passes "stripe.com").
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url.replace(/^\/+/, '');
+    // Validate it parses.
+    try {
+      const u = new URL(url);
+      if (!u.hostname.includes('.')) throw new Error('no-tld');
+    } catch {
+      return json({ error: 'invalid-url' }, 400);
+    }
+    if (url.length > 2048) return json({ error: 'invalid-url' }, 400);
     const title = (body.title ?? '').slice(0, 256) || null;
 
     const { count } = await admin

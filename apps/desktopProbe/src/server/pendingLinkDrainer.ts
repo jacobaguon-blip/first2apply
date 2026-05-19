@@ -41,6 +41,48 @@ function looksLikeCareersUrl(url: string): boolean {
 }
 
 /**
+ * Decode a DuckDuckGo result href. Some look like `//duckduckgo.com/l/?uddg=...`
+ * with the real URL in the `uddg` query param; others are direct URLs.
+ */
+function decodeDuckDuckGoHref(href: string): string | null {
+  if (!href) return null;
+  try {
+    let full = href.startsWith('//') ? 'https:' + href : href;
+    if (!/^https?:\/\//i.test(full)) return null;
+    const u = new URL(full);
+    if (u.hostname.includes('duckduckgo.com') && u.searchParams.has('uddg')) {
+      return u.searchParams.get('uddg');
+    }
+    return full;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Parse the DuckDuckGo HTML SERP for the first result that lives on the
+ * target hostname (or any subdomain of it). Returns absolute URL or null.
+ */
+function pickResultMatchingHost(html: string, targetHostname: string): string | null {
+  const target = targetHostname.replace(/^www\./, '').toLowerCase();
+  const re = /<a\b[^>]*\b(?:class\s*=\s*["'](?:result__a|result__url)["']|href\s*=\s*["'])[^>]*\bhref\s*=\s*["']([^"']+)["']/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(html)) !== null) {
+    const resolved = decodeDuckDuckGoHref(match[1]);
+    if (!resolved) continue;
+    try {
+      const host = new URL(resolved).hostname.replace(/^www\./, '').toLowerCase();
+      if (host === target || host.endsWith('.' + target)) {
+        return resolved;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  return null;
+}
+
+/**
  * Scan the captured HTML of a company front page for an anchor that points
  * at the careers/jobs page. Returns an absolute URL or null if nothing found.
  */
@@ -203,8 +245,26 @@ export class PendingLinkDrainer {
         urlToUse = found;
         discovered = true;
       } else {
+        // Anchor-scan failed → fall back to DuckDuckGo HTML search.
         const host = (() => { try { return new URL(sharedUrl).hostname; } catch { return sharedUrl; } })();
-        throw new Error(`Couldn't find a Careers or Jobs link on ${host}. Try sharing the careers page directly.`);
+        const ddgUrl = `https://duckduckgo.com/html/?q=${encodeURIComponent('site:' + host.replace(/^www\./, '') + ' careers')}`;
+        this.logger.info(`pending_link ${row.id}: anchor-scan empty, trying DuckDuckGo fallback`);
+        let ddgFound: string | null = null;
+        try {
+          ddgFound = await this.normalHtmlDownloader.loadUrl({
+            url: ddgUrl,
+            callback: async ({ html }) => pickResultMatchingHost(html, host),
+          });
+        } catch (e) {
+          this.logger.error(`pending_link ${row.id}: DDG fallback load failed: ${getExceptionMessage(e)}`);
+        }
+        if (ddgFound && ddgFound !== sharedUrl) {
+          this.logger.info(`pending_link ${row.id}: DDG fallback found → ${ddgFound}`);
+          urlToUse = ddgFound;
+          discovered = true;
+        } else {
+          throw new Error(`Couldn't find a Careers or Jobs link on ${host}. Try sharing the careers page directly.`);
+        }
       }
     }
 
