@@ -125,9 +125,9 @@ export function initRendererIpcApi({
       const horizon = new Date(Date.now() - PENDING_LINKS_UI_HORIZON_DAYS * 86_400_000).toISOString();
       const { data, error } = await supabase
         .from('pending_links')
-        .select('id, url, title, status, attempts, error_message, created_at, updated_at')
+        .select('id, url, title, status, attempts, error_message, created_at, updated_at, completed_at, link_id')
         .eq('user_id', u.user.id)
-        .in('status', ['pending', 'failed'])
+        .in('status', ['pending', 'failed', 'completed'])
         .gte('created_at', horizon)
         .order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
@@ -145,6 +145,30 @@ export function initRendererIpcApi({
         .eq('id', id);
       if (error) throw new Error(error.message);
       drainer.drain().catch((): void => undefined);
+      return { ok: true };
+    }),
+  );
+
+  ipcMain.handle('update-pending-link', async (_e, { id, url, title }: { id: number; url: string; title?: string }) =>
+    _apiCall(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      let cleanUrl = (url ?? '').trim();
+      if (!cleanUrl) throw new Error('URL required');
+      if (!/^https?:\/\//i.test(cleanUrl)) cleanUrl = 'https://' + cleanUrl.replace(/^\/+/, '');
+      try { new URL(cleanUrl); } catch { throw new Error('Invalid URL'); }
+      const { error } = await supabase
+        .from('pending_links')
+        .update({
+          url: cleanUrl,
+          title: (title ?? '').trim() || null,
+          status: 'pending',
+          attempts: 0,
+          error_message: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+      if (error) throw new Error(error.message);
       return { ok: true };
     }),
   );

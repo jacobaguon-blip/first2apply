@@ -697,11 +697,13 @@ export type PendingLinkRow = {
   id: number;
   url: string;
   title: string | null;
-  status: 'pending' | 'failed';
+  status: 'pending' | 'failed' | 'completed';
   attempts: number;
   error_message: string | null;
   created_at: string;
   updated_at: string;
+  completed_at?: string | null;
+  link_id?: number | null;
 };
 
 export async function listApiTokens(): Promise<{ tokens: ApiToken[] }> {
@@ -726,6 +728,10 @@ export async function retryPendingLink(id: number): Promise<{ ok: true }> {
 
 export async function deletePendingLink(id: number): Promise<{ ok: true }> {
   return _mainProcessApiCall<{ ok: true }>('delete-pending-link', { id });
+}
+
+export async function updatePendingLink(args: { id: number; url: string; title?: string }): Promise<{ ok: true }> {
+  return _mainProcessApiCall<{ ok: true }>('update-pending-link', args);
 }
 
 export type ShortcutInstallPayload = {
