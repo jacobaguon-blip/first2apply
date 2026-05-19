@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-05-19
+- `05:14` -- fix(desktop): require careers-looking path in DDG fallback results _(session `18f75bd9`)_
+  - `apps/desktopProbe/src/server/pendingLinkDrainer.ts`
+
 ## 2026-05-18
 - `21:59` -- feat(desktop): DuckDuckGo fallback for careers-page discovery + URL scheme tolerance _(session `18f75bd9`)_
   - `apps/backend/supabase/functions/queue-pending-link/index.ts`
