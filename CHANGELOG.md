@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-18
+- `18:31` -- feat(desktop): careers-page auto-discovery + "Pending from iPhone" panel _(session `b6978153`)_
+  - `apps/desktopProbe/package.json`
+  - `apps/desktopProbe/src/components/iphoneShareSettings.tsx`
+  - `apps/desktopProbe/src/components/pendingFromIphone.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/pages/links.tsx`
 - `15:10` -- feat(pi): front PWA with Caddy at first2apply.maadcloud.com _(session `0cd0d67c`)_
   - `apps/webapp/README.md`
   - `deploy/pi/systemd/f2a-web-ui.service`
