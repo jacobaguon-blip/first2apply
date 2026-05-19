@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-19
+- `15:17` -- chore(release): bump desktop to 2.4.0 _(session `8234ad6e`)_
+  - `apps/desktopProbe/package.json`
 - `14:51` -- feat(career-ops): Tier 1 — master CV + tailored CV + PDF export _(session `63bcbdd6`)_
   - `apps/backend/supabase/functions/_shared/careerOpsPrompts.ts`
   - `apps/backend/supabase/functions/parse-cv/deno.json`
