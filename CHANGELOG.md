@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-18
+- `21:59` -- feat(desktop): DuckDuckGo fallback for careers-page discovery + URL scheme tolerance _(session `18f75bd9`)_
+  - `apps/backend/supabase/functions/queue-pending-link/index.ts`
+  - `apps/desktopProbe/src/server/pendingLinkDrainer.ts`
 - `18:31` -- feat(desktop): careers-page auto-discovery + "Pending from iPhone" panel _(session `b6978153`)_
   - `apps/desktopProbe/package.json`
   - `apps/desktopProbe/src/components/iphoneShareSettings.tsx`
