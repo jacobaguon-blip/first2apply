@@ -49,22 +49,7 @@ Deno.serve(async (req) => {
       ...context,
     });
 
-    // check how many links the user has already created
-    const { data: existingLinks, error: listLinksErr } = await supabaseClient
-      .from('links')
-      .select('*')
-      .eq('user_id', user.id);
-    if (listLinksErr) throw new Error(listLinksErr.message);
-    const userLinkCount = existingLinks?.length ?? 0;
-    const HARD_MAX_LINKS_PER_USER = 100;
-
-    if (userLinkCount >= HARD_MAX_LINKS_PER_USER) {
-      throw new Error(
-        `You have reached the maximum number of links (${HARD_MAX_LINKS_PER_USER}) allowed per user. Please delete some links before creating new ones. If you think this is a mistake, please contact our support team.`,
-      );
-    }
-
-    // insert a new link in the db
+    // Per-user link caps removed — fork has no subscription tiers.
     const { cleanUrl, site } = cleanJobUrl({
       url,
       allJobSites,
@@ -75,17 +60,6 @@ Deno.serve(async (req) => {
     if (site.deprecated) {
       throw new Error(
         `Site ${site.name} is deprecated and no longer supported. Please contact our support team if you need help.`,
-      );
-    }
-    // for now we only allow a limited number of custom parsed links per user because the feature is still in beta
-    const existingCustomParsedLinks = existingLinks?.filter(
-      (link) => allJobSites.find((site) => site.id === link.site_id)?.provider === 'custom',
-    );
-    const existingCustomParsedLinksCount = existingCustomParsedLinks?.length ?? 0;
-    const CUSTOM_PARSING_MAX_LINKS_PER_USER = 10;
-    if (site.provider === 'custom' && existingCustomParsedLinksCount >= CUSTOM_PARSING_MAX_LINKS_PER_USER) {
-      throw new Error(
-        `You have reached the maximum number of links (${CUSTOM_PARSING_MAX_LINKS_PER_USER}) with custom jobs parsing allowed per user. Please delete some links before creating new ones with custom parsing. If you think this is a mistake, please contact our support team.`,
       );
     }
 
