@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-20
+- `13:13` -- chore(release): bump desktop to 2.4.4 _(session `f13a61ce`)_
+  - `apps/desktopProbe/package.json`
 - `13:05` -- feat(career-ops): Fit column + batch evaluate w/ daily quota _(session `e2c0c790`)_
   - `apps/backend/supabase/functions/evaluate-job/index.ts`
   - `apps/desktopProbe/package.json`
