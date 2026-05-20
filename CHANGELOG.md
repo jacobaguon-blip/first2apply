@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-05-20
+- `02:00` -- chore: nightly sweep — update apps (4 files) _(session `8234ad6e`)_
+  - `apps/desktopProbe/package.json`
+  - `apps/desktopProbe/src/components/home/jobTabs.tsx`
+  - `apps/desktopProbe/src/components/home/jobTabsContent.tsx`
+  - `apps/desktopProbe/src/components/home/jobsList.tsx`
+
 ## 2026-05-19
 - `18:31` -- chore(release): bump desktop to 2.4.1 _(session `c7dff726`)_
   - `apps/desktopProbe/package.json`
