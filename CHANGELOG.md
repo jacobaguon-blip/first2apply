@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-20
+- `13:05` -- feat(career-ops): Fit column + batch evaluate w/ daily quota _(session `e2c0c790`)_
+  - `apps/backend/supabase/functions/evaluate-job/index.ts`
+  - `apps/desktopProbe/package.json`
+  - `apps/desktopProbe/src/components/home/jobTabsContent.tsx`
+  - `apps/desktopProbe/src/components/home/jobsList.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
 - `02:00` -- chore: nightly sweep — update apps (4 files) _(session `8234ad6e`)_
   - `apps/desktopProbe/package.json`
   - `apps/desktopProbe/src/components/home/jobTabs.tsx`
