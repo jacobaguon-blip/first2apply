@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-19
+- `18:06` -- feat(desktop): bulk add targets from a sponsor/exhibitor page _(session `84b50c2e`)_
+  - `apps/desktopProbe/src/components/bulkAddFromPage.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/pages/links.tsx`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
 - `17:28` -- feat(backend): remove per-user link caps (no subscriptions in this fork) _(session `ffe92ae1`)_
   - `apps/backend/supabase/functions/create-link/index.ts`
 - `16:57` -- chore(backend): bump queue-pending-link cap 30 → 200 _(session `b13081bb`)_
