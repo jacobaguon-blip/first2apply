@@ -75,6 +75,22 @@ async function checkFeatureFlag(supabaseClient: any, userId: string): Promise<bo
   return !!data?.career_ops_enabled;
 }
 
+const DAILY_EVAL_QUOTA = 200;
+
+// deno-lint-ignore no-explicit-any
+async function checkDailyQuota(supabaseClient: any, userId: string): Promise<{ ok: boolean; used: number }> {
+  const horizon = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error } = await supabaseClient
+    .from('evaluations')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .not('score', 'is', null)
+    .gte('created_at', horizon);
+  if (error) throw error;
+  const used = count ?? 0;
+  return { ok: used < DAILY_EVAL_QUOTA, used };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
@@ -94,6 +110,19 @@ Deno.serve(async (req) => {
     if (!enabled) {
       return new Response(
         JSON.stringify({ error: { code: 'feature_disabled', message: 'career_ops_enabled is off' } }),
+        { headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
+      );
+    }
+
+    const quota = await checkDailyQuota(supabaseClient, user.id);
+    if (!quota.ok) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            code: 'quota_exceeded',
+            message: `Daily evaluation cap of ${DAILY_EVAL_QUOTA} reached (${quota.used} used in last 24h). Try again later.`,
+          },
+        }),
         { headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
       );
     }

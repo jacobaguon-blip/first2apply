@@ -1,21 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { useAppState } from '@/hooks/appState';
+import { useCareerOps } from '@/hooks/careerOps';
 import { useError } from '@/hooks/error';
 import { useSession } from '@/hooks/session';
 import { useSettings } from '@/hooks/settings';
 import {
+  batchEvaluateJobs,
   getJobById,
+  listJobEvaluations,
   listJobs,
   openExternalUrl,
   scanJob,
   updateJobLabels,
   updateJobStatus,
+  type JobEvaluationRow,
 } from '@/lib/electronMainSdk';
 import { Job, JobLabel, JobStatus } from '@first2apply/core';
-import { JobSummary, TabsContent } from '@first2apply/ui';
+import { Button, JobSummary, TabsContent } from '@first2apply/ui';
 import { toast } from '@first2apply/ui';
 
 import { BrowserWindow, BrowserWindowHandle } from '../browserWindow';
@@ -65,6 +69,80 @@ export function JobTabsContent({
 
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const selectedJob = listing.jobs.find((job) => job.id === selectedJobId);
+  const [evaluations, setEvaluations] = useState<Map<number, JobEvaluationRow>>(new Map());
+  const [sortMode, setSortMode] = useState<'newest' | 'fit'>('newest');
+  const [scoring, setScoring] = useState(false);
+  const [scoreProgress, setScoreProgress] = useState<{ done: number; total: number } | null>(null);
+  const { enabled: careerOpsEnabled } = useCareerOps();
+
+  // Keep evaluations in sync with the loaded jobs page.
+  useEffect(() => {
+    if (!careerOpsEnabled || listing.jobs.length === 0) return;
+    const ids = listing.jobs.map((j) => j.id);
+    let cancelled = false;
+    listJobEvaluations(ids)
+      .then((r) => {
+        if (cancelled) return;
+        setEvaluations((prev) => {
+          const next = new Map(prev);
+          for (const row of r.rows) next.set(row.job_id, row);
+          return next;
+        });
+      })
+      .catch((): void => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [careerOpsEnabled, listing.jobs.map((j) => j.id).join(',')]);
+
+  // When sort=fit, reorder the loaded page in-memory by score desc. Unscored jobs sink.
+  const visibleJobs = useMemo(() => {
+    if (sortMode !== 'fit') return listing.jobs;
+    return [...listing.jobs].sort((a, b) => {
+      const sa = evaluations.get(a.id)?.score ?? -1;
+      const sb = evaluations.get(b.id)?.score ?? -1;
+      return sb - sa;
+    });
+  }, [listing.jobs, sortMode, evaluations]);
+
+  const unscoredIds = useMemo(
+    () => listing.jobs.filter((j) => !evaluations.has(j.id)).map((j) => j.id),
+    [listing.jobs, evaluations],
+  );
+
+  const onScoreUnscored = async (limit: number) => {
+    if (unscoredIds.length === 0) return;
+    const batch = unscoredIds.slice(0, limit);
+    setScoring(true);
+    setScoreProgress({ done: 0, total: batch.length });
+    try {
+      // Stream progress by chunking calls of 1.
+      let done = 0;
+      for (const id of batch) {
+        const r = await batchEvaluateJobs([id]);
+        done += 1;
+        setScoreProgress({ done, total: batch.length });
+        const failed = r.results.find((x) => !x.ok);
+        if (failed && /quota_exceeded/.test(failed.error ?? '')) {
+          toast({ title: 'Daily evaluation cap reached', description: failed.error, variant: 'destructive' });
+          break;
+        }
+      }
+      // Refresh evaluations for the scored ids.
+      const r = await listJobEvaluations(batch);
+      setEvaluations((prev) => {
+        const next = new Map(prev);
+        for (const row of r.rows) next.set(row.job_id, row);
+        return next;
+      });
+      toast({ title: 'Done scoring', description: `Evaluated ${done} job${done === 1 ? '' : 's'}.` });
+    } catch (e) {
+      handleError({ error: e, title: 'Batch evaluate failed' });
+    } finally {
+      setScoring(false);
+      setScoreProgress(null);
+    }
+  };
 
   const statusIndex = ALL_JOB_STATUSES.indexOf(status);
 
@@ -334,13 +412,64 @@ export function JobTabsContent({
                     labels={labels}
                     onSearchJobs={onSearchJobs}
                   />
+                  {careerOpsEnabled && listing.jobs.length > 0 && (
+                    <div className="mt-2 flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Fit</span>
+                        <span className="text-muted-foreground">
+                          {evaluations.size}/{listing.jobs.length} scored
+                          {unscoredIds.length > 0 && ` · ${unscoredIds.length} unscored`}
+                          {scoreProgress && ` · ${scoreProgress.done}/${scoreProgress.total}…`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant={sortMode === 'newest' ? 'default' : 'outline'}
+                          onClick={() => setSortMode('newest')}
+                          className="h-7 px-2 text-xs"
+                        >
+                          Newest
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={sortMode === 'fit' ? 'default' : 'outline'}
+                          onClick={() => setSortMode('fit')}
+                          className="h-7 px-2 text-xs"
+                        >
+                          Best fit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onScoreUnscored(10)}
+                          disabled={scoring || unscoredIds.length === 0}
+                          className="h-7 px-2 text-xs"
+                        >
+                          {scoring ? 'Scoring…' : `Score ${Math.min(10, unscoredIds.length)}`}
+                        </Button>
+                        {unscoredIds.length > 10 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onScoreUnscored(unscoredIds.length)}
+                            disabled={scoring}
+                            className="h-7 px-2 text-xs"
+                          >
+                            Score all ({unscoredIds.length})
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {listing.isLoading || statusItem !== status ? (
                   <JobsListSkeleton />
                 ) : listing.jobs.length > 0 ? (
                   <JobsList
-                    jobs={listing.jobs}
+                    jobs={visibleJobs}
+                    evaluations={evaluations}
                     selectedJobId={selectedJobId}
                     hasMore={listing.hasMore}
                     parentContainerId="jobsList"

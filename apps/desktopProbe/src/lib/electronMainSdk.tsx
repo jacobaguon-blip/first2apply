@@ -817,6 +817,18 @@ export async function evaluateJob(jobId: number): Promise<JobEvaluationResult> {
   return _mainProcessApiCall('evaluate-job', { jobId });
 }
 
+export type JobEvaluationRow = { job_id: number; score: number; grade: 'A' | 'B' | 'C' | 'D' | 'F'; archetype: string };
+
+export async function listJobEvaluations(jobIds: number[]): Promise<{ rows: JobEvaluationRow[] }> {
+  return _mainProcessApiCall('list-job-evaluations', { jobIds });
+}
+
+export async function batchEvaluateJobs(
+  jobIds: number[],
+): Promise<{ results: Array<{ jobId: number; ok: boolean; error?: string }> }> {
+  return _mainProcessApiCall('batch-evaluate-jobs', { jobIds });
+}
+
 export type BulkCandidate = { url: string; host: string; text: string };
 
 export async function bulkScanPage(url: string): Promise<{ candidates: BulkCandidate[] }> {

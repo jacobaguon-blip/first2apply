@@ -844,6 +844,44 @@ export function initRendererIpcApi({
     }),
   );
 
+  ipcMain.handle('list-job-evaluations', async (_e, { jobIds }: { jobIds: number[] }) =>
+    _apiCall(async () => {
+      if (!jobIds || jobIds.length === 0) return { rows: [] };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      const { data, error } = await supabase
+        .from('evaluations')
+        .select('job_id, score, grade, archetype')
+        .in('job_id', jobIds)
+        .not('score', 'is', null);
+      if (error) throw new Error(error.message);
+      return { rows: data ?? [] };
+    }),
+  );
+
+  ipcMain.handle('batch-evaluate-jobs', async (_e, { jobIds }: { jobIds: number[] }) =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const results: Array<{ jobId: number; ok: boolean; error?: string }> = [];
+      for (const jobId of jobIds ?? []) {
+        try {
+          const { data, error } = await supabase.functions.invoke<{
+            score?: number;
+            error?: { code: string; message: string };
+          }>('evaluate-job', { body: { job_id: jobId } });
+          if (error) throw error;
+          if (data?.error) throw new Error(`${data.error.code}: ${data.error.message}`);
+          results.push({ jobId, ok: true });
+        } catch (e) {
+          results.push({ jobId, ok: false, error: e instanceof Error ? e.message : String(e) });
+          // Stop early on quota exceeded — no point burning more attempts.
+          if (e instanceof Error && /quota_exceeded/.test(e.message)) break;
+        }
+      }
+      return { results };
+    }),
+  );
+
   ipcMain.handle('evaluate-job', async (_e, { jobId }: { jobId: number }) =>
     _apiCall(async () => {
       const supabase = supabaseApi.getSupabaseClient();

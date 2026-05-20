@@ -3,6 +3,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import InfiniteScroll from 'react-infinite-scroll-component';
 
 import { Icons } from '@/components/icons';
+import type { JobEvaluationRow } from '@/lib/electronMainSdk';
 import { cn } from '@/lib/utils';
 import { Job } from '@first2apply/core';
 import { JobCard, useSites } from '@first2apply/ui';
@@ -15,6 +16,7 @@ import { DeleteJobDialog } from './deleteJobDialog';
  */
 export function JobsList({
   jobs,
+  evaluations,
   selectedJobId,
   hasMore,
   parentContainerId,
@@ -25,6 +27,7 @@ export function JobsList({
   onDelete,
 }: {
   jobs: Job[];
+  evaluations?: Map<number, JobEvaluationRow>;
   selectedJobId?: number;
   hasMore: boolean;
   parentContainerId: string;
@@ -146,6 +149,7 @@ export function JobsList({
                     {job.location ? ` · ${job.location}` : ''}
                   </p>
                 </div>
+                <FitChip evaluation={evaluations?.get(job.id)} />
                 <span className="shrink-0 whitespace-nowrap text-xs text-foreground/70">
                   {getRelativeTimeString(new Date(job.created_at))}
                 </span>
@@ -176,6 +180,28 @@ export function JobsList({
         />
       )}
     </InfiniteScroll>
+  );
+}
+
+function FitChip({ evaluation }: { evaluation?: JobEvaluationRow }) {
+  if (!evaluation) return null;
+  const color =
+    evaluation.grade === 'A'
+      ? 'bg-green-600/15 text-green-700 dark:text-green-400'
+      : evaluation.grade === 'B'
+        ? 'bg-emerald-600/15 text-emerald-700 dark:text-emerald-400'
+        : evaluation.grade === 'C'
+          ? 'bg-yellow-600/15 text-yellow-700 dark:text-yellow-500'
+          : evaluation.grade === 'D'
+            ? 'bg-orange-600/15 text-orange-700 dark:text-orange-400'
+            : 'bg-red-600/15 text-red-700 dark:text-red-400';
+  return (
+    <span
+      className={cn('shrink-0 rounded-full px-2 py-0.5 text-xs font-medium', color)}
+      title={`Score ${evaluation.score}/100 · ${evaluation.archetype}`}
+    >
+      {evaluation.grade} · {evaluation.score}
+    </span>
   );
 }
 
