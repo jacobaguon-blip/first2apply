@@ -817,6 +817,16 @@ export async function evaluateJob(jobId: number): Promise<JobEvaluationResult> {
   return _mainProcessApiCall('evaluate-job', { jobId });
 }
 
+export type BulkCandidate = { url: string; host: string; text: string };
+
+export async function bulkScanPage(url: string): Promise<{ candidates: BulkCandidate[] }> {
+  return _mainProcessApiCall('bulk-from-page:scan', { url });
+}
+
+export async function bulkEnqueuePending(urls: string[]): Promise<{ inserted: number; deduped: number }> {
+  return _mainProcessApiCall('bulk-from-page:enqueue', { urls });
+}
+
 export async function exportCvPdf(args: {
   markdown: string;
   company: string;

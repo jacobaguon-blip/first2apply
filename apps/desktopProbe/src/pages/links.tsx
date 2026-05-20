@@ -2,6 +2,7 @@ import { LayoutGridIcon, ListIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { BrowserWindow, BrowserWindowHandle } from '@/components/browserWindow';
+import { BulkAddFromPage } from '@/components/bulkAddFromPage';
 import { CreateCompanyTarget } from '@/components/createCompanyTarget';
 import { CreateLink } from '@/components/createLink';
 import { LinksList } from '@/components/linksList';
@@ -213,6 +214,7 @@ export function LinksPage() {
               </div>
             )}
             <CreateCompanyTarget />
+            <BulkAddFromPage />
           </div>
         </div>
 

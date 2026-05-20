@@ -184,6 +184,118 @@ export function initRendererIpcApi({
     }),
   );
 
+  // ---- IPC: bulk-add-from-page (Option B) ----
+  ipcMain.handle('bulk-from-page:scan', async (_e, { url }: { url: string }) =>
+    _apiCall(async () => {
+      const cleanUrl = (() => {
+        let u = (url ?? '').trim();
+        if (!u) throw new Error('URL required');
+        if (!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, '');
+        try {
+          new URL(u);
+        } catch {
+          throw new Error('Invalid URL');
+        }
+        return u;
+      })();
+      const sourceHost = new URL(cleanUrl).hostname.toLowerCase();
+
+      const candidates = await normalHtmlDownloader.loadUrl({
+        url: cleanUrl,
+        scrollTimes: 4,
+        callback: async ({ html }) => {
+          const re = /<a\b[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+          const byHost = new Map<string, { url: string; host: string; text: string }>();
+          let m: RegExpExecArray | null;
+          while ((m = re.exec(html)) !== null) {
+            const href = m[1].trim();
+            const rawText = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) continue;
+            let abs: URL;
+            try {
+              abs = new URL(href, cleanUrl);
+            } catch {
+              continue;
+            }
+            if (abs.protocol !== 'http:' && abs.protocol !== 'https:') continue;
+            const host = abs.hostname.toLowerCase();
+            // Skip self-references and obvious social/CDN hosts.
+            if (host === sourceHost || host.endsWith('.' + sourceHost) || sourceHost.endsWith('.' + host)) continue;
+            const SOCIAL = [
+              'facebook.com', 'twitter.com', 'x.com', 'instagram.com', 'linkedin.com', 'youtube.com',
+              'tiktok.com', 'pinterest.com', 'threads.net', 'snapchat.com', 'reddit.com', 'wa.me',
+              'google.com', 'apple.com', 'cdn.shopify.com', 'amazonaws.com', 'cloudfront.net',
+              'gravatar.com', 'doubleclick.net', 'googletagmanager.com', 'googleadservices.com',
+              'recaptcha.net', 'gstatic.com',
+            ];
+            if (SOCIAL.some((s) => host === s || host.endsWith('.' + s))) continue;
+
+            // Prefer the root of each external host: drop path on first encounter.
+            const rootUrl = abs.protocol + '//' + host + '/';
+            if (!byHost.has(host)) {
+              byHost.set(host, { url: rootUrl, host, text: rawText });
+            } else if (rawText && !byHost.get(host)!.text) {
+              byHost.get(host)!.text = rawText;
+            }
+          }
+          return [...byHost.values()].sort((a, b) => a.host.localeCompare(b.host));
+        },
+      });
+
+      return { candidates };
+    }),
+  );
+
+  ipcMain.handle('bulk-from-page:enqueue', async (_e, { urls }: { urls: string[] }) =>
+    _apiCall(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const supabase = supabaseApi.getSupabaseClient() as any;
+      const { data: u } = await supabase.auth.getUser();
+      if (!u?.user?.id) throw new Error('Not signed in');
+      const userId = u.user.id as string;
+
+      const normalized: string[] = [];
+      for (const raw of urls ?? []) {
+        let s = (raw ?? '').trim();
+        if (!s) continue;
+        if (!/^https?:\/\//i.test(s)) s = 'https://' + s.replace(/^\/+/, '');
+        try {
+          new URL(s);
+        } catch {
+          continue;
+        }
+        if (s.length > 2048) continue;
+        normalized.push(s);
+      }
+      if (normalized.length === 0) return { inserted: 0, deduped: 0 };
+
+      // Dedup against existing pending rows for this user.
+      const { data: existing } = await supabase
+        .from('pending_links')
+        .select('url')
+        .eq('user_id', userId)
+        .in('status', ['pending', 'claimed']);
+      const existingSet = new Set<string>((existing ?? []).map((r: { url: string }) => r.url));
+
+      const toInsert = normalized
+        .filter((u, i, arr) => arr.indexOf(u) === i)
+        .filter((u) => !existingSet.has(u));
+      const deduped = normalized.length - toInsert.length;
+
+      if (toInsert.length === 0) {
+        return { inserted: 0, deduped };
+      }
+
+      const rows = toInsert.map((u) => ({ user_id: userId, url: u, source: 'bulk-from-page' }));
+      const { error: insErr } = await supabase.from('pending_links').insert(rows);
+      if (insErr) throw new Error(insErr.message);
+
+      drainer.drain().catch((): void => undefined);
+
+      return { inserted: toInsert.length, deduped };
+    }),
+  );
+
   // ---- IPC: personal tokens ----
   ipcMain.handle('list-api-tokens', async () =>
     _apiCall(async () => {
