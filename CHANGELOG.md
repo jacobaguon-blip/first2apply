@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-19
+- `18:31` -- chore(release): bump desktop to 2.4.1 _(session `c7dff726`)_
+  - `apps/desktopProbe/package.json`
 - `18:06` -- feat(desktop): bulk add targets from a sponsor/exhibitor page _(session `84b50c2e`)_
   - `apps/desktopProbe/src/components/bulkAddFromPage.tsx`
   - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
