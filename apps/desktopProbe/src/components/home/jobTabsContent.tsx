@@ -41,6 +41,7 @@ export function JobTabsContent({
   siteIds,
   linkIds,
   labels,
+  viewMode,
 }: {
   status: JobStatus;
   listing: JobListing;
@@ -49,6 +50,7 @@ export function JobTabsContent({
   siteIds: number[];
   linkIds: number[];
   labels: string[];
+  viewMode: 'card' | 'list';
 }) {
   const { handleError } = useError();
   const { settings } = useSettings();
@@ -342,6 +344,7 @@ export function JobTabsContent({
                     selectedJobId={selectedJobId}
                     hasMore={listing.hasMore}
                     parentContainerId="jobsList"
+                    viewMode={viewMode}
                     onLoadMore={onLoadMore}
                     onSelect={(job) => scanJobAndSelect(job)}
                     onArchive={(j) => {

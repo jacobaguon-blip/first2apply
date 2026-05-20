@@ -1,4 +1,5 @@
 import { ArchiveIcon, DotsVerticalIcon, DownloadIcon, TrashIcon, UpdateIcon } from '@radix-ui/react-icons';
+import { LayoutGridIcon, ListIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -22,7 +23,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@first2apply/ui';
-import { Tabs, TabsList, TabsTrigger } from '@first2apply/ui';
+import { Button, Tabs, TabsList, TabsTrigger } from '@first2apply/ui';
 import { toast } from '@first2apply/ui';
 
 import { JobTabsContent } from './jobTabsContent';
@@ -58,6 +59,14 @@ export function JobTabs() {
   const siteIds = searchParams.get('site_ids') ? searchParams.get('site_ids').split(',').map(Number) : [];
   const linkIds = searchParams.get('link_ids') ? searchParams.get('link_ids').split(',').map(Number) : [];
   const labels = searchParams.get('labels') ? searchParams.get('labels').split(',') : [];
+
+  const [viewMode, setViewMode] = useState<'card' | 'list'>(
+    () => (localStorage.getItem('jobsViewMode') as 'card' | 'list') || 'card',
+  );
+  const updateViewMode = (mode: 'card' | 'list') => {
+    setViewMode(mode);
+    localStorage.setItem('jobsViewMode', mode);
+  };
 
   const [listing, setListing] = useState<JobListing>({
     isLoading: true,
@@ -128,6 +137,28 @@ export function JobTabs() {
 
   return (
     <Tabs value={status} onValueChange={(value) => onTabChange(value)}>
+      <div className="mb-2 flex justify-end">
+        <div className="flex items-center rounded-md border border-border bg-card p-0.5">
+          <Button
+            variant={viewMode === 'card' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => updateViewMode('card')}
+            title="Card view"
+          >
+            <LayoutGridIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => updateViewMode('list')}
+            title="List view"
+          >
+            <ListIcon className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
       <TabsList className="h-fit w-full p-2">
         <TabsTrigger
           value="new"
@@ -227,6 +258,7 @@ export function JobTabs() {
         siteIds={siteIds}
         linkIds={linkIds}
         labels={labels}
+        viewMode={viewMode}
       />
     </Tabs>
   );

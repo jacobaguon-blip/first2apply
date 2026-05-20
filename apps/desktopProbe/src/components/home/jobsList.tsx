@@ -18,6 +18,7 @@ export function JobsList({
   selectedJobId,
   hasMore,
   parentContainerId,
+  viewMode = 'card',
   onLoadMore,
   onSelect,
   onArchive,
@@ -27,6 +28,7 @@ export function JobsList({
   selectedJobId?: number;
   hasMore: boolean;
   parentContainerId: string;
+  viewMode?: 'card' | 'list';
   onLoadMore: () => void;
   onSelect: (job: Job) => void;
   onArchive: (job: Job) => void;
@@ -126,6 +128,31 @@ export function JobsList({
     >
       <ul>
         {jobs.map((job, index) => {
+          if (viewMode === 'list') {
+            return (
+              <li
+                key={job.id}
+                className={cn(
+                  'flex cursor-pointer items-center gap-3 border-b border-muted px-4 py-2.5 hover:bg-muted/50',
+                  selectedJobId === job.id && 'bg-muted',
+                )}
+                ref={itemRefs[index]}
+                onClick={() => onSelect(job)}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium leading-5">{job.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {job.companyName}
+                    {job.location ? ` · ${job.location}` : ''}
+                  </p>
+                </div>
+                <span className="shrink-0 whitespace-nowrap text-xs text-foreground/70">
+                  {getRelativeTimeString(new Date(job.created_at))}
+                </span>
+              </li>
+            );
+          }
+
           return (
             <li
               key={job.id}
