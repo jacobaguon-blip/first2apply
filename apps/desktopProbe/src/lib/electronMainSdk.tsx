@@ -182,6 +182,9 @@ export async function listJobs({
   siteIds,
   linkIds,
   labels,
+  sort,
+  locationBuckets,
+  locationContains,
   limit,
   after,
 }: {
@@ -190,6 +193,9 @@ export async function listJobs({
   siteIds?: number[];
   linkIds?: number[];
   labels?: string[];
+  sort?: import('@first2apply/core').JobSortMode;
+  locationBuckets?: import('@first2apply/core').LocationBucket[];
+  locationContains?: string;
   limit?: number;
   after?: string;
 }) {
@@ -206,6 +212,9 @@ export async function listJobs({
     siteIds,
     linkIds,
     labels,
+    sort,
+    locationBuckets,
+    locationContains,
     limit,
     after,
   });

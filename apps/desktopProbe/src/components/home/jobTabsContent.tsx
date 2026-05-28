@@ -18,9 +18,26 @@ import {
   updateJobStatus,
   type JobEvaluationRow,
 } from '@/lib/electronMainSdk';
-import { Job, JobLabel, JobStatus } from '@first2apply/core';
-import { Button, JobSummary, TabsContent } from '@first2apply/ui';
+import { Job, JobLabel, JobSortMode, JobStatus, LocationBucket } from '@first2apply/core';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+  JobSummary,
+  TabsContent,
+} from '@first2apply/ui';
 import { toast } from '@first2apply/ui';
+
+type SortMode = JobSortMode | 'fit';
+
+const SORT_LABELS: Record<SortMode, string> = {
+  newest_first: 'Newest first',
+  oldest_first: 'Oldest first',
+  fit: 'Best fit',
+};
 
 import { BrowserWindow, BrowserWindowHandle } from '../browserWindow';
 import { JobDetails } from './jobDetails';
@@ -46,6 +63,9 @@ export function JobTabsContent({
   linkIds,
   labels,
   viewMode,
+  sort,
+  locationBuckets,
+  locationContains,
 }: {
   status: JobStatus;
   listing: JobListing;
@@ -55,6 +75,9 @@ export function JobTabsContent({
   linkIds: number[];
   labels: string[];
   viewMode: 'card' | 'list';
+  sort: JobSortMode;
+  locationBuckets: LocationBucket[];
+  locationContains: string;
 }) {
   const { handleError } = useError();
   const { settings } = useSettings();
@@ -70,7 +93,12 @@ export function JobTabsContent({
   const [selectedJobId, setSelectedJobId] = useState<number | null>(null);
   const selectedJob = listing.jobs.find((job) => job.id === selectedJobId);
   const [evaluations, setEvaluations] = useState<Map<number, JobEvaluationRow>>(new Map());
-  const [sortMode, setSortMode] = useState<'newest' | 'fit'>('newest');
+  const [sortMode, setSortMode] = useState<SortMode>(sort);
+
+  // Sync sortMode with the URL-driven sort prop, but don't override client-only 'fit'.
+  useEffect(() => {
+    setSortMode((prev) => (prev === 'fit' ? prev : sort));
+  }, [sort]);
   const [scoring, setScoring] = useState(false);
   const [scoreProgress, setScoreProgress] = useState<{ done: number; total: number } | null>(null);
   const { enabled: careerOpsEnabled } = useCareerOps();
@@ -169,7 +197,18 @@ export function JobTabsContent({
         console.log(location.search);
         setListing((listing) => ({ ...listing, isLoading: true }));
 
-        const result = await listJobs({ status, search, siteIds, linkIds, labels, limit: JOB_BATCH_SIZE });
+        const serverSort: JobSortMode = sort === 'oldest_first' ? 'oldest_first' : 'newest_first';
+        const result = await listJobs({
+          status,
+          search,
+          siteIds,
+          linkIds,
+          labels,
+          sort: serverSort,
+          locationBuckets,
+          locationContains,
+          limit: JOB_BATCH_SIZE,
+        });
         console.log('found jobs', result.jobs.length);
 
         setListing({
@@ -389,7 +428,29 @@ export function JobTabsContent({
   // Update the query params when the search input changes
   const onSearchJobs = ({ search, filters }: { search: string; filters: JobFiltersType }) => {
     navigate(
-      `?status=${status}&search=${search}&site_ids=${filters.sites.join(',')}&link_ids=${filters.links.join(',')}&labels=${filters.labels.join(',')}`,
+      `?status=${status}` +
+        `&search=${search}` +
+        `&site_ids=${filters.sites.join(',')}` +
+        `&link_ids=${filters.links.join(',')}` +
+        `&labels=${filters.labels.join(',')}` +
+        `&loc_buckets=${filters.locationBuckets.join(',')}` +
+        `&loc_contains=${encodeURIComponent(filters.locationContains)}` +
+        `&sort=${sortMode === 'fit' ? sort : sortMode}`,
+    );
+  };
+
+  const onSortChange = (next: SortMode) => {
+    setSortMode(next);
+    if (next === 'fit') return; // client-only — don't dirty the URL
+    navigate(
+      `?status=${status}` +
+        `&search=${search}` +
+        `&site_ids=${siteIds.join(',')}` +
+        `&link_ids=${linkIds.join(',')}` +
+        `&labels=${labels.join(',')}` +
+        `&loc_buckets=${locationBuckets.join(',')}` +
+        `&loc_contains=${encodeURIComponent(locationContains)}` +
+        `&sort=${next}`,
     );
   };
 
@@ -410,6 +471,8 @@ export function JobTabsContent({
                     siteIds={siteIds}
                     linkIds={linkIds}
                     labels={labels}
+                    locationBuckets={locationBuckets}
+                    locationContains={locationContains}
                     onSearchJobs={onSearchJobs}
                   />
                   {careerOpsEnabled && listing.jobs.length > 0 && (
@@ -423,22 +486,23 @@ export function JobTabsContent({
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant={sortMode === 'newest' ? 'default' : 'outline'}
-                          onClick={() => setSortMode('newest')}
-                          className="h-7 px-2 text-xs"
-                        >
-                          Newest
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={sortMode === 'fit' ? 'default' : 'outline'}
-                          onClick={() => setSortMode('fit')}
-                          className="h-7 px-2 text-xs"
-                        >
-                          Best fit
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline" className="h-7 px-2 text-xs">
+                              Sort: {SORT_LABELS[sortMode]}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuRadioGroup
+                              value={sortMode}
+                              onValueChange={(v) => onSortChange(v as SortMode)}
+                            >
+                              <DropdownMenuRadioItem value="newest_first">Newest first</DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="oldest_first">Oldest first</DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="fit">Best fit</DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <Button
                           size="sm"
                           variant="outline"

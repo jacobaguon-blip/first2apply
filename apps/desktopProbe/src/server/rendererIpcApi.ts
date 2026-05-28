@@ -457,8 +457,26 @@ export function initRendererIpcApi({
     return res;
   });
 
-  ipcMain.handle('list-jobs', async (event, { status, search, siteIds, linkIds, labels, limit, after }) =>
-    _apiCall(() => supabaseApi.listJobs({ status, search, siteIds, linkIds, labels, limit, after })),
+  ipcMain.handle(
+    'list-jobs',
+    async (
+      event,
+      { status, search, siteIds, linkIds, labels, sort, locationBuckets, locationContains, limit, after },
+    ) =>
+      _apiCall(() =>
+        supabaseApi.listJobs({
+          status,
+          search,
+          siteIds,
+          linkIds,
+          labels,
+          sort,
+          locationBuckets,
+          locationContains,
+          limit,
+          after,
+        }),
+      ),
   );
 
   ipcMain.handle('update-job-status', async (event, { jobId, status }) => {
