@@ -35,4 +35,12 @@ describe('classifyLocation', () => {
   it('exports the canonical bucket list', () => {
     expect(LOCATION_BUCKETS).toEqual(['remote', 'hybrid', 'onsite', 'unspecified']);
   });
+
+  it('pins documented false positives (descriptive "remote")', () => {
+    // These are intentional false positives — see classifyLocation.ts JSDoc.
+    // Keep them pinned so the next editor doesn't "fix" them and break the mirror.
+    expect(classifyLocation('Remote-first')).toBe('remote');
+    expect(classifyLocation('fully remote')).toBe('remote');
+    expect(classifyLocation('Remote office in NYC')).toBe('remote');
+  });
 });
