@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `09:49` -- docs: implementation plan for sort dropdown + location filter _(session `3c13aafd`)_
+  - `docs/plans/2026-05-28-sort-and-location-filter.md`
 - `09:44` -- feat(desktop): one-command local + household deploy (pnpm-only, no npm fallback) _(session `4557f571`)_
   - `apps/desktopProbe/package.json`
   - `apps/desktopProbe/scripts/deploy-all.sh`
