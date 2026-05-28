@@ -496,7 +496,8 @@ export function initRendererIpcApi({
     _apiCall(async () => {
       const isScanning = await jobScanner.isScanning();
       const newUpdate = await autoUpdater.getNewUpdate();
-      return { isScanning, newUpdate };
+      const lastScanAt = jobScanner.getLastScanAt()?.toISOString() ?? null;
+      return { isScanning, newUpdate, lastScanAt };
     }),
   );
   ipcMain.handle('apply-app-update', async () =>

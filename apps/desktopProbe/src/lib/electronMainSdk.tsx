@@ -537,6 +537,7 @@ export async function scanAllMyLinks(): Promise<{ triggeredVia: 'pi' | 'local' }
 export async function getAppState(): Promise<{
   isScanning: boolean;
   newUpdate?: NewAppVersion;
+  lastScanAt?: string | null;
 }> {
   return await _mainProcessApiCall('get-app-state', {});
 }

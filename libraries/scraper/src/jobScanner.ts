@@ -106,6 +106,9 @@ export class JobScanner {
   };
   private _cronJob: ScheduledTask | undefined;
   private _runningScansCount = 0;
+  // Timestamp of the last fully-completed scanLinks call (success path only).
+  // Surfaced to the UI as "Last scanned: <relative time>".
+  private _lastScanAt: Date | null = null;
 
   constructor(args: JobScannerCtorArgs) {
     this._logger = args.logger;
@@ -145,6 +148,15 @@ export class JobScanner {
 
   isScanning(): boolean {
     return this._runningScansCount > 0;
+  }
+
+  /**
+   * Timestamp of the most recent scanLinks() success. Null until the first
+   * scan completes in this process. The UI uses this to render
+   * "Last scanned: <relative time>".
+   */
+  getLastScanAt(): Date | null {
+    return this._lastScanAt;
   }
 
   isPaused(): boolean {
@@ -280,6 +292,7 @@ export class JobScanner {
       const end = new Date().getTime();
       const took = (end - start) / 1000;
       this._logger.info(`scan complete in ${took.toFixed(0)} seconds`);
+      this._lastScanAt = new Date();
       this._analytics.trackEvent('scan_links_complete', {
         links_count: links.length,
         new_jobs_count: newJobs.length,
