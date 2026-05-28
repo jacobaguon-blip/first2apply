@@ -15,6 +15,9 @@
     "prettier": "prettier --check \"src/**/*.{ts,tsx}\"",
     "package": "electron-forge package",
     "make": "electron-forge make --arch=arm64",
+    "deploy:local": "bash scripts/deploy-local.sh",
+    "deploy:local:refresh": "DEPLOY_REFRESH_DEPS=1 bash scripts/deploy-local.sh",
+    "deploy:all": "bash scripts/deploy-all.sh",
     "release": "npx release-it --ci",
     "test": "vitest run",
     "test:watch": "vitest"
