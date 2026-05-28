@@ -305,6 +305,53 @@ export type Database = {
           },
         ]
       }
+      evaluations: {
+        Row: {
+          archetype: string | null
+          blocks: Json | null
+          created_at: string
+          grade: string | null
+          id: string
+          job_id: number
+          score: number | null
+          tailored_cv: string | null
+          tailored_cv_generated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          archetype?: string | null
+          blocks?: Json | null
+          created_at?: string
+          grade?: string | null
+          id?: string
+          job_id: number
+          score?: number | null
+          tailored_cv?: string | null
+          tailored_cv_generated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          archetype?: string | null
+          blocks?: Json | null
+          created_at?: string
+          grade?: string | null
+          id?: string
+          job_id?: number
+          score?: number | null
+          tailored_cv?: string | null
+          tailored_cv_generated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       html_dumps: {
         Row: {
           created_at: string
@@ -517,9 +564,63 @@ export type Database = {
           },
         ]
       }
+      pending_links: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: number
+          link_id: number | null
+          source: string
+          status: string
+          title: string | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: number
+          link_id?: number | null
+          source?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: number
+          link_id?: number | null
+          source?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_links_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_id: string | null
+          career_ops_enabled: boolean
           created_at: string
           id: number
           is_trial: boolean
@@ -531,6 +632,7 @@ export type Database = {
         }
         Insert: {
           account_id?: string | null
+          career_ops_enabled?: boolean
           created_at?: string
           id?: number
           is_trial?: boolean
@@ -542,6 +644,7 @@ export type Database = {
         }
         Update: {
           account_id?: string | null
+          career_ops_enabled?: boolean
           created_at?: string
           id?: number
           is_trial?: boolean
@@ -666,6 +769,60 @@ export type Database = {
           provider?: string
           queryParamsToRemove?: string[] | null
           urls?: string[]
+        }
+        Relationships: []
+      }
+      user_api_tokens: {
+        Row: {
+          created_at: string
+          id: number
+          label: string
+          last_used_at: string | null
+          revoked_at: string | null
+          scopes: string[]
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          label: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          scopes?: string[]
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          label?: string
+          last_used_at?: string | null
+          revoked_at?: string | null
+          scopes?: string[]
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_cv_profiles: {
+        Row: {
+          markdown: string
+          source_filename: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          markdown: string
+          source_filename?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          markdown?: string
+          source_filename?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
