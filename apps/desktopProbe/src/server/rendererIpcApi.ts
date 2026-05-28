@@ -492,11 +492,56 @@ export function initRendererIpcApi({
       return { job: updatedJob };
     }),
   );
+  // 30s cache for the DB lookup of MAX(last_scraped_at) across the user's
+  // links. The appState hook polls every 2s; the DB doesn't need that much
+  // pressure for a sidebar timestamp. Cleared automatically as time advances.
+  let _lastScrapedAtCache: { at: number; value: string | null } | null = null;
+  const LAST_SCRAPED_TTL_MS = 30_000;
+
   ipcMain.handle('get-app-state', async () =>
     _apiCall(async () => {
       const isScanning = await jobScanner.isScanning();
       const newUpdate = await autoUpdater.getNewUpdate();
-      const lastScanAt = jobScanner.getLastScanAt()?.toISOString() ?? null;
+
+      const inProcessLastScanIso = jobScanner.getLastScanAt()?.toISOString() ?? null;
+
+      // Pi-completed scans never update the desktop's in-process scanner, so
+      // also read MAX(last_scraped_at) from the cloud `links` table. That's
+      // the truth source for "when did any scan of mine last finish" — covers
+      // both local and Pi scans uniformly.
+      let dbLastScrapedIso: string | null = null;
+      const now = Date.now();
+      if (_lastScrapedAtCache && now - _lastScrapedAtCache.at < LAST_SCRAPED_TTL_MS) {
+        dbLastScrapedIso = _lastScrapedAtCache.value;
+      } else {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const supabase = supabaseApi.getSupabaseClient() as any;
+          const { data, error } = await supabase
+            .from('links')
+            .select('last_scraped_at')
+            .not('last_scraped_at', 'is', null)
+            .order('last_scraped_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (!error && data?.last_scraped_at) {
+            dbLastScrapedIso = new Date(data.last_scraped_at).toISOString();
+          }
+          _lastScrapedAtCache = { at: now, value: dbLastScrapedIso };
+        } catch {
+          // ignore — fall back to in-process value silently
+        }
+      }
+
+      // Pick the newer of the two ISO timestamps (lexicographic compare is
+      // correct for ISO-8601 UTC strings of the same length).
+      const lastScanAt =
+        inProcessLastScanIso && dbLastScrapedIso
+          ? inProcessLastScanIso > dbLastScrapedIso
+            ? inProcessLastScanIso
+            : dbLastScrapedIso
+          : (inProcessLastScanIso ?? dbLastScrapedIso);
+
       return { isScanning, newUpdate, lastScanAt };
     }),
   );
