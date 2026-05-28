@@ -47,6 +47,33 @@ export interface IScannerSupabaseApi {
   getSupabaseClient(): any;
 }
 
+/**
+ * Run `worker` over `items` with at most `concurrency` in flight at once.
+ * No external dep; simple promise pool. Each worker drains a shared index
+ * cursor until the queue is empty. Items are processed in their original
+ * order in terms of dispatch; completion order is whatever finishes first.
+ *
+ * Used by scanLinks to keep the local-AI inference host (Ollama on a Pi 5
+ * CPU) from being slammed with N parallel parse requests that all queue
+ * inside Ollama and time out.
+ */
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<void>,
+): Promise<void> {
+  if (items.length === 0) return;
+  let cursor = 0;
+  const pool = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (true) {
+      const i = cursor++;
+      if (i >= items.length) return;
+      await worker(items[i], i);
+    }
+  });
+  await Promise.all(pool);
+}
+
 function redactSettings(s: JobScannerSettings): JobScannerSettings {
   const redact = (v?: string) => (v && v.length > 0 ? `<redacted len=${v.length}>` : v);
   return { ...s, pushoverAppToken: redact(s.pushoverAppToken), pushoverUserKey: redact(s.pushoverUserKey) } as JobScannerSettings;
@@ -203,66 +230,72 @@ export class JobScanner {
       this._runningScansCount++;
       const start = new Date().getTime();
 
-      await Promise.all(
-        links.map(async (link) => {
-          const newJobs = await this._normalHtmlDownloader
-            .loadUrl<Job[]>({
-              url: link.url,
-              scrollTimes: 5,
-              callback: async ({ html, webPageRuntimeData, maxRetries, retryCount }) => {
-                if (!this._isRunning) return [];
-                if (this._dryRun) {
-                  this._logger.info(`[dry-run] would scanHtmls for link ${link.title} (${html.length} bytes)`, { linkId: link.id });
-                  return [];
-                }
-
-                const { newJobs, parseFailed, parseErrors } = await this._supabaseApi.scanHtmls([
-                  { linkId: link.id, content: html, webPageRuntimeData, maxRetries, retryCount },
-                ]);
-
-                if (parseErrors?.length) {
-                  for (const pe of parseErrors) {
-                    this._logger.error(`[edge] parse error for link ${link.title} (${pe.linkId}): ${pe.message}`, {
-                      linkId: pe.linkId,
-                    });
-                  }
-                }
-
-                if (parseFailed) {
-                  this._logger.debug(`failed to parse html for link ${link.title}`, { linkId: link.id });
-                  throw new Error(`failed to parse html for link ${link.id}`);
-                }
-
-                await waitRandomBetween(1000, 4000);
-                return newJobs;
-              },
-            })
-            .catch(async (error): Promise<Job[]> => {
-              if (this._isRunning) {
-                const errorMessage = getExceptionMessage(error);
-                this._logger.error(`failed to scan link: ${errorMessage}`, { linkId: link.id });
-
-                if (this._dryRun) {
-                  this._logger.info(`[dry-run] would increaseScrapeFailureCount for link ${link.id}`);
-                  return [];
-                }
-                await this._supabaseApi
-                  .increaseScrapeFailureCount({
-                    linkId: link.id,
-                    failures: link.scrape_failure_count + 1,
-                  })
-                  .catch((err) => {
-                    this._logger.error(`failed to increase scrape failure count: ${getExceptionMessage(err)}`, {
-                      linkId: link.id,
-                    });
-                  });
+      // Concurrency cap on per-link work: download + scanHtmls (which fans
+      // out to the edge function / local LLM). The household setup runs
+      // Ollama on a Pi 5 CPU which serializes inference, so the previous
+      // unlimited Promise.all queued 38+ requests inside Ollama and blew
+      // past the 28-min per-call ceiling on later requests. Capping at a
+      // small number lets one download overlap with one in-flight parse
+      // without thrashing. Override with F2A_SCAN_CONCURRENCY in the probe
+      // env if you're running on a beefier inference host.
+      const SCAN_CONCURRENCY = Math.max(1, Number(process.env.F2A_SCAN_CONCURRENCY ?? '2') || 2);
+      this._logger.info(`scanLinks concurrency=${SCAN_CONCURRENCY} (links=${links.length})`);
+      await runWithConcurrency(links, SCAN_CONCURRENCY, async (link) => {
+        await this._normalHtmlDownloader
+          .loadUrl<Job[]>({
+            url: link.url,
+            scrollTimes: 5,
+            callback: async ({ html, webPageRuntimeData, maxRetries, retryCount }) => {
+              if (!this._isRunning) return [];
+              if (this._dryRun) {
+                this._logger.info(`[dry-run] would scanHtmls for link ${link.title} (${html.length} bytes)`, { linkId: link.id });
+                return [];
               }
-              return [];
-            });
 
-          return newJobs;
-        }),
-      );
+              const { newJobs, parseFailed, parseErrors } = await this._supabaseApi.scanHtmls([
+                { linkId: link.id, content: html, webPageRuntimeData, maxRetries, retryCount },
+              ]);
+
+              if (parseErrors?.length) {
+                for (const pe of parseErrors) {
+                  this._logger.error(`[edge] parse error for link ${link.title} (${pe.linkId}): ${pe.message}`, {
+                    linkId: pe.linkId,
+                  });
+                }
+              }
+
+              if (parseFailed) {
+                this._logger.debug(`failed to parse html for link ${link.title}`, { linkId: link.id });
+                throw new Error(`failed to parse html for link ${link.id}`);
+              }
+
+              await waitRandomBetween(1000, 4000);
+              return newJobs;
+            },
+          })
+          .catch(async (error): Promise<Job[]> => {
+            if (this._isRunning) {
+              const errorMessage = getExceptionMessage(error);
+              this._logger.error(`failed to scan link: ${errorMessage}`, { linkId: link.id });
+
+              if (this._dryRun) {
+                this._logger.info(`[dry-run] would increaseScrapeFailureCount for link ${link.id}`);
+                return [];
+              }
+              await this._supabaseApi
+                .increaseScrapeFailureCount({
+                  linkId: link.id,
+                  failures: link.scrape_failure_count + 1,
+                })
+                .catch((err) => {
+                  this._logger.error(`failed to increase scrape failure count: ${getExceptionMessage(err)}`, {
+                    linkId: link.id,
+                  });
+                });
+            }
+            return [];
+          });
+      });
       this._logger.info(`downloaded html for ${links.length} links`);
 
       if (!this._isRunning) return;
