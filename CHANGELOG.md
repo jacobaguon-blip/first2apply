@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-05-28
+- `08:31` -- feat(desktop): 'Last scan: Xm ago' indicator in sidebar _(session `fb374e1f`)_
+  - `apps/desktopProbe/src/components/navbar.tsx`
+  - `apps/desktopProbe/src/hooks/appState.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
+  - `libraries/scraper/src/jobScanner.ts`
+
 ## 2026-05-27
 - `22:44` -- fix(security): _localServer router bearer-auth gate + 0.0.0.0 bind _(session `fb374e1f`)_
   - `apps/backend/supabase/functions/_localServer.ts`
