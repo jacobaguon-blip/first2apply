@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-27
+- `18:35` -- docs: design for local AI on the Pi (A2) + 429 investigation ledger _(session `01176a02`)_
+  - `docs/superpowers/specs/2026-05-27-local-ai-on-pi-design.md`
+  - `troubleshooting/2026-05-27-jobs-not-landing-openai-429/hypothesis-ledger.md`
 - investigate: jobs not landing for ~1 week — Pi cron/probe healthy, but cloud `scan-urls` edge function gets OpenAI **429 quota exceeded** on every link parse → `new_jobs_count: 0`. Root cause = OpenAI billing/quota; fix is to restore quota + update `OPENAI_API_KEY` edge secret. See `troubleshooting/2026-05-27-jobs-not-landing-openai-429/hypothesis-ledger.md`.
 
 ## 2026-05-20
