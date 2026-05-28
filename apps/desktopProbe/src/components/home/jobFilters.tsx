@@ -22,7 +22,7 @@ export function JobFilters({
   siteIds: number[];
   linkIds: number[];
   labels: string[];
-  locationBuckets?: string[];
+  locationBuckets?: LocationBucket[];
   locationContains?: string;
   onSearchJobs: (_: { search: string; filters: JobFiltersType }) => void;
 }) {
@@ -31,9 +31,26 @@ export function JobFilters({
     sites: [],
     links: [],
     labels: [],
-    locationBuckets: (locationBuckets as LocationBucket[]) ?? [],
+    locationBuckets: locationBuckets ?? [],
     locationContains: locationContains ?? '',
   });
+
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      sites: siteIds ?? prev.sites,
+      links: linkIds ?? prev.links,
+      labels: labels ?? prev.labels,
+      locationBuckets: locationBuckets ?? prev.locationBuckets,
+      locationContains: locationContains ?? prev.locationContains,
+    }));
+  }, [
+    (siteIds ?? []).join(','),
+    (linkIds ?? []).join(','),
+    (labels ?? []).join(','),
+    (locationBuckets ?? []).join(','),
+    locationContains ?? '',
+  ]);
 
   // Debounced search for input value
   const emitDebouncedSearch = useCallback(
