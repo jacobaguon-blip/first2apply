@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useError } from '@/hooks/error';
 import { changeAllJobsStatus, exportJobsToCsv } from '@/lib/electronMainSdk';
-import { Job, JobSortMode, JobStatus, LocationBucket } from '@first2apply/core';
+import { Job, JOB_SORT_MODES, JobSortMode, JobStatus, LOCATION_BUCKETS, LocationBucket } from '@first2apply/core';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,9 +59,16 @@ export function JobTabs() {
   const siteIds = searchParams.get('site_ids') ? searchParams.get('site_ids').split(',').map(Number) : [];
   const linkIds = searchParams.get('link_ids') ? searchParams.get('link_ids').split(',').map(Number) : [];
   const labels = searchParams.get('labels') ? searchParams.get('labels').split(',') : [];
-  const sort = (searchParams.get('sort') as JobSortMode) || 'newest_first';
-  const locationBuckets = searchParams.get('loc_buckets')
-    ? (searchParams.get('loc_buckets')!.split(',').filter(Boolean) as LocationBucket[])
+  const rawSort = searchParams.get('sort');
+  const sort: JobSortMode = JOB_SORT_MODES.includes(rawSort as JobSortMode)
+    ? (rawSort as JobSortMode)
+    : 'newest_first';
+
+  const rawBuckets = searchParams.get('loc_buckets');
+  const locationBuckets: LocationBucket[] = rawBuckets
+    ? (rawBuckets.split(',').filter((b): b is LocationBucket =>
+        LOCATION_BUCKETS.includes(b as LocationBucket),
+      ))
     : [];
   const locationContains = searchParams.get('loc_contains') || '';
 
