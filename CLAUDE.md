@@ -104,6 +104,11 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
 - **"Scan is stuck on scanning" / jobs not updating** → `libraries/scraper/src/jobScanner.ts`,
   `scannerSettings.ts` (frequency), `health/`. Check the Pi probe path + Tailscale (quirks 3–4) before code.
 - **AI job evaluation / fit scoring** → `apps/backend/supabase/functions/` (OpenAI calls).
+- **Location filtering + sort by date** → `libraries/core/src/classifyLocation.ts` is the canonical classifier;
+  SQL mirror in migration `apps/backend/supabase/migrations/20260528000000_sort_and_location.sql`
+  (function `public.classify_job_location`). The two MUST stay in sync — change them together. The Deno
+  edge fn (`apps/backend/supabase/functions/_shared/advancedMatching.ts`) imports the TS helper directly
+  from `@first2apply/core`, so there is no third mirror.
 - **Desktop UI** → `apps/desktopProbe/src/pages/` + `components/`.
 - **Release / changelog** → `CHANGELOG.md`, release-it conventional commits (`chore(release): …`).
 - **Decisions / history** → `decisions.md`, `BACKLOG.md`, `troubleshooting/<date>-<slug>/`.
