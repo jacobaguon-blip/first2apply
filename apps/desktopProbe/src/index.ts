@@ -161,7 +161,33 @@ const supabaseConfig = getSupabaseConfig();
 if (supabaseConfig.source === 'none') {
   logger.info('no Supabase URL/key configured — configure in Settings → Backend');
 }
-const supabase = createClient<DbSchema>(supabaseConfig.url, supabaseConfig.key);
+// Optional override: when F2A_FUNCTIONS_URL is set, rewrite outgoing supabase
+// function calls (parse-cv / tailor-cv / evaluate-job / batch-evaluate-jobs)
+// to the Pi's self-hosted edge runtime over Tailscale. DB/RPC/auth traffic
+// (other paths) keeps going to cloud Supabase. Without the override, the
+// client behaves exactly as before.
+const functionsBaseUrl = process.env.F2A_FUNCTIONS_URL;
+const fnRewriteFetch: typeof fetch | undefined = functionsBaseUrl
+  ? ((): typeof fetch => {
+      const prefix = supabaseConfig.url.replace(/\/$/, '') + '/functions/v1/';
+      const localBase = functionsBaseUrl.replace(/\/$/, '') + '/functions/v1/';
+      const rewrite = (raw: string): string => (raw.startsWith(prefix) ? localBase + raw.slice(prefix.length) : raw);
+      return ((input, init) => {
+        if (typeof input === 'string') return fetch(rewrite(input), init);
+        if (input instanceof URL) return fetch(rewrite(input.toString()), init);
+        const original = input as Request;
+        const rewritten = rewrite(original.url);
+        if (rewritten === original.url) return fetch(input, init);
+        return fetch(new Request(rewritten, original), init);
+      }) as typeof fetch;
+    })()
+  : undefined;
+const supabase = createClient<DbSchema>(
+  supabaseConfig.url,
+  supabaseConfig.key,
+  fnRewriteFetch ? { global: { fetch: fnRewriteFetch } } : undefined,
+);
+if (functionsBaseUrl) logger.info(`functions calls rewritten -> ${functionsBaseUrl}`);
 const supabaseApi = new F2aSupabaseApi(supabase);
 const htmlDownloaders = [
   new HtmlDownloader({

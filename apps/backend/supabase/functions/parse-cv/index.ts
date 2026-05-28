@@ -1,4 +1,5 @@
 import { getExceptionMessage } from '@first2apply/core';
+import { Buffer } from 'node:buffer';
 
 import { CORS_HEADERS } from '../_shared/cors.ts';
 import { getEdgeFunctionContext } from '../_shared/edgeFunctions.ts';
@@ -69,7 +70,7 @@ async function checkFeatureFlag(supabaseClient: { from: (t: string) => { select:
   return !!data?.career_ops_enabled;
 }
 
-Deno.serve(async (req) => {
+export const handle = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
@@ -151,4 +152,8 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     });
   }
-});
+};
+
+if (import.meta.main) {
+  Deno.serve(handle);
+}

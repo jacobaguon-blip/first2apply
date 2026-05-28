@@ -91,7 +91,7 @@ async function checkDailyQuota(supabaseClient: any, userId: string): Promise<{ o
   return { ok: used < DAILY_EVAL_QUOTA, used };
 }
 
-Deno.serve(async (req) => {
+export const handle = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
@@ -215,4 +215,8 @@ Deno.serve(async (req) => {
       { headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
     );
   }
-});
+};
+
+if (import.meta.main) {
+  Deno.serve(handle);
+}

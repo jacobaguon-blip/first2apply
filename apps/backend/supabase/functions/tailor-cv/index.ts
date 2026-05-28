@@ -22,7 +22,7 @@ async function checkFeatureFlag(
   return !!data?.career_ops_enabled;
 }
 
-Deno.serve(async (req) => {
+export const handle = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
@@ -123,4 +123,8 @@ Deno.serve(async (req) => {
       { headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
     );
   }
-});
+};
+
+if (import.meta.main) {
+  Deno.serve(handle);
+}

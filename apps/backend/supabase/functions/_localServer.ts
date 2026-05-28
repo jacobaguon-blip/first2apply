@@ -15,6 +15,9 @@
  */
 import { handle as scanUrlsHandle } from './scan-urls/index.ts';
 import { handle as scanJobDescriptionHandle } from './scan-job-description/index.ts';
+import { handle as evaluateJobHandle } from './evaluate-job/index.ts';
+import { handle as tailorCvHandle } from './tailor-cv/index.ts';
+import { handle as parseCvHandle } from './parse-cv/index.ts';
 import { CORS_HEADERS } from './_shared/cors.ts';
 
 const ok = (body: unknown, status = 200) =>
@@ -40,6 +43,12 @@ Deno.serve({ port, hostname: '0.0.0.0' }, async (req) => {
       return scanUrlsHandle(req);
     case 'scan-job-description':
       return scanJobDescriptionHandle(req);
+    case 'evaluate-job':
+      return evaluateJobHandle(req);
+    case 'tailor-cv':
+      return tailorCvHandle(req);
+    case 'parse-cv':
+      return parseCvHandle(req);
     case 'post-scan-hook':
       // intentional local no-op (no emails, no cloud webhook fan-out)
       return ok({ ok: true, skipped: true });
