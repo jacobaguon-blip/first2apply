@@ -109,8 +109,15 @@ if [ "$REFRESH_DEPS" = "1" ]; then
 fi
 
 # ─── 5. Build ──────────────────────────────────────────────────────────────
-echo "==> pnpm make (electron-forge make --arch=arm64)"
-pnpm make
+# `pnpm package` (electron-forge package) produces the .app bundle — exactly
+# what we need to install locally. We intentionally avoid `pnpm make` here
+# because `make` invokes the DMG maker which pulls in `macos-alias`, a native
+# module that fails to compile on Node v26+. The household publish path
+# (packagers/household/publish-release.sh) still uses `pnpm make` because the
+# DMG is the distributable format for the remote install — for local install
+# we just need the .app.
+echo "==> pnpm package (electron-forge package --arch=arm64)"
+pnpm package --arch=arm64
 
 BUILT="out/${APP_NAME}-darwin-arm64/${APP_NAME}.app"
 if [ ! -d "$BUILT" ]; then

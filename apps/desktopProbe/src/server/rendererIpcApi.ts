@@ -657,6 +657,25 @@ export function initRendererIpcApi({
     return res;
   });
 
+  ipcMain.handle('reapply-filters', async (event, { includeExcluded } = {}) => {
+    const res = await _apiCall(() => supabaseApi.reapplyFilters({ includeExcluded }));
+    // `_apiCall` returns `{data}` on success or `{error}` on failure — unwrap
+    // before reading fields. analytics only fires on the success path.
+    const data = 'data' in res
+      ? (res.data as { total?: number; evaluated?: number; excluded?: number; kept?: number; unchanged?: number; errors?: number } | undefined)
+      : undefined;
+    if (data) {
+      analytics.trackEvent('filters_reapplied', {
+        total: data.total,
+        evaluated: data.evaluated,
+        excluded: data.excluded,
+        kept: data.kept,
+        errors: data.errors,
+      });
+    }
+    return res;
+  });
+
   ipcMain.handle('get-global-blacklist', async () => _apiCall(() => supabaseApi.getGlobalBlacklist()));
 
   ipcMain.handle('update-global-blacklist', async (event, { companies }) => {

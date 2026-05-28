@@ -104,6 +104,10 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
 - **"Scan is stuck on scanning" / jobs not updating** → `libraries/scraper/src/jobScanner.ts`,
   `scannerSettings.ts` (frequency), `health/`. Check the Pi probe path + Tailscale (quirks 3–4) before code.
 - **AI job evaluation / fit scoring** → `apps/backend/supabase/functions/` (OpenAI calls).
+  - **Filter prompt edits do NOT retroactively re-score old jobs.** `applyAdvancedMatchingFilters`
+    runs once per job during `scan-job-description`. The "Re-apply to existing jobs" button on
+    the AI Filters page calls the `reapply-filter-profile` edge function to sweep the backlog
+    (`new` + `excluded_by_advanced_matching`) — that's the only path that re-evaluates existing jobs.
 - **Desktop UI** → `apps/desktopProbe/src/pages/` + `components/`.
 - **Release / changelog** → `CHANGELOG.md`, release-it conventional commits (`chore(release): …`).
 - **Decisions / history** → `decisions.md`, `BACKLOG.md`, `troubleshooting/<date>-<slug>/`.
