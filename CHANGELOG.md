@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `10:35` -- feat(skill,deploy): /deploy-desktop project skill + Node-26-safe local build _(session `efbb7eb7`)_
+  - `.claude/skills/deploy-desktop/SKILL.md`
+  - `CLAUDE.md`
+  - `apps/desktopProbe/scripts/deploy-local.sh`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
 - `10:34` -- chore: ignore .worktrees/ _(session `efbb7eb7`)_
   - `.gitignore`
 - `10:18` -- chore: postgrest v12 typing workaround (SupabaseClient<any>) _(session `a8d1e5af`)_
