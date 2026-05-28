@@ -189,13 +189,20 @@ const PARSE_JOBS_PAGE_SCHEMA = z.object({
   errorMessage: z.string().max(500).optional().nullable(),
 });
 
-// Chunking + cap constants. maxChars (~36k ≈ ~9-12k tokens) keeps each chunk
-// comfortably inside qwen2.5:7b's usable context while staying well under the
-// per-chunk schema bound of 100 jobs.
-const PARSE_CHUNK_MAX_CHARS = 36_000;
+// Chunking + cap constants. Sized for the local model's CPU inference budget:
+// ~16k chars (~4-5k input tokens) leaves room for ~1.5k output tokens inside a
+// pinned 16384 num_ctx (set via Modelfile on the qwen2.5:*-f2a variants), and
+// keeps per-chunk wall time well within PARSE_CALL_TIMEOUT_MS on a Pi 5 CPU.
+// The per-chunk schema bound is 100; max ~15 dense listings fit per chunk.
+const PARSE_CHUNK_MAX_CHARS = 16_000;
 const PARSE_CHUNK_OVERLAP = 500;
 const MAX_JOBS_PER_PAGE = 30;
-const PARSE_CALL_TIMEOUT_MS = 180_000;
+// 28 min per chunk: matches the probe's undici 30-min dispatcher headroom. On a
+// Pi 5 CPU, multiple concurrent edge calls all queue inside Ollama (single CPU
+// model is serialized), so individual requests routinely wait minutes in the
+// queue before processing begins. A stricter timeout would kill legitimate
+// queued requests. A real timeout still beats hanging the whole scan.
+const PARSE_CALL_TIMEOUT_MS = 1_680_000;
 const SYSTEM_PROMPT = `You are an expert web scraper specialized in extracting job listings from HTML pages. 
 Your task is to analyze the provided HTML content and identify job listings, extracting relevant details for each job.
 If you cannot extract the information due to the HTML being a login page, CAPTCHA, or any other access restriction, respond with an empty result and an appropriate errorMessage.
