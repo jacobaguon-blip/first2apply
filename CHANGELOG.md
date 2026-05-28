@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-27
+- `22:17` -- feat: Sprint 3+4 — CV/fit local via _localServer; managed compose stack _(session `fb374e1f`)_
+  - `apps/backend/supabase/functions/_localServer.ts`
+  - `apps/backend/supabase/functions/evaluate-job/index.ts`
+  - `apps/backend/supabase/functions/parse-cv/index.ts`
+  - `apps/backend/supabase/functions/tailor-cv/index.ts`
+  - `apps/desktopProbe/src/index.ts`
 - `21:44` -- docs(plan): UX writeup for local-AI-on-Pi (layman summary) _(session `a67abc58`)_
   - `.claude/plans/2026-05-27-local-ai-on-pi-ux-writeup.md`
   - `.claude/plans/2026-05-27-local-ai-on-pi.md`
