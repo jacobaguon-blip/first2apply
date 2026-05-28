@@ -19,6 +19,12 @@ returns text language sql immutable as $$
   end;
 $$;
 
+-- CALLER CONTRACT: the keyset cursor (jobs_after = "id!updated_at") is
+-- direction-sensitive. When the caller toggles jobs_sort between
+-- 'newest_first' and 'oldest_first', it MUST pass jobs_after = null on the
+-- first request after the toggle. Reusing a stale cursor will silently skip
+-- or duplicate jobs at the boundary.
+
 -- 3. list_jobs: add sort + location params. Cursor format unchanged (id!updated_at).
 --    For oldest_first we paginate ascending and flip the cursor comparison.
 create or replace function list_jobs(
