@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-27
+- `22:44` -- fix(security): _localServer router bearer-auth gate + 0.0.0.0 bind _(session `fb374e1f`)_
+  - `apps/backend/supabase/functions/_localServer.ts`
 - `22:17` -- feat: Sprint 3+4 — CV/fit local via _localServer; managed compose stack _(session `fb374e1f`)_
   - `apps/backend/supabase/functions/_localServer.ts`
   - `apps/backend/supabase/functions/evaluate-job/index.ts`
