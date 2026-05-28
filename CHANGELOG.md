@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-27
+- `20:50` -- feat(backend,probe): host edge functions locally on Pi via _localServer router _(session `fb374e1f`)_
+  - `apps/backend/supabase/functions/_localServer.ts`
+  - `apps/backend/supabase/functions/_shared/env.ts`
+  - `apps/backend/supabase/functions/scan-job-description/index.ts`
+  - `apps/backend/supabase/functions/scan-urls/index.ts`
+  - `apps/serverProbe/src/env.ts`
 - `20:06` -- feat(backend): local AI provider switch + HTML chunking + parse retry wrapper _(session `fb9fe4ca`)_
   - `apps/backend/supabase/functions/_shared/customJobsParser.ts`
   - `apps/backend/supabase/functions/_shared/env.ts`
