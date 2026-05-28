@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `09:42` -- docs: design for sort dropdown + location filter (menu + AI profile) _(session `4557f571`)_
+  - `docs/plans/2026-05-28-sort-and-location-filter-design.md`
 - `08:31` -- feat(desktop): 'Last scan: Xm ago' indicator in sidebar _(session `fb374e1f`)_
   - `apps/desktopProbe/src/components/navbar.tsx`
   - `apps/desktopProbe/src/hooks/appState.tsx`
