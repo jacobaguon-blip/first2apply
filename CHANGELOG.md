@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `13:57` -- docs(claude-md): note classifyLocation TS+SQL mirror contract _(session `8d15eeac`)_
+  - `CLAUDE.md`
 - `13:37` -- feat(desktop): location preferences in AI Filter Profile editor _(session `939e9975`)_
   - `apps/desktopProbe/src/pages/filters.tsx`
   - `apps/desktopProbe/src/pages/filters/LocationPreferences.tsx`
