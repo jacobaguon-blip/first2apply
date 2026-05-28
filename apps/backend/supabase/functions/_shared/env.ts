@@ -2,10 +2,18 @@ import { throwError } from '@first2apply/core';
 
 import { OpenAiConfig } from './openAI.ts';
 
+export type AiProvider = 'openai' | 'local';
+
 export type First2ApplyBackendEnv = {
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
   openAiConfig: OpenAiConfig;
+  // AI provider selection. `local` routes the OpenAI client at a local
+  // OpenAI-compatible server (Ollama) — no API key, no cost. `openai` is the
+  // legacy cloud path (requires a funded OPENAI_API_KEY). Default: local.
+  aiProvider: AiProvider;
+  ollamaUrl: string;
+  ollamaModel: string;
   mailerLiteApiKey?: string;
   mailerSendApiKey?: string;
   mailerFromEmail: string;
@@ -24,6 +32,9 @@ export function parseEnv(): First2ApplyBackendEnv {
     openAiConfig: {
       apiKey: Deno.env.get('OPENAI_API_KEY') ?? '',
     },
+    aiProvider: (Deno.env.get('F2A_AI_PROVIDER') ?? 'local') === 'openai' ? 'openai' : 'local',
+    ollamaUrl: Deno.env.get('F2A_OLLAMA_URL') ?? 'http://127.0.0.1:11434/v1',
+    ollamaModel: Deno.env.get('F2A_OLLAMA_MODEL') ?? 'qwen2.5:7b',
     mailerLiteApiKey: Deno.env.get('MAILERLITE_API_KEY'),
     mailerSendApiKey: Deno.env.get('MAILERSEND_API_KEY'),
     mailerFromEmail: Deno.env.get('MAILER_FROM_EMAIL') ?? 'contact@first2apply.com',

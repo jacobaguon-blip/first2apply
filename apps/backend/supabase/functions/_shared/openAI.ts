@@ -7,7 +7,7 @@ import OpenAI from 'openai';
 import { ILogger } from './logger.ts';
 
 // Type for OpenAI API response with usage information
-type OpenAIResponse = {
+export type OpenAIResponse = {
   usage?: {
     prompt_tokens?: number;
     completion_tokens?: number;
@@ -29,18 +29,35 @@ export type OpenAiConfig = {
 };
 
 export function buildOpenAiClient({ modelName }: { modelName?: SupportedModel }) {
+  const requestedModel = modelName ?? 'gpt-4o';
+  if (!(requestedModel in COST_PER_MODEL)) {
+    throw new Error(`Unsupported model: ${requestedModel}`);
+  }
+
+  if (env.aiProvider === 'local') {
+    // Route the OpenAI client at a local OpenAI-compatible server (Ollama).
+    // No API key, no per-token cost. The requested gpt-4o/gpt-4o-mini name is
+    // mapped to the single local model; call sites stay unchanged.
+    const openAi = new OpenAI({
+      baseURL: env.ollamaUrl,
+      apiKey: 'local',
+    });
+    console.log(`Using local model ${env.ollamaModel} (mapped from ${requestedModel}) via ${env.ollamaUrl}.`);
+    const llmConfig = {
+      model: env.ollamaModel,
+      costPerMillionInputTokens: 0,
+      costPerMillionOutputTokens: 0,
+    };
+    return { openAi, llmConfig };
+  }
+
   const openAi = new OpenAI({
     apiKey: env.openAiConfig.apiKey,
   });
-
-  const model = modelName ?? 'gpt-4o';
-  if (!(model in COST_PER_MODEL)) {
-    throw new Error(`Unsupported model: ${model}`);
-  }
-  console.log(`Using model ${model} for Azure OpenAI calls.`);
-  const { input, output } = COST_PER_MODEL[model];
+  console.log(`Using model ${requestedModel} for OpenAI calls.`);
+  const { input, output } = COST_PER_MODEL[requestedModel];
   const llmConfig = {
-    model,
+    model: requestedModel,
     costPerMillionInputTokens: input,
     costPerMillionOutputTokens: output,
   };

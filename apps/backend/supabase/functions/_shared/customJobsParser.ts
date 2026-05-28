@@ -10,7 +10,8 @@ import { resolveFilterProfileForJob } from './advancedMatching.ts';
 import { denoHashString } from './deno.ts';
 import { JobDescriptionUpdates } from './jobDescriptionParser.ts';
 import { ILogger } from './logger.ts';
-import { buildOpenAiClient, logAiUsage } from './openAI.ts';
+import { chunkMarkdown } from './markdownChunker.ts';
+import { buildOpenAiClient, logAiUsage, OpenAIResponse } from './openAI.ts';
 import { detectGreenhouse, fetchGreenhouseJobs } from './parsers/greenhouseAts.ts';
 import { JobSiteParseResult, ParsedJob } from './parsers/parserTypes.ts';
 
@@ -49,99 +50,95 @@ export async function parseCustomJobs({
     ...context,
   });
 
-  // helper methods
-  const generateUserPrompt = () => {
-    const document = new DOMParser().parseFromString(html, 'text/html');
-    if (!document || !document.documentElement) throw new Error('Could not parse html');
+  // Build cleaned markdown once, then chunk it. The local model has a much
+  // smaller usable context than gpt-4o, so big index pages (e.g. ~450 listings)
+  // must be split into chunks and merged — never silently truncated.
+  const document = new DOMParser().parseFromString(html, 'text/html');
+  if (!document || !document.documentElement) throw new Error('Could not parse html');
 
-    // save some info before stripping
-    const headerInfo = extractHeaderInfo(document.documentElement);
-    logger.info(
-      `page title: ${headerInfo.title}, description: ${headerInfo.metaDescription}, favicon: ${headerInfo.faviconUrl}`,
-    );
+  const headerInfo = extractHeaderInfo(document.documentElement);
+  logger.info(
+    `page title: ${headerInfo.title}, description: ${headerInfo.metaDescription}, favicon: ${headerInfo.faviconUrl}`,
+  );
 
-    // strip away nodes that are not relevant to the LLM
-    const nodesToRemove = ['head', 'script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe', 'img', 'form'];
-    stripNodes(document.documentElement, nodesToRemove);
-    stripAttributes(document.documentElement, /^(class|style|aria-.*|role)$/);
+  const nodesToRemove = ['head', 'script', 'style', 'nav', 'header', 'footer', 'aside', 'iframe', 'img', 'form'];
+  stripNodes(document.documentElement, nodesToRemove);
+  stripAttributes(document.documentElement, /^(class|style|aria-.*|role)$/);
+  const fullMarkdown = turndownService.turndown(document.documentElement?.outerHTML ?? '');
 
-    // Convert HTML -> markdown to keep the prompt under model TPM limits.
-    // Raw HTML for job-board indexes (e.g. anthropic.com/careers/jobs, ~450 listings)
-    // can exceed 60k tokens and trigger OpenAI 429 TPM errors.
-    let htmlContent = turndownService.turndown(document.documentElement?.outerHTML ?? '');
-    const MAX_CONTENT_CHARS = 120_000;
-    if (htmlContent.length > MAX_CONTENT_CHARS) {
-      logger.info(`markdown content ${htmlContent.length} chars exceeds cap, truncating to ${MAX_CONTENT_CHARS}`);
-      htmlContent = htmlContent.slice(0, MAX_CONTENT_CHARS);
-    }
-    logger.info(`custom parser content size: ${htmlContent.length} chars (markdown)`);
+  const chunks = chunkMarkdown(fullMarkdown, { maxChars: PARSE_CHUNK_MAX_CHARS, overlapChars: PARSE_CHUNK_OVERLAP });
+  logger.info(`custom parser content size: ${fullMarkdown.length} chars (markdown), split into ${chunks.length} chunk(s)`);
 
-    return `Extract the jobs listing from the page content below. Return the result as a JSON object matching the provided schema. If no jobs are found, return an empty array for the jobs field.
+  const buildUserPrompt = (chunkContent: string) =>
+    `Extract the jobs listing from the page content below. Return the result as a JSON object matching the provided schema. If no jobs are found, return an empty array for the jobs field.
 Here are some rules for the required output:
 - The externalId field should be a unique identifier for the job, preferably from the job site.
-  Try to extract it from the job URL or any data attributes. 
+  Try to extract it from the job URL or any data attributes.
   If not available, create one based on the job title and company name.
 - The externalUrl field should be the direct URL to the job listing. It should be a fully qualified URL. If only a relative URL is available, prepend the domain name from the page URL: ${url}. Should never be an email address.
 - The title field should be the job title.
 - The companyName field should be the name of the company offering the job.
-- The companyLogo field should be a URL to the company's logo, if available. If not available, try to use the site favicon URL: ${
-      headerInfo.faviconUrl
-    }. If the logo URL is relative, prepend the domain name from the page URL: ${url}.
+- The companyLogo field should be a URL to the company's logo, if available. If not available, try to use the site favicon URL: ${headerInfo.faviconUrl}. If the logo URL is relative, prepend the domain name from the page URL: ${url}.
 - The jobType field should indicate if the job is remote, hybrid, or onsite. If not specified, leave it empty.
-- The location field should specify the job's location, if available. 
+- The location field should specify the job's location, if available.
     Add the full location as provided including street, city, state, country if available. If only "remote" is mentioned, leave the location empty and set jobType to "remote".
 - The salary field should specify the offered salary or salary range, if available. Always try to extract it if present. If there are other benefits mentioned (e.g. stock options, bonuses), do not include them in the salary field, but put them as tags.
 - The tags field should include relevant tags or keywords associated with the job, if available. If you see "easy apply" on a job add it as a tag. Or if the job is sponsored.
 
-Limit the number of jobs extracted to a maximum of 30. If more jobs are present, prioritize the most recent ones.
-Try to extract all or as many jobs from the page as possible. And preserve the order of the jobs as they appear on the page.
+Extract every job present in the content below. Preserve the order of the jobs as they appear on the page.
 
 Here is the page header info:
 ${JSON.stringify(headerInfo)}
 
 Here is the page content (HTML converted to markdown):
 """
-${htmlContent}
+${chunkContent}
 """`;
-  };
 
-  const response = await openAi.chat.completions.create({
-    model: llmConfig.model,
-    messages: [
-      {
-        role: 'system',
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: 'user',
-        content: generateUserPrompt(),
-      },
-    ],
-    max_completion_tokens: 16_000,
-    response_format: zodResponseFormat(PARSE_JOBS_PAGE_SCHEMA, 'ParseJobsPageResponse'),
-  });
+  // Parse each chunk, merge, then dedupe + apply the page-wide cap once.
+  const rawJobs: z.infer<typeof JOB_SCHEMA>[] = [];
+  let listFound = true;
+  for (let i = 0; i < chunks.length; i++) {
+    const parseResult = await callJobsParse({
+      openAi,
+      llmConfig,
+      userPrompt: buildUserPrompt(chunks[i]),
+      logger,
+      label: `${siteId} chunk ${i + 1}/${chunks.length}`,
+    });
 
-  const choice = response.choices[0];
-  if (choice.finish_reason !== 'stop') {
-    throw new Error(`OpenAI response did not finish: ${choice.finish_reason}`);
+    if (parseResult.errorMessage) {
+      logger.error(`Site ${siteId} chunk ${i + 1} - model reported an error: ${parseResult.errorMessage}`);
+      // Only treat the page as "no list found" when the first/only chunk fails;
+      // later-chunk errors shouldn't discard jobs already extracted upstream.
+      if (i === 0 && chunks.length === 1) listFound = false;
+      continue;
+    }
+    rawJobs.push(...parseResult.jobs);
+
+    if (parseResult.response) {
+      await logAiUsage({
+        forUserId: user.id,
+        llmConfig,
+        response: parseResult.response,
+        ...context,
+      });
+    }
   }
 
-  const parseResult = PARSE_JOBS_PAGE_SCHEMA.parse(JSON.parse(choice.message.content ?? throwError('missing content')));
-
-  await logAiUsage({
-    forUserId: user.id,
-    llmConfig,
-    response,
-    ...context,
-  });
-
-  const listFound = !parseResult.errorMessage;
-  if (!listFound) {
-    logger.error(`Site ${siteId} - OpenAI reported an error: ${parseResult.errorMessage}`);
-  }
+  // Dedupe by externalUrl (first occurrence wins, preserves page order), then
+  // apply the page-wide max-30 cap once across the whole merged set.
+  const seenUrls = new Set<string>();
+  const dedupedJobs = rawJobs
+    .filter((job) => {
+      if (!job.externalUrl || seenUrls.has(job.externalUrl)) return false;
+      seenUrls.add(job.externalUrl);
+      return true;
+    })
+    .slice(0, MAX_JOBS_PER_PAGE);
 
   const jobs = await Promise.all(
-    parseResult.jobs.map(
+    dedupedJobs.map(
       async (job): Promise<ParsedJob> => ({
         // hash the url to create a stable externalId if not provided
         externalId: await denoHashString(job.externalUrl),
@@ -184,10 +181,21 @@ const JOB_SCHEMA = z.object({
 
   description: z.string().min(20).optional().nullable(),
 });
+// Per-chunk bound. The page-wide cap is enforced post-merge (MAX_JOBS_PER_PAGE),
+// so this only needs to be high enough that a single dense chunk is not rejected
+// (which would silently drop that chunk's jobs — the failure chunking prevents).
 const PARSE_JOBS_PAGE_SCHEMA = z.object({
-  jobs: z.array(JOB_SCHEMA).min(0).max(50),
+  jobs: z.array(JOB_SCHEMA).min(0).max(100),
   errorMessage: z.string().max(500).optional().nullable(),
 });
+
+// Chunking + cap constants. maxChars (~36k ≈ ~9-12k tokens) keeps each chunk
+// comfortably inside qwen2.5:7b's usable context while staying well under the
+// per-chunk schema bound of 100 jobs.
+const PARSE_CHUNK_MAX_CHARS = 36_000;
+const PARSE_CHUNK_OVERLAP = 500;
+const MAX_JOBS_PER_PAGE = 30;
+const PARSE_CALL_TIMEOUT_MS = 180_000;
 const SYSTEM_PROMPT = `You are an expert web scraper specialized in extracting job listings from HTML pages. 
 Your task is to analyze the provided HTML content and identify job listings, extracting relevant details for each job.
 If you cannot extract the information due to the HTML being a login page, CAPTCHA, or any other access restriction, respond with an empty result and an appropriate errorMessage.
@@ -388,6 +396,68 @@ const turndownService = new turndown({
   bulletListMarker: '-',
   codeBlockStyle: 'fenced',
 });
+
+/**
+ * Call the jobs-parse model with schema validation + one retry, and a per-call
+ * timeout so a slow/hung local inference is treated as a parse failure rather
+ * than blocking the whole scan.
+ */
+async function callJobsParse({
+  openAi,
+  llmConfig,
+  userPrompt,
+  logger,
+  label,
+}: {
+  openAi: ReturnType<typeof buildOpenAiClient>['openAi'];
+  llmConfig: ReturnType<typeof buildOpenAiClient>['llmConfig'];
+  userPrompt: string;
+  logger: ILogger;
+  label: string;
+}): Promise<z.infer<typeof PARSE_JOBS_PAGE_SCHEMA> & { response?: OpenAIResponse }> {
+  const attempt = async (extraReminder: boolean) => {
+    const messages = [
+      { role: 'system' as const, content: SYSTEM_PROMPT },
+      { role: 'user' as const, content: userPrompt },
+    ];
+    if (extraReminder) {
+      messages.push({
+        role: 'user' as const,
+        content: 'Your previous reply was not valid JSON for the schema. Reply with ONLY a JSON object matching the schema, no prose.',
+      });
+    }
+    const response = await openAi.chat.completions.create(
+      {
+        model: llmConfig.model,
+        messages,
+        // max_tokens (not max_completion_tokens) for Ollama OpenAI-compat parity.
+        max_tokens: 16_000,
+        response_format: zodResponseFormat(PARSE_JOBS_PAGE_SCHEMA, 'ParseJobsPageResponse'),
+      },
+      { timeout: PARSE_CALL_TIMEOUT_MS },
+    );
+    const choice = response.choices[0];
+    if (choice.finish_reason !== 'stop' && choice.finish_reason !== 'length') {
+      throw new Error(`model response did not finish: ${choice.finish_reason}`);
+    }
+    const parsed = PARSE_JOBS_PAGE_SCHEMA.parse(JSON.parse(choice.message.content ?? throwError('missing content')));
+    return { ...parsed, response };
+  };
+
+  try {
+    return await attempt(false);
+  } catch (firstErr) {
+    logger.info(`jobs parse ${label}: first attempt invalid (${(firstErr as Error).message}), retrying once`);
+    try {
+      return await attempt(true);
+    } catch (secondErr) {
+      logger.error(`jobs parse ${label}: failed after retry (${(secondErr as Error).message})`);
+      // Treat as "no jobs in this chunk" rather than throwing — the caller
+      // records the error and continues with other chunks.
+      return { jobs: [], errorMessage: `parse failed: ${(secondErr as Error).message}`, response: undefined };
+    }
+  }
+}
 
 function stripNodes(root: Element, selectors: string[]) {
   selectors.forEach((selector) => {
