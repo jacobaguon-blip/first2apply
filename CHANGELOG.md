@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `12:13` -- feat(desktop): location section in funnel filter menu _(session `8b0890e5`)_
+  - `apps/desktopProbe/src/components/home/jobFilters.tsx`
+  - `apps/desktopProbe/src/components/home/jobFilters/jobFiltersMenu.tsx`
 - `11:59` -- style(ui): drop redundant JobSortMode cast + match file semicolon style _(session `8b0890e5`)_
   - `libraries/ui/src/lib/supabaseApi.ts`
 - `11:50` -- feat(ui): listJobs accepts sort + location params _(session `b53d5bd7`)_
