@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `13:11` -- feat(backend): apply AI profile location rules in advancedMatching pipeline _(session `15f1f07f`)_
+  - `apps/backend/supabase/functions/_shared/advancedMatching.ts`
 - `12:57` -- fix(desktop): validate sort + loc_buckets URL params against allowlists _(session `a8d1e5af`)_
   - `apps/desktopProbe/src/components/home/jobTabs.tsx`
 - `12:47` -- feat(desktop): sort dropdown + location URL state in jobs view _(session `d45bb41f`)_
