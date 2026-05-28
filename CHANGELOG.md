@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `11:14` -- feat(backend): list_jobs sort + location params, ai profile location columns _(session `efbb7eb7`)_
+  - `apps/backend/supabase/migrations/20260528000000_sort_and_location.sql`
 - `11:05` -- docs(core): document classifyLocation mirror contract + pin false positives _(session `6bb85505`)_
   - `libraries/core/src/__tests__/classifyLocation.test.ts`
   - `libraries/core/src/classifyLocation.ts`
