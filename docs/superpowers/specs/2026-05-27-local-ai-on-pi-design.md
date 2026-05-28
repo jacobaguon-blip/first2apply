@@ -97,16 +97,45 @@ ARM, or if dropping Deno from the stack becomes a strategic goal.
   local model so call sites are unchanged. Stale "Azure OpenAI" log line cleaned up.
 
 ### 4. Chunking layer (new — `parseCustomJobs` only)
-- After the existing strip→turndown step, if content exceeds a safe token budget
-  (~8–12k tokens), split on listing boundaries into chunks.
-- Parse each chunk against the existing `PARSE_JOBS_PAGE_SCHEMA`; merge + dedupe by
-  `externalUrl`, preserve order, keep the existing max-30 cap.
-- Greenhouse fast-path stays first — ATS pages never hit the model.
+
+Replaces the current single-shot `htmlContent.slice(0, MAX_CONTENT_CHARS)`
+behavior (`customJobsParser.ts:72-76`). Interface:
+
+`chunkMarkdown(markdown: string, opts: { maxChars: number; overlapChars: number }): string[]`
+- **Truncation reconciliation:** the existing `MAX_CONTENT_CHARS` (120k) hard
+  truncation is **removed**. Instead the full cleaned markdown is split into
+  chunks of `maxChars` (target ~8–12k tokens ≈ ~32–48k chars; pin in step-1
+  benchmark) so no listings are silently dropped.
+- **Splitting contract:** split primarily on top-level markdown headings/list-item
+  boundaries (regex on `^#{1,3} ` and list markers from the existing
+  `bulletListMarker: '-'` turndown config). If no boundary exists within a chunk
+  window, fall back to a hard char-window split with `overlapChars` (~500) carried
+  between adjacent chunks so a listing straddling a boundary still appears whole in
+  at least one chunk. Single-chunk pages (under `maxChars`) bypass splitting and
+  behave exactly as today.
+- **Per-chunk parse + merge:** each chunk is parsed against the existing
+  `PARSE_JOBS_PAGE_SCHEMA`; results are concatenated, deduped by `externalUrl`
+  (first occurrence wins, preserving page order).
+- **Cap relocation:** the "maximum of 30" instruction is **removed from the
+  per-call prompt** (otherwise N chunks could each return 30 → N×30). The cap
+  becomes a single post-merge `slice(0, 30)` applied once after dedupe, preserving
+  the original cap semantics across the whole page.
+- **Per-chunk schema bound:** `PARSE_JOBS_PAGE_SCHEMA` still validates each chunk
+  with `jobs.max(50)`. Size `maxChars` so a single chunk realistically holds <50
+  listings; if a dense chunk could exceed it, raise the per-call `.max(50)` (the
+  real cap is now the post-merge `slice(0, 30)`) so a dense chunk isn't rejected
+  and silently dropped — the exact failure chunking exists to prevent.
+- Greenhouse fast-path stays first — ATS pages never hit the model or the chunker.
 
 ### 5. Reliability wrapper (new — shared)
 - Each model call: validate output with the existing Zod schema → one retry with a
   "return valid JSON only" reminder → on second failure, record a parse error via
-  the existing `parseFailed` path. No infinite hangs (explicit per-call timeout).
+  the existing `parseFailed` path.
+- **Per-call timeout:** generous, sized for CPU inference, so it never manufactures
+  failures the cloud path didn't see. Provisional ceiling **180s per chunk** /
+  **300s per CV-tailor call**; final values pinned by the step-1 benchmark before
+  the cap is enforced. A timeout is treated as a parse failure (same `parseFailed`
+  path), never a hang.
 
 ### 6. Client routing (changed)
 - Probe: scraper's `scanHtmls` / job-description calls → local runtime
@@ -127,7 +156,11 @@ New Pi env:
 
 ## Rollout
 
-1. Ollama up + model pulled + benchmark one real parse (timing + quality).
+1. Ollama up + model pulled + benchmark one real parse. **Go/no-go thresholds:**
+   index-page parse completes under the per-chunk timeout ceiling, and a 3–5 job
+   spot-check matches prior gpt-4o output on title/company/url/location for ≥80% of
+   fields. If either fails, revisit model size (Section "Model tier") before
+   proceeding — do not advance to step 2.
 2. Edge runtime container serving functions locally.
 3. Flip scanning to local; confirm jobs land.
 4. Flip the three CV/fit endpoints.
@@ -142,6 +175,11 @@ New Pi env:
 
 - Manual scan → `new_jobs_count > 0`, zero 429s in `f2a-server-probe` logs.
 - One fit eval + one CV tailor succeed end-to-end from the desktop over Tailscale.
+- **Auth shim correctness:** a desktop-originated `evaluate-job` / `tailor-cv`
+  resolves to the correct user via the service-role + `F2A_OWNER_USER_ID` shim
+  (confirm the result rows are written for the owner, not a wrong/empty user) —
+  these previously relied on the desktop JWT, so a wrong-user resolution is a
+  silent data bug, not a crash.
 - Quality spot-check: 3–5 jobs parsed locally vs. prior gpt-4o output.
 
 ## Open risks
