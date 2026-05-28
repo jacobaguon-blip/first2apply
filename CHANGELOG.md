@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-27
+- `18:58` -- docs: add CLAUDE.md session cheat sheet _(session `3f7543ce`)_
+  - `CLAUDE.md`
 - `18:45` -- docs: tighten local-AI spec after review (chunking interface, timeouts, verification) _(session `e864bd08`)_
   - `docs/superpowers/specs/2026-05-27-local-ai-on-pi-design.md`
 - `18:35` -- docs: design for local AI on the Pi (A2) + 429 investigation ledger _(session `01176a02`)_
