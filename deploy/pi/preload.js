@@ -15,6 +15,28 @@
  */
 const functionsUrl = process.env.F2A_FUNCTIONS_URL;
 const supabaseUrl = process.env.SUPABASE_URL;
+
+// Local LLM parses can take many minutes on Pi 5 CPU. Node's undici defaults
+// (5 min headers + 5 min body) would abort legitimate slow responses from the
+// local edge runtime. Raise both globally so the probe waits for the parse.
+try {
+  // preload runs from / (outside the probe's node_modules), so resolve undici
+  // by its absolute container path. /app/node_modules/undici is present in
+  // the f2a-server-probe image (transitive dep).
+  const { setGlobalDispatcher, Agent } = require('/app/node_modules/undici');
+  setGlobalDispatcher(
+    new Agent({
+      headersTimeout: 30 * 60 * 1000, // 30 min
+      bodyTimeout: 30 * 60 * 1000,
+      keepAliveTimeout: 60_000,
+    }),
+  );
+  // eslint-disable-next-line no-console
+  console.log('[preload] undici dispatcher: headers/body timeout 30 min');
+} catch (err) {
+  console.warn('[preload] could not set undici dispatcher:', err?.message);
+}
+
 if (functionsUrl && supabaseUrl) {
   const prefix = supabaseUrl.replace(/\/$/, '') + '/functions/v1/';
   const localBase = functionsUrl.replace(/\/$/, '') + '/functions/v1/';
