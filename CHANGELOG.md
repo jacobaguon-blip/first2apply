@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `12:31` -- chore(types): refresh generated Database types + export from @first2apply/core _(session `7ef01cf0`)_
+  - `libraries/core/src/database.types.ts`
+  - `libraries/core/src/index.ts`
 - `11:00` -- fix(desktop): last-scan indicator reads MAX(last_scraped_at) from DB _(session `01c4e9d7`)_
   - `apps/desktopProbe/src/server/rendererIpcApi.ts`
 - `10:35` -- feat(skill,deploy): /deploy-desktop project skill + Node-26-safe local build _(session `efbb7eb7`)_
