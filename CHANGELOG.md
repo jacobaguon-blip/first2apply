@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-27
+- `21:42` -- ops: raise parse-call timeout to 28min + morning report _(session `a67abc58`)_
+  - `MORNING-REPORT-2026-05-28.md`
+  - `apps/backend/supabase/functions/_shared/customJobsParser.ts`
 - `21:28` -- fix(preload): undici 30-min headers/body timeout for slow Pi 5 LLM parses _(session `fb374e1f`)_
   - `deploy/pi/preload.js`
 - `21:16` -- fix(scan-urls): explicit user_id on jobs upsert + preload.js for probe wiring _(session `fb374e1f`)_
