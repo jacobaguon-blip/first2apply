@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `10:18` -- chore: postgrest v12 typing workaround (SupabaseClient<any>) _(session `a8d1e5af`)_
+  - `apps/backend/supabase/functions/deno.lock`
+  - `libraries/core/src/types.ts`
+  - `libraries/ui/src/lib/supabaseApi.ts`
 - `10:05` -- docs(CLAUDE.md): trigger table + local-AI quirk + desktop deploy commands _(session `d45bb41f`)_
   - `CLAUDE.md`
 - `09:49` -- docs: implementation plan for sort dropdown + location filter _(session `3c13aafd`)_
