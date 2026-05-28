@@ -141,3 +141,4 @@ ssl
 
 # Weekend AI budget tracker (local-only)
 .f2a-ai-spend.json
+.worktrees/
