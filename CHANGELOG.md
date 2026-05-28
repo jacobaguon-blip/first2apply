@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `12:22` -- fix(desktop): sync funnel filters from props + narrow LocationBucket prop type _(session `d45bb41f`)_
+  - `apps/desktopProbe/src/components/home/jobFilters.tsx`
 - `12:13` -- feat(desktop): location section in funnel filter menu _(session `8b0890e5`)_
   - `apps/desktopProbe/src/components/home/jobFilters.tsx`
   - `apps/desktopProbe/src/components/home/jobFilters/jobFiltersMenu.tsx`
