@@ -292,7 +292,7 @@ export class F2aSupabaseApi {
     labels,
     limit = 50,
     after,
-    sort = 'newest_first' as JobSortMode,
+    sort = 'newest_first',
     locationBuckets,
     locationContains,
   }: {
@@ -312,9 +312,9 @@ export class F2aSupabaseApi {
     const jobs_link_ids = linkIds && linkIds.length > 0 ? linkIds : undefined
     const jobs_labels = labels && labels.length > 0 ? labels : undefined
     const jobs_location_buckets =
-      locationBuckets && locationBuckets.length > 0 ? locationBuckets : undefined;
+      locationBuckets && locationBuckets.length > 0 ? locationBuckets : undefined
     const jobs_location_contains =
-      locationContains && locationContains.trim() ? locationContains.trim() : undefined;
+      locationContains && locationContains.trim() ? locationContains.trim() : undefined
     const [jobs, counters] = await Promise.all([
       this._supabaseApiCall<Job[], PostgrestError>(async () => {
         const res = await this._supabase.rpc("list_jobs", {
