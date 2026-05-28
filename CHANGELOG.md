@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `11:59` -- style(ui): drop redundant JobSortMode cast + match file semicolon style _(session `8b0890e5`)_
+  - `libraries/ui/src/lib/supabaseApi.ts`
 - `11:50` -- feat(ui): listJobs accepts sort + location params _(session `b53d5bd7`)_
   - `libraries/ui/src/lib/supabaseApi.ts`
 - `11:33` -- feat(core): add JobSortMode + location fields on AiFilterProfile _(session `da4081df`)_
