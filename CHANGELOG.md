@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-27
+- `21:44` -- docs(plan): UX writeup for local-AI-on-Pi (layman summary) _(session `a67abc58`)_
+  - `.claude/plans/2026-05-27-local-ai-on-pi-ux-writeup.md`
+  - `.claude/plans/2026-05-27-local-ai-on-pi.md`
 - `21:42` -- ops: raise parse-call timeout to 28min + morning report _(session `a67abc58`)_
   - `MORNING-REPORT-2026-05-28.md`
   - `apps/backend/supabase/functions/_shared/customJobsParser.ts`
