@@ -5,6 +5,25 @@
 > **When you discover a durable structural fact (new key path, changed flow, new gotcha),
 > add it here in the same session.** See "Maintaining this file" at the bottom.
 
+## When the user asks for X, run Y (trigger table)
+
+These are automatic — no need to re-ask the user. Confirm any one-way doors
+inline (`git push`, posting to anything customer-visible, etc.) but the local
+deploy itself is reversible (`.previous.app` rollback path).
+
+| User says (any of) | Run this from anywhere in the repo |
+|---|---|
+| "deploy the desktop", "ship the changes", "update my app", "rebuild and run", "package and install the new version" | `pnpm --filter first2apply-desktop deploy:local` |
+| "deploy to her too", "ship everywhere", "rollout" | `pnpm --filter first2apply-desktop deploy:all` |
+| "rollback the desktop", "revert the last deploy" | See `docs/DEPLOY-DESKTOP.md` § Rollback (`.previous.app` swap) |
+| "redeploy the Pi local-AI stack", "restart the edge runtime" | `ssh maadkal@raspberrypi 'bash /opt/first2apply-mono/deploy/deploy-local-ai.sh'` |
+| "what's the last scan / are jobs landing?" | Query `jobs` table by `created_at` (use Pi `.env` service-role key); check `f2a-edge-local` logs for `[custom] found N jobs` |
+
+The local-deploy script builds the arm64 `.app`, atomically swaps
+`/Applications/First 2 Apply.app` (keeping the prior build at `.previous.app`),
+strips Gatekeeper quarantine, and launches the new app — all in one command.
+Full process + knobs: `docs/DEPLOY-DESKTOP.md`.
+
 ## What this is
 
 Open-source job-board aggregator (LinkedIn/Indeed/Dice/…). Upstream: BeastX `first2apply`.
@@ -46,6 +65,24 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
    (`publish-release.sh`, `deploy-to-her.sh`). (memory: `project_household_deploy`)
 6. **Supabase cloud project** exists so the desktop app runs on other machines without self-hosting.
    Local Docker stack (`pnpm up`) is dev-only. (memory: `project_supabase_cloud`)
+7. **Local AI on the Pi (no API keys).** All AI inference runs on the Pi via **Ollama** (default
+   model `qwen2.5:3b-f2a`, `num_ctx=16384` via Modelfile) and a **self-hosted Deno edge runtime**
+   (`f2a-edge-local` container, port 54321) that imports each function's `handle()` and routes by
+   `/functions/v1/<name>`. Provider switch is one env var: `F2A_AI_PROVIDER=local|openai`.
+   - Pi files: `/opt/first2apply-mono/` (functions + libs), `/opt/first2apply-mono/deploy/`
+     (`compose.local-ai.yaml`, `deploy-local-ai.sh`).
+   - Probe wiring: `/opt/first2apply/preload.js` + `NODE_OPTIONS=--require=/preload.js` in
+     `/opt/first2apply/.env`; rewrites `${SUPABASE_URL}/functions/v1/*` → local edge, and raises
+     undici dispatcher timeout to 30 min for slow CPU parses. Durable in-source version lives in
+     `apps/serverProbe/src/main.ts` (activates on next probe image rebuild).
+   - Desktop wiring: `apps/desktopProbe/src/index.ts` — same rewriting fetch, gated on
+     `F2A_FUNCTIONS_URL`. Activates on next desktop rebuild.
+   - Router auth: `_localServer.ts` requires `Authorization: Bearer …` (any non-empty token);
+     handlers do the real JWT/service-role validation via `getEdgeFunctionContext`. `/health` is
+     exempt. Bind is `0.0.0.0` because the desktop reaches the Pi over Tailscale.
+   - Fork-specific: jobs UPSERT into `jobs` table now sets `user_id` explicitly because the DB
+     default `auth.uid()` is null for service-role calls (`apps/backend/supabase/functions/scan-urls/index.ts`).
+   - Spec + design: `docs/superpowers/specs/2026-05-27-local-ai-on-pi-design.md`.
 
 ## Common commands (from repo root)
 
@@ -57,6 +94,10 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
 | Test / lint | `pnpm test` / `pnpm lint` |
 | Local Supabase + services | `pnpm up` (docker compose) |
 | Serve edge fns w/ debugger | `pnpm debug:edge` |
+| **Deploy desktop to this Mac** | `pnpm --filter first2apply-desktop deploy:local` |
+| **Deploy desktop everywhere** | `pnpm --filter first2apply-desktop deploy:all` |
+| Refresh deps before deploy (no postinstall scripts) | `pnpm --filter first2apply-desktop deploy:local:refresh` |
+| Deploy Pi local-AI stack | `ssh maadkal@raspberrypi 'bash /opt/first2apply-mono/deploy/deploy-local-ai.sh'` |
 
 ## Where things live (jump table)
 
