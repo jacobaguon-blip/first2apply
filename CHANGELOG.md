@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `11:33` -- feat(core): add JobSortMode + location fields on AiFilterProfile _(session `da4081df`)_
+  - `libraries/core/src/types.ts`
 - `11:23` -- docs(backend): document cursor-reset contract on sort toggle _(session `8b0890e5`)_
   - `apps/backend/supabase/migrations/20260528000000_sort_and_location.sql`
 - `11:14` -- feat(backend): list_jobs sort + location params, ai profile location columns _(session `efbb7eb7`)_
