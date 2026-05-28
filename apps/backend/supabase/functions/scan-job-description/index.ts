@@ -7,7 +7,7 @@ import { getEdgeFunctionContext } from '../_shared/edgeFunctions.ts';
 import { parseJobDescriptionUpdates } from '../_shared/jobDescriptionParser.ts';
 import { createLoggerWithMeta } from '../_shared/logger.ts';
 
-Deno.serve(async (req) => {
+export const handle = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
@@ -164,4 +164,8 @@ Deno.serve(async (req) => {
       // status: 500,
     });
   }
-});
+};
+
+if (import.meta.main) {
+  Deno.serve(handle);
+}

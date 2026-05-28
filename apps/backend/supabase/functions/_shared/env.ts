@@ -34,7 +34,10 @@ export function parseEnv(): First2ApplyBackendEnv {
     },
     aiProvider: (Deno.env.get('F2A_AI_PROVIDER') ?? 'local') === 'openai' ? 'openai' : 'local',
     ollamaUrl: Deno.env.get('F2A_OLLAMA_URL') ?? 'http://127.0.0.1:11434/v1',
-    ollamaModel: Deno.env.get('F2A_OLLAMA_MODEL') ?? 'qwen2.5:7b',
+    // Default to the f2a variant which pins num_ctx=16384 via Modelfile.
+    // 3b is the production default — quality demonstrated on extraction work
+    // and CPU-friendlier than 7b on a Pi 5. Override with F2A_OLLAMA_MODEL.
+    ollamaModel: Deno.env.get('F2A_OLLAMA_MODEL') ?? 'qwen2.5:3b-f2a',
     mailerLiteApiKey: Deno.env.get('MAILERLITE_API_KEY'),
     mailerSendApiKey: Deno.env.get('MAILERSEND_API_KEY'),
     mailerFromEmail: Deno.env.get('MAILER_FROM_EMAIL') ?? 'contact@first2apply.com',

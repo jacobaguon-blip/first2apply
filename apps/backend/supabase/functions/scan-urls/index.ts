@@ -15,7 +15,7 @@ type HtmlParseRequest = {
   retryCount?: number;
 };
 
-Deno.serve(async (req) => {
+export const handle = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS });
   }
@@ -144,7 +144,14 @@ Deno.serve(async (req) => {
       // status: 500,
     });
   }
-});
+};
+
+// Auto-bind to a port only when invoked as a top-level edge function (cloud or
+// `supabase functions serve`). The local self-hosted server imports `handle`
+// directly, so the check below skips Deno.serve in that environment.
+if (import.meta.main) {
+  Deno.serve(handle);
+}
 
 async function parseHtmlToJobsList({
   html,

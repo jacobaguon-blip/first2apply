@@ -25,6 +25,11 @@ export type ServerProbeEnv = {
   probeSecret?: string;
   probePort: number;
   probeBind: string;
+  // Optional override for the Supabase Edge Functions base URL. When set, the
+  // probe's supabase client rewrites `${supabaseUrl}/functions/v1/*` calls to
+  // `${functionsUrl}/functions/v1/*` so functions can be served by a local
+  // edge runtime on the Pi (no API keys, no 429s).
+  functionsUrl?: string;
 };
 
 export function validateEnv(opts: { skip?: boolean } = {}): ServerProbeEnv | undefined {
@@ -54,5 +59,6 @@ export function validateEnv(opts: { skip?: boolean } = {}): ServerProbeEnv | und
     probeSecret: process.env.F2A_PROBE_SECRET,
     probePort: process.env.F2A_PROBE_PORT ? Number(process.env.F2A_PROBE_PORT) : 7879,
     probeBind: process.env.F2A_PROBE_BIND ?? '0.0.0.0',
+    functionsUrl: process.env.F2A_FUNCTIONS_URL,
   };
 }

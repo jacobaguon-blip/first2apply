@@ -103,9 +103,33 @@ async function main() {
 
   await app.whenReady();
 
+  // When F2A_FUNCTIONS_URL is set, rewrite outgoing calls that target
+  // `${supabaseUrl}/functions/v1/*` to the local edge runtime on the Pi.
+  // DB/RPC/Auth traffic (which uses other paths) keeps going to cloud Supabase
+  // untouched. Without this override, supabase-js derives the functions URL
+  // from supabaseUrl and there's no other way to point it elsewhere.
+  const supabaseFnPrefix = `${env.supabaseUrl.replace(/\/$/, '')}/functions/v1/`;
+  const rewritingFetch: typeof fetch | undefined = env.functionsUrl
+    ? (input, init) => {
+        const localBase = env.functionsUrl!.replace(/\/$/, '');
+        const rewrite = (raw: string): string =>
+          raw.startsWith(supabaseFnPrefix) ? `${localBase}/functions/v1/${raw.slice(supabaseFnPrefix.length)}` : raw;
+        if (typeof input === 'string') return fetch(rewrite(input), init);
+        if (input instanceof URL) return fetch(rewrite(input.toString()), init);
+        // Request object: clone with rewritten URL if needed
+        const original = input as Request;
+        const rewritten = rewrite(original.url);
+        if (rewritten === original.url) return fetch(input, init);
+        const cloned = new Request(rewritten, original);
+        return fetch(cloned, init);
+      }
+    : undefined;
+
   const supabase = createClient(env.supabaseUrl, env.supabaseServiceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
+    ...(rewritingFetch ? { global: { fetch: rewritingFetch } } : {}),
   });
+  if (env.functionsUrl) logger.info(`functions calls rewritten -> ${env.functionsUrl}`);
   const supabaseApi = new ServerSupabaseApi(supabase);
   const settingsProvider = new EnvSettingsProvider(logger, env);
   const analytics = new NoopAnalytics();
