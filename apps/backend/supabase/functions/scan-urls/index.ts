@@ -115,6 +115,10 @@ export const handle = async (req: Request): Promise<Response> => {
         .upsert(
           parsedJobs.map((job) => ({
             ...job,
+            // Explicit user_id — the DB default is `auth.uid()` which is null
+            // when the probe calls with a service-role JWT (no user context).
+            // userId is the link owner (or auth user when via desktop JWT).
+            user_id: userId,
             status: 'processing' as const,
             // ensure tags is not null
             tags: job.tags ?? [],
