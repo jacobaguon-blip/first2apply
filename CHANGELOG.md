@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-27
+- `20:06` -- feat(backend): local AI provider switch + HTML chunking + parse retry wrapper _(session `fb9fe4ca`)_
+  - `apps/backend/supabase/functions/_shared/customJobsParser.ts`
+  - `apps/backend/supabase/functions/_shared/env.ts`
+  - `apps/backend/supabase/functions/_shared/markdownChunker.test.ts`
+  - `apps/backend/supabase/functions/_shared/markdownChunker.ts`
+  - `apps/backend/supabase/functions/_shared/openAI.ts`
 - `18:58` -- docs: add CLAUDE.md session cheat sheet _(session `3f7543ce`)_
   - `CLAUDE.md`
 - `18:45` -- docs: tighten local-AI spec after review (chunking interface, timeouts, verification) _(session `e864bd08`)_
