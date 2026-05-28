@@ -1,6 +1,5 @@
 import {
   AiFilterProfile,
-  DbSchema,
   Job,
   JobLabel,
   JobStatus,
@@ -23,14 +22,14 @@ import * as luxon from "luxon"
  * Class used to interact with our Supabase API.
  */
 export class F2aSupabaseApi {
-  constructor(private _supabase: SupabaseClient<DbSchema>) {}
+  constructor(private _supabase: SupabaseClient<any>) {}
 
   /**
    * Underlying supabase client. Exposed for callers that need to invoke
    * RPCs or table operations not yet wrapped by this class
    * (e.g. dispatchPushoverSummary in apps/desktopProbe/.../notifications).
    */
-  getSupabaseClient(): SupabaseClient<DbSchema> {
+  getSupabaseClient(): SupabaseClient<any> {
     return this._supabase
   }
 
@@ -764,6 +763,28 @@ export class F2aSupabaseApi {
     await this._supabaseApiCall(
       async () =>
         await this._supabase.from("ai_filter_profiles").delete().eq("id", id)
+    )
+  }
+
+  /**
+   * Re-run the advanced-matching filter across the caller's existing jobs.
+   *
+   * By default sweeps both `new` and `excluded_by_advanced_matching`, so a
+   * prompt edit can move jobs in either direction (e.g. newly-excluded retail
+   * jobs leave 'new'; previously-excluded jobs return after a rule relaxes).
+   */
+  reapplyFilters({ includeExcluded = true }: { includeExcluded?: boolean } = {}) {
+    return this._supabaseApiCall(() =>
+      this._supabase.functions.invoke<{
+        total: number
+        evaluated: number
+        kept: number
+        excluded: number
+        unchanged: number
+        errors: number
+      }>("reapply-filter-profile", {
+        body: { includeExcluded },
+      })
     )
   }
 

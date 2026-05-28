@@ -238,6 +238,9 @@ export type AccountMemberRow = {
  * Supabase database schema.
  */
 export type DbSchema = {
+  __InternalSupabase: {
+    PostgrestVersion: '12';
+  };
   public: {
     Tables: {
       sites: {
