@@ -162,7 +162,7 @@ export function JobTabs() {
       <TabsList className="h-fit w-full p-2">
         <TabsTrigger
           value="new"
-          className={`flex flex-1 items-center px-6 py-3.5 focus-visible:ring-0 focus-visible:ring-offset-0 ${
+          className={`flex flex-1 items-center px-6 py-3.5 ${
             status === 'new' ? 'justify-between' : 'justify-center'
           }`}
         >
@@ -184,7 +184,7 @@ export function JobTabs() {
         </TabsTrigger>
         <TabsTrigger
           value="applied"
-          className={`flex flex-1 items-center px-6 py-3.5 focus-visible:ring-0 focus-visible:ring-offset-0 ${
+          className={`flex flex-1 items-center px-6 py-3.5 ${
             status === 'applied' ? 'justify-between' : 'justify-center'
           }`}
         >
@@ -206,7 +206,7 @@ export function JobTabs() {
         </TabsTrigger>
         <TabsTrigger
           value="archived"
-          className={`flex flex-1 items-center px-6 py-3.5 focus-visible:ring-0 focus-visible:ring-offset-0 ${
+          className={`flex flex-1 items-center px-6 py-3.5 ${
             status === 'archived' ? 'justify-between' : 'justify-center'
           }`}
         >
@@ -228,7 +228,7 @@ export function JobTabs() {
         </TabsTrigger>
         <TabsTrigger
           value="excluded_by_advanced_matching"
-          className={`flex flex-1 items-center px-6 py-3.5 focus-visible:ring-0 focus-visible:ring-offset-0 ${
+          className={`flex flex-1 items-center px-6 py-3.5 ${
             status === 'excluded_by_advanced_matching' ? 'justify-between' : 'justify-center'
           }`}
         >

@@ -65,8 +65,8 @@ export function ForgotPasswordCard({
             />
           </CardContent>
           <CardFooter className="flex flex-col gap-4 pb-7 pt-2">
-            <Button className="w-full" disabled={!form.formState.isValid}>
-              {isSubmitting && <Icons.spinner2 className="mr-1 animate-spin" />}
+            <Button className="w-full" disabled={!form.formState.isValid || isSubmitting}>
+              {isSubmitting && <Icons.spinner2 className="mr-1 h-4 w-4 animate-spin" />}
               Send Reset Link
             </Button>
 

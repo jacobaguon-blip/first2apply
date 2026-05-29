@@ -77,6 +77,14 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
      `apps/serverProbe/src/main.ts` (activates on next probe image rebuild).
    - Desktop wiring: `apps/desktopProbe/src/index.ts` — same rewriting fetch, gated on
      `F2A_FUNCTIONS_URL`. Activates on next desktop rebuild.
+   - **Build-time gotcha:** any `.env` var that main-process code reads via `process.env.*` must
+     also be listed in `apps/desktopProbe/webpack.plugins.ts` `EnvironmentPlugin`. Without it,
+     webpack inlines `undefined`, the value is silently lost, and any branch keyed on it gets
+     dead-code-eliminated. (`F2A_FUNCTIONS_URL` was the trip-wire here; see session 2026-05-28.)
+   - **`.env.deploy-local-backup` foot-gun:** `deploy-local.sh` PUSHOVER scrub creates this backup
+     and restores it on next run if a prior run crashed. A stale backup silently overwrites recent
+     `.env` edits. If a fresh edit "disappears" after a deploy, check for / delete this file before
+     re-editing.
    - Router auth: `_localServer.ts` requires `Authorization: Bearer …` (any non-empty token);
      handlers do the real JWT/service-role validation via `getEdgeFunctionContext`. `/health` is
      exempt. Bind is `0.0.0.0` because the desktop reaches the Pi over Tailscale.

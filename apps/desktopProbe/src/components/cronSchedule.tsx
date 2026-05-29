@@ -17,7 +17,7 @@ export function CronSchedule({
         <h2 className="text-lg">Search Frequency</h2>
         <p className="text-sm font-light">How often do you want to receive job notifications?</p>
       </div>
-      <Select value={cronRule} onValueChange={onCronRuleChange}>
+      <Select value={cronRule} onValueChange={onCronRuleChange} aria-label="Scan frequency">
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Never" />
         </SelectTrigger>

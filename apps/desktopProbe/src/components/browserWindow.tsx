@@ -130,7 +130,7 @@ export const BrowserWindow = forwardRef<BrowserWindowHandle, BrowserWindowProps>
         <div className="flex h-[50px] w-full items-center border-b bg-background px-4">
           <div className="flex gap-2" id="navigation-buttons">
             <div id="back-button" className="rounded-full">
-              <Button variant="ghost" size="icon" disabled={!canGoBack} onClick={() => overlayBrowserViewGoBack()}>
+              <Button variant="ghost" size="icon" aria-label="Go back" disabled={!canGoBack} onClick={() => overlayBrowserViewGoBack()}>
                 <ArrowLeftIcon className="h-7 w-7 rounded-full" />
               </Button>
             </div>
@@ -138,6 +138,7 @@ export const BrowserWindow = forwardRef<BrowserWindowHandle, BrowserWindowProps>
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label="Go forward"
                 disabled={!canGoForward}
                 onClick={() => overlayBrowserViewGoForward()}
               >
@@ -149,6 +150,7 @@ export const BrowserWindow = forwardRef<BrowserWindowHandle, BrowserWindowProps>
           <div id="url-input" className="ml-2 w-full">
             <Input
               type="text"
+              aria-label="URL"
               onClick={(e) => (e.target as HTMLInputElement).select()}
               value={currentUrl}
               onChange={(e) => setCurrentUrl(e.target.value)}
@@ -162,7 +164,7 @@ export const BrowserWindow = forwardRef<BrowserWindowHandle, BrowserWindowProps>
 
           {/* close btn */}
           <div className="ml-2">
-            <Button variant="ghost" size="icon" onClick={() => handleClose()}>
+            <Button variant="ghost" size="icon" aria-label="Close" onClick={() => handleClose()}>
               <Cross1Icon className="h-5 w-5 rounded-full" />
             </Button>
           </div>

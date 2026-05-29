@@ -127,6 +127,7 @@ export function BulkAddFromPage() {
         <div className="mt-4 flex gap-2">
           <Input
             type="url"
+            aria-label="Page URL"
             placeholder="https://example.com/sponsors"
             value={url}
             onChange={(e) => setUrl(e.target.value)}

@@ -502,6 +502,25 @@ export async function deleteFilterProfile(id: number): Promise<void> {
 }
 
 /**
+ * Re-run advanced-matching filters across the caller's existing jobs after a
+ * filter-profile edit. Returns counts so the UI can toast a summary.
+ */
+export type ReapplyFiltersResult = {
+  total: number;
+  evaluated: number;
+  kept: number;
+  excluded: number;
+  unchanged: number;
+  errors: number;
+};
+
+export async function reapplyFilters(
+  { includeExcluded = true }: { includeExcluded?: boolean } = {},
+): Promise<ReapplyFiltersResult> {
+  return await _mainProcessApiCall<ReapplyFiltersResult>('reapply-filters', { includeExcluded });
+}
+
+/**
  * Get the user's global company blacklist.
  */
 export async function getGlobalBlacklist(): Promise<string[]> {
@@ -663,6 +682,9 @@ export class ElectronApiSdk implements First2ApplyApiSdk {
   // Global Blacklist
   getGlobalBlacklist = getGlobalBlacklist;
   updateGlobalBlacklist = updateGlobalBlacklist;
+
+  // Re-apply filters
+  reapplyFilters = reapplyFilters;
 }
 
 export type SupabaseConfigInfo = {

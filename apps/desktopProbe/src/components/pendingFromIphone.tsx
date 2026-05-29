@@ -128,11 +128,13 @@ export function PendingFromIphone() {
               {isEditing ? (
                 <div className="space-y-2">
                   <Input
+                    aria-label="URL"
                     placeholder="Real careers/jobs URL (e.g. recruiting.paylocity.com/...)"
                     value={editing[r.id].url}
                     onChange={(e) => setEditing((s) => ({ ...s, [r.id]: { ...s[r.id], url: e.target.value } }))}
                   />
                   <Input
+                    aria-label="Title"
                     placeholder="Title (optional)"
                     value={editing[r.id].title}
                     onChange={(e) => setEditing((s) => ({ ...s, [r.id]: { ...s[r.id], title: e.target.value } }))}

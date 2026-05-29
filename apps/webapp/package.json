@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack --port=3002",
+    "dev": "next dev --turbopack --port=3002",
     "typecheck": "tsc --noEmit",
     "build": "next build --webpack",
     "build:standalone": "next build --webpack && node scripts/assemble-standalone.mjs",

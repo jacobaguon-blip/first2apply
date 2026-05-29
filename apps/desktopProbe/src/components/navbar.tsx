@@ -15,7 +15,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Icons } from '@/components/icons';
 import { useAppState } from '@/hooks/appState';
 import { useCareerOps } from '@/hooks/careerOps';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@first2apply/ui';
+import { Button, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@first2apply/ui';
 import { useTheme } from 'next-themes';
 
 export function Navbar() {
@@ -155,13 +155,14 @@ export function Navbar() {
       <TooltipProvider delayDuration={500}>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="flex items-center gap-3 p-1 hover:text-primary"
             >
               {theme === 'dark' ? <SunIcon className="h-7 w-7" /> : <MoonIcon className="h-7 w-7" />}
               <span className="hidden text-lg 2xl:inline-block">{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-            </button>
+            </Button>
           </TooltipTrigger>
 
           <TooltipContent side="right" className="text-base 2xl:hidden">

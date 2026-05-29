@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from '@first2apply/ui';
+
 export default function OfflinePage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
@@ -9,13 +11,13 @@ export default function OfflinePage() {
           First 2 Apply needs a network connection to load this page. Your last-synced jobs are still
           available from the home screen.
         </p>
-        <button
+        <Button
           type="button"
           onClick={() => location.reload()}
-          className="bg-primary text-primary-foreground mt-6 rounded-md px-4 py-2 text-sm"
+          className="mt-6"
         >
           Retry
-        </button>
+        </Button>
         <p className="text-muted-foreground mt-8 text-xs">
           Stuck?{' '}
           <a href="/sw-reset" className="underline">

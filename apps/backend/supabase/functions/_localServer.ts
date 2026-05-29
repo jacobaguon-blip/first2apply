@@ -18,6 +18,7 @@ import { handle as scanJobDescriptionHandle } from './scan-job-description/index
 import { handle as evaluateJobHandle } from './evaluate-job/index.ts';
 import { handle as tailorCvHandle } from './tailor-cv/index.ts';
 import { handle as parseCvHandle } from './parse-cv/index.ts';
+import { handle as reapplyFilterProfileHandle } from './reapply-filter-profile/index.ts';
 import { CORS_HEADERS } from './_shared/cors.ts';
 
 const ok = (body: unknown, status = 200) =>
@@ -74,6 +75,8 @@ Deno.serve({ port, hostname: '0.0.0.0' }, async (req) => {
       return tailorCvHandle(req);
     case 'parse-cv':
       return parseCvHandle(req);
+    case 'reapply-filter-profile':
+      return reapplyFilterProfileHandle(req);
     case 'post-scan-hook':
       // intentional local no-op (no emails, no cloud webhook fan-out)
       return ok({ ok: true, skipped: true });

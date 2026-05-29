@@ -21,10 +21,13 @@ export const plugins = [
   ]),
   // Pi probe HTTP endpoint — optional at build time; renderer falls back to
   // local scanner when these are unset or the Pi is unreachable.
+  // F2A_FUNCTIONS_URL routes Supabase edge-function calls to the Pi's
+  // self-hosted edge runtime (Sprint 3+4 local-AI). Unset → cloud functions.
   new webpack.EnvironmentPlugin({
     F2A_PROBE_URL: null,
     F2A_PROBE_SECRET: null,
     F2A_FORCE_CAREER_OPS: null,
+    F2A_FUNCTIONS_URL: null,
   }),
   new CopyWebpackPlugin({
     patterns: [{ from: path.join(__dirname, 'images'), to: 'images' }],

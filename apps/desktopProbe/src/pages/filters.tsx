@@ -1,4 +1,4 @@
-import { CheckIcon, Cross2Icon, InfoCircledIcon, MinusCircledIcon, PlusIcon } from '@radix-ui/react-icons';
+import { CheckIcon, Cross2Icon, InfoCircledIcon, MinusCircledIcon, PlusIcon, ReloadIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 
@@ -12,6 +12,7 @@ import {
   getGlobalBlacklist,
   listFilterProfiles,
   openExternalUrl,
+  reapplyFilters,
   setDefaultFilterProfile,
   updateFilterProfile,
   updateGlobalBlacklist,
@@ -56,6 +57,10 @@ export function FiltersPage() {
 
   // dialog state for delete confirm
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+
+  // re-apply filters dialog + in-flight state
+  const [isReapplyDialogOpen, setReapplyDialogOpen] = useState<boolean>(false);
+  const [isReapplying, setIsReapplying] = useState<boolean>(false);
 
   // initial load
   useEffect(() => {
@@ -148,6 +153,27 @@ export function FiltersPage() {
     }
   };
 
+  const onConfirmReapply = async () => {
+    setIsReapplying(true);
+    try {
+      const result = await reapplyFilters({ includeExcluded: true });
+      setReapplyDialogOpen(false);
+      const changed = (result.kept + result.excluded) - result.unchanged;
+      toast({
+        title: 'Filters re-applied',
+        description:
+          `${result.evaluated} job${result.evaluated === 1 ? '' : 's'} evaluated — ` +
+          `${result.excluded} now filtered out, ${result.kept} kept, ` +
+          `${Math.max(0, changed)} status change${changed === 1 ? '' : 's'}` +
+          (result.errors ? ` (${result.errors} error${result.errors === 1 ? '' : 's'})` : ''),
+      });
+    } catch (error) {
+      handleError({ error, title: 'Failed to re-apply filters' });
+    } finally {
+      setIsReapplying(false);
+    }
+  };
+
   const onConfirmDelete = async () => {
     if (pendingDeleteId == null) return;
     const id = pendingDeleteId;
@@ -230,21 +256,35 @@ export function FiltersPage() {
 
       {/* Section B — Filter Profiles */}
       <section>
-        <div className="mb-4 flex items-center gap-2">
-          <h2 className="text-xl font-medium">Filter Profiles</h2>
-          <TooltipProvider delayDuration={300}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex cursor-help items-center">
-                  <InfoCircledIcon className="h-4 w-4 text-muted-foreground" />
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-xs text-sm">
-                Searches with no profile selected fall back to your default profile. If no default is set, AI filtering
-                is skipped for those searches.
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-medium">Filter Profiles</h2>
+            <TooltipProvider delayDuration={300}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex cursor-help items-center">
+                    <InfoCircledIcon className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs text-sm">
+                  Searches with no profile selected fall back to your default profile. If no default is set, AI
+                  filtering is skipped for those searches.
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
+          {/* Re-apply filter to existing jobs. Edits to a prompt only affect
+              newly-detected jobs by default; this sweeps the existing backlog. */}
+          <Button
+            variant="secondary"
+            onClick={() => setReapplyDialogOpen(true)}
+            disabled={isReapplying || profiles.length === 0}
+            data-testid="reapply-filters-button"
+          >
+            <ReloadIcon className={`mr-2 h-4 w-4 ${isReapplying ? 'animate-spin' : ''}`} />
+            {isReapplying ? 'Re-applying…' : 'Re-apply to existing jobs'}
+          </Button>
         </div>
 
         <div className="flex min-h-[480px] gap-6 rounded-md border border-border bg-card/30">
@@ -339,6 +379,38 @@ export function FiltersPage() {
               onClick={onConfirmDelete}
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Re-apply confirm */}
+      <AlertDialog
+        open={isReapplyDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && !isReapplying) setReapplyDialogOpen(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Re-apply filters to existing jobs?</AlertDialogTitle>
+            <AlertDialogDescription>
+              By default, filter edits only affect newly-detected jobs. This runs the AI filter again across every
+              existing job in your <span className="font-medium">New</span> and{' '}
+              <span className="font-medium">Filtered out</span> tabs, so changes you made to your prompt or blacklist
+              take effect on your backlog too.
+              <span className="mt-2 block text-sm">
+                Each job is re-evaluated by OpenAI, so this can take a minute and uses tokens against your account.
+                Safe to run again later.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isReapplying} onClick={() => setReapplyDialogOpen(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction disabled={isReapplying} onClick={onConfirmReapply}>
+              {isReapplying ? 'Re-applying…' : 'Re-apply now'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

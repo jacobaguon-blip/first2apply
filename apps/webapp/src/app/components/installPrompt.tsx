@@ -1,5 +1,6 @@
 'use client';
 
+import { Button } from '@first2apply/ui';
 import { useEffect, useState } from 'react';
 
 const DISMISS_KEY = 'f2a:install-prompt-dismissed-v1';
@@ -59,9 +60,9 @@ export function InstallPrompt() {
             offline.
           </p>
         </div>
-        <button type="button" onClick={dismiss} className="text-muted-foreground text-xs underline">
+        <Button variant="link" size="sm" type="button" onClick={dismiss}>
           Dismiss
-        </button>
+        </Button>
       </div>
     </div>
   );

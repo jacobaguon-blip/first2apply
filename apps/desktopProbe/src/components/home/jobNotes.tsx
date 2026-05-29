@@ -134,7 +134,7 @@ export function JobNotes({ jobId }: { jobId: number }) {
       <div className="flex items-center">
         <h3 className="text-2xl">Your notes</h3>
 
-        <Button size="xs" className="ml-2 rounded-full px-1" onClick={handleNewNote} disabled={newNote !== undefined}>
+        <Button size="xs" className="ml-2 rounded-full px-1" aria-label="Add note" onClick={handleNewNote} disabled={newNote !== undefined}>
           <PlusIcon className="h-4 w-4" />
         </Button>
       </div>
@@ -328,6 +328,7 @@ function EditJobNote({
       </CardHeader>
       <CardContent>
         <TextareaAutosize
+          aria-label="Write a note"
           value={text}
           autoFocus={isNew}
           onChange={(e) => setText(e.target.value)}

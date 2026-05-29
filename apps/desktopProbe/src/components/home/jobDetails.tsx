@@ -213,6 +213,7 @@ function TailoredCvPanel({ job }: { job: Job }) {
       {savedPath && <p className="text-sm text-green-600">Saved to {savedPath}</p>}
       {tailored && view === 'edit' && (
         <textarea
+          aria-label="Cover letter"
           className="font-mono w-full min-h-[40vh] rounded-md border p-3 text-sm"
           value={tailored}
           onChange={(e) => setTailored(e.target.value)}

@@ -85,7 +85,6 @@ export function LoginCard({
                   <FormLabel>Email</FormLabel>
                   <FormControl>
                     <Input
-                      id="email"
                       type="email"
                       placeholder="name@example.com"
                       {...field}
@@ -101,7 +100,7 @@ export function LoginCard({
                 <FormItem className="space-y-1">
                   <FormLabel>Password</FormLabel>
                   <FormControl className="flex gap-2">
-                    <Input id="password" type="password" {...field} />
+                    <Input type="password" {...field} />
                   </FormControl>
                 </FormItem>
               )}

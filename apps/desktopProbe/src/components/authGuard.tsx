@@ -42,7 +42,7 @@ export const withAuthGuard = (Component: React.ComponentType) => {
 export const AuthGuardLoading = () => {
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center">
-      <div className="h-16 w-16 animate-spin rounded-full border-b-4 border-gray-900"></div>
+      <div className="h-16 w-16 animate-spin rounded-full border-b-4 border-foreground"></div>
     </main>
   );
 };

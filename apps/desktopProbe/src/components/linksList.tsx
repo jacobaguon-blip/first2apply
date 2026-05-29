@@ -250,6 +250,7 @@ export function LinksList({
                       variant="secondary"
                       size="default"
                       className="rounded-full px-2 py-1 text-sm"
+                      aria-label="Debug"
                       onClick={(evt) => {
                         evt.stopPropagation();
                         onDebugLink(link.id);
@@ -326,6 +327,7 @@ export function LinksList({
                     variant="destructive"
                     size="default"
                     className="ml-2 rounded-full bg-destructive/10 px-2 py-1 text-sm transition-colors duration-200 ease-in-out hover:bg-destructive/20 focus:bg-destructive/20"
+                    aria-label="Delete"
                     onClick={(evt) => {
                       evt.stopPropagation();
                       onDeleteLink(link.id);
