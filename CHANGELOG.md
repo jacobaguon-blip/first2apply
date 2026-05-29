@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-05-28
+- `22:21` -- docs: 2026-05-28 session summary + sort/location backlog entries _(session `f53d9ea1`)_
+  - `docs/BACKLOG.md`
+  - `docs/sessions/2026-05-28-sort-and-location-filter.md`
 - `12:41` -- perf(scraper): cap scanLinks concurrency to keep local Ollama from thrashing _(session `d45bb41f`)_
   - `libraries/scraper/src/jobScanner.ts`
 - `12:31` -- chore(types): refresh generated Database types + export from @first2apply/core _(session `7ef01cf0`)_
