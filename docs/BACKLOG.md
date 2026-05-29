@@ -1,6 +1,6 @@
 # first2apply backlog
 
-Last updated: 2026-05-19
+Last updated: 2026-05-28
 
 ## Feature Requests
 
@@ -8,7 +8,7 @@ Last updated: 2026-05-19
 - (none)
 
 ### P1
-- (none)
+- **Merge & ship sort+location feature.** Manual-smoke `feature/sort-and-location-filter`; on green, merge to master, apply migration `20260528000000_sort_and_location.sql` to cloud Supabase, run `/deploy-desktop`. *Source: session 2026-05-28.*
 
 ### Done (P1)
 - ~~Package & ship a new desktop release including Scan now button~~ — 2.4.0 built, staged, installed locally, and deployed to her Mac via `deploy-to-her.sh`. *Resolved: 2026-05-19.*
@@ -21,7 +21,10 @@ Last updated: 2026-05-19
 - ~~Resolve pre-existing `chatgpt_prompt` TS errors~~ — verified clean; references type against `AiFilterProfile` (which still has the field), not `AdvancedMatchingConfig`. Backlog item was stale. *Resolved: 2026-05-19.*
 
 ### P3
-- (none)
+- **Posted-date sort behind feature flag.** Only enable for Indeed + LinkedIn (the boards that reliably expose posted-date). Requires `posted_date timestamptz` column on `jobs`, parser changes, and a "best effort" UI label. *Source: session 2026-05-28.*
+- **Extract `buildJobsUrl(params)` helper.** `jobTabsContent.tsx` constructs the jobs URL in three callsites (`onTabChange`, `onSearchJobs`, `onSortChange`) that have already begun to drift (one has `&r=` cache-buster, only one encodes `loc_contains`, etc.). *Source: session 2026-05-28.*
+- **`ProfileFieldPatch` type alias in `filters.tsx`.** Dedupe the two `Partial<Pick<AiFilterProfile, ...>>` callsites so the next field addition only edits one place. *Source: session 2026-05-28.*
+- **Functional index on `classify_job_location(location)`.** Only add if bucket filtering becomes a hot path (currently a seq-eval over the user's row set, fine at present scale). *Source: session 2026-05-28.*
 
 ## Bugs
 - (none open)
