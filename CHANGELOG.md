@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-05-29
+- `02:00` -- chore: nightly sweep — 25 files (BACKLOG.md,CLAUDE.md,apps/backend/supabase/functions/_localServer.ts) _(session `f53d9ea1`)_
+  - `BACKLOG.md`
+  - `CLAUDE.md`
+  - `apps/backend/supabase/functions/_localServer.ts`
+  - `apps/desktopProbe/src/app.tsx`
+  - `apps/desktopProbe/src/components/authGuard.tsx`
+
 ## 2026-05-28
 - `22:21` -- docs: 2026-05-28 session summary + sort/location backlog entries _(session `f53d9ea1`)_
   - `docs/BACKLOG.md`
