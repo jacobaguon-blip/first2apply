@@ -1,6 +1,6 @@
 # first2apply backlog
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 ## Feature Requests
 
@@ -25,6 +25,14 @@ Last updated: 2026-05-28
 - **Extract `buildJobsUrl(params)` helper.** `jobTabsContent.tsx` constructs the jobs URL in three callsites (`onTabChange`, `onSearchJobs`, `onSortChange`) that have already begun to drift (one has `&r=` cache-buster, only one encodes `loc_contains`, etc.). *Source: session 2026-05-28.*
 - **`ProfileFieldPatch` type alias in `filters.tsx`.** Dedupe the two `Partial<Pick<AiFilterProfile, ...>>` callsites so the next field addition only edits one place. *Source: session 2026-05-28.*
 - **Functional index on `classify_job_location(location)`.** Only add if bucket filtering becomes a hot path (currently a seq-eval over the user's row set, fine at present scale). *Source: session 2026-05-28.*
+
+## QA Polish (from 2026-05-28 audit)
+- **[P2]** Standardize inline error display — currently three patterns (`<Alert>`, raw `<p class="text-destructive">`, toast). Pick one for inline form errors. *Source: session 2026-05-28.*
+- **[P2]** Add required field indicators (asterisks) to all forms with Zod required fields. *Source: session 2026-05-28.*
+- **[P2]** Render `<FormMessage>` in desktop app forms so Zod validation errors are visible inline (currently errors are computed but never displayed). *Source: session 2026-05-28.*
+- **[P3]** Add character counters to filters page inputs (name maxLength=80, prompt maxLength=5000, blacklist maxLength=100). *Source: session 2026-05-28.*
+- **[P3]** Remove dead `/connections` page (`pages/connections.tsx`) or wire it up as a route in `app.tsx`. *Source: session 2026-05-28.*
+- **[P3]** Add `max-w-full` to skeleton components with fixed pixel widths (`SettingsSkeleton.tsx`, `CronScheduleSkeleton.tsx`). *Source: session 2026-05-28.*
 
 ## Bugs
 - (none open)
