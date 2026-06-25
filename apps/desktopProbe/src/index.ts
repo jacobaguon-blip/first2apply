@@ -78,9 +78,8 @@ const createMainWindow = () => {
     mainWindow.webContents.openDevTools();
   }
 
-  mainWindow.on('close', (event) => {
-    event.preventDefault();
-    onHideToSystemTray();
+  mainWindow.on('close', () => {
+    quit();
   });
 
   // open all external links in the default browser
@@ -108,12 +107,8 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 
-// do not close all windows when the app is quit on macOS, instead hide the main window
-app.on('before-quit', (event) => {
-  if (appIsRunning) {
-    event.preventDefault();
-    onHideToSystemTray();
-  }
+app.on('before-quit', () => {
+  quit();
 });
 
 app.on('activate', () => {
@@ -140,20 +135,6 @@ function onActivate() {
 
   mainWindow?.focus();
 }
-function onHideToSystemTray() {
-  // household fork: keep the dock icon visible so closing the window
-  // behaves like a normal Mac app. Click the dock icon to reopen.
-  mainWindow?.hide();
-
-  if (process.platform === 'win32') {
-    mainWindow?.setSkipTaskbar(true);
-  }
-
-  // dirty hack to fix navigating to the right tab in home page
-  // when closing we navigate to help page
-  mainWindow?.webContents.send('navigate', { path: '/help' });
-}
-
 // globals
 const analytics = new AmplitudeAnalyticsClient();
 const autoUpdater = new F2aAutoUpdater(logger, quit, analytics);
