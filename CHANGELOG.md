@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-06-25
+- `14:26` -- fix: quit app on window close instead of hiding to tray _(session `51e88028`)_
+  - `apps/desktopProbe/src/index.ts`
+
 ## 2026-05-30
 - `02:13` -- chore: nightly sweep — update docs (1 file) _(session `d239f82f`)_
   - `docs/BACKLOG.md`
