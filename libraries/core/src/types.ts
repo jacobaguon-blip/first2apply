@@ -1,3 +1,5 @@
+import { LocationBucket } from './classifyLocation';
+
 export enum SiteProvider {
   linkedin = 'linkedin',
   glassdoor = 'glassdoor',
@@ -165,7 +167,12 @@ export interface AiFilterProfile {
   chatgpt_prompt: string;
   blacklisted_companies: string[];
   is_default: boolean;
+  location_buckets: LocationBucket[] | null;
+  location_contains: string[] | null;
 }
+
+export const JOB_SORT_MODES = ['newest_first', 'oldest_first'] as const;
+export type JobSortMode = (typeof JOB_SORT_MODES)[number];
 
 export type QuietHoursWindow = { start: string; end: string };
 export type QuietHoursDay =

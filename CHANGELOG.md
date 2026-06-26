@@ -45,6 +45,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CLAUDE.md`
   - `apps/desktopProbe/scripts/deploy-local.sh`
   - `apps/desktopProbe/src/server/rendererIpcApi.ts`
+- `13:57` -- docs(claude-md): note classifyLocation TS+SQL mirror contract _(session `8d15eeac`)_
+  - `CLAUDE.md`
+- `13:37` -- feat(desktop): location preferences in AI Filter Profile editor _(session `939e9975`)_
+  - `apps/desktopProbe/src/pages/filters.tsx`
+  - `apps/desktopProbe/src/pages/filters/LocationPreferences.tsx`
+- `13:11` -- feat(backend): apply AI profile location rules in advancedMatching pipeline _(session `15f1f07f`)_
+  - `apps/backend/supabase/functions/_shared/advancedMatching.ts`
+- `12:57` -- fix(desktop): validate sort + loc_buckets URL params against allowlists _(session `a8d1e5af`)_
+  - `apps/desktopProbe/src/components/home/jobTabs.tsx`
+- `12:47` -- feat(desktop): sort dropdown + location URL state in jobs view _(session `d45bb41f`)_
+  - `apps/desktopProbe/src/components/home/jobTabs.tsx`
+  - `apps/desktopProbe/src/components/home/jobTabsContent.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
+- `12:22` -- fix(desktop): sync funnel filters from props + narrow LocationBucket prop type _(session `d45bb41f`)_
+  - `apps/desktopProbe/src/components/home/jobFilters.tsx`
+- `12:13` -- feat(desktop): location section in funnel filter menu _(session `8b0890e5`)_
+  - `apps/desktopProbe/src/components/home/jobFilters.tsx`
+  - `apps/desktopProbe/src/components/home/jobFilters/jobFiltersMenu.tsx`
+- `11:59` -- style(ui): drop redundant JobSortMode cast + match file semicolon style _(session `8b0890e5`)_
+  - `libraries/ui/src/lib/supabaseApi.ts`
+- `11:50` -- feat(ui): listJobs accepts sort + location params _(session `b53d5bd7`)_
+  - `libraries/ui/src/lib/supabaseApi.ts`
+- `11:33` -- feat(core): add JobSortMode + location fields on AiFilterProfile _(session `da4081df`)_
+  - `libraries/core/src/types.ts`
+- `11:23` -- docs(backend): document cursor-reset contract on sort toggle _(session `8b0890e5`)_
+  - `apps/backend/supabase/migrations/20260528000000_sort_and_location.sql`
+- `11:14` -- feat(backend): list_jobs sort + location params, ai profile location columns _(session `efbb7eb7`)_
+  - `apps/backend/supabase/migrations/20260528000000_sort_and_location.sql`
+- `11:05` -- docs(core): document classifyLocation mirror contract + pin false positives _(session `6bb85505`)_
+  - `libraries/core/src/__tests__/classifyLocation.test.ts`
+  - `libraries/core/src/classifyLocation.ts`
+- `10:48` -- feat(core): add classifyLocation helper for location bucketing _(session `1da40573`)_
+  - `libraries/core/src/__tests__/classifyLocation.test.ts`
+  - `libraries/core/src/classifyLocation.ts`
+  - `libraries/core/src/index.ts`
 - `10:34` -- chore: ignore .worktrees/ _(session `efbb7eb7`)_
   - `.gitignore`
 - `10:18` -- chore: postgrest v12 typing workaround (SupabaseClient<any>) _(session `a8d1e5af`)_

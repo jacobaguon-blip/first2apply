@@ -1,4 +1,4 @@
-import { AiFilterProfile, DbSchema, Job, JobStatus, throwError } from '@first2apply/core';
+import { AiFilterProfile, classifyLocation, DbSchema, Job, JobStatus, throwError } from '@first2apply/core';
 import { SupabaseClient } from '@supabase/supabasefork';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
@@ -75,6 +75,17 @@ export async function applyAdvancedMatchingFilters({
   logger.info(
     `using ai filter profile for job ${job.id}: profile_id=${filterProfile.id} name="${filterProfile.name}" is_default=${filterProfile.is_default}`,
   );
+
+  // apply location preferences from the active profile (if any).
+  // Both fields treat null/empty as "no constraint".
+  const locDecision = evaluateLocation(job, filterProfile);
+  if (!locDecision.ok) {
+    logger.info(`job ${job.id} excluded by location filter: ${locDecision.reason}`);
+    return {
+      newStatus: 'excluded_by_advanced_matching',
+      excludeReason: locDecision.reason,
+    };
+  }
 
   // prompt OpenAI to determine if the job should be excluded
   if (job.description && filterProfile.chatgpt_prompt) {
@@ -171,6 +182,41 @@ function dedupeCaseInsensitive(values: string[]): string[] {
     out.push(v);
   }
   return out;
+}
+
+function evaluateLocation(
+  job: Pick<Job, 'location'>,
+  profile: Pick<AiFilterProfile, 'location_buckets' | 'location_contains'>,
+):
+  | { ok: true }
+  | { ok: false; reason: string } {
+  const buckets = profile.location_buckets ?? [];
+  const contains = profile.location_contains ?? [];
+
+  // No constraints set on the profile -> nothing to enforce.
+  if (buckets.length === 0 && contains.length === 0) return { ok: true };
+
+  const bucket = classifyLocation(job.location);
+
+  if (buckets.length > 0 && !buckets.includes(bucket)) {
+    return {
+      ok: false,
+      reason: `location_mismatch: bucket=${bucket} loc="${job.location ?? ''}"`,
+    };
+  }
+
+  if (contains.length > 0) {
+    const hay = (job.location ?? '').toLowerCase();
+    const matches = contains.some((needle) => hay.includes(needle.toLowerCase()));
+    if (!matches) {
+      return {
+        ok: false,
+        reason: `location_mismatch: no contains match (loc="${job.location ?? ''}")`,
+      };
+    }
+  }
+
+  return { ok: true };
 }
 
 function isExcludedCompanyByList({ companyName, blacklist }: { companyName: string; blacklist: string[] }): boolean {

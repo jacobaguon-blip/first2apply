@@ -42,6 +42,7 @@ import {
 } from '@first2apply/ui';
 
 import { DefaultLayout } from './defaultLayout';
+import { LocationPreferences } from './filters/LocationPreferences';
 
 export function FiltersPage() {
   const { handleError } = useError();
@@ -133,7 +134,12 @@ export function FiltersPage() {
 
   const onCommitProfileField = async (
     id: number,
-    patch: Partial<Pick<AiFilterProfile, 'name' | 'chatgpt_prompt' | 'blacklisted_companies'>>,
+    patch: Partial<
+      Pick<
+        AiFilterProfile,
+        'name' | 'chatgpt_prompt' | 'blacklisted_companies' | 'location_buckets' | 'location_contains'
+      >
+    >,
   ) => {
     try {
       const updated = await updateFilterProfile(id, patch);
@@ -437,7 +443,12 @@ function ProfileEditor({
 }: {
   profile: AiFilterProfile;
   onCommitField: (
-    patch: Partial<Pick<AiFilterProfile, 'name' | 'chatgpt_prompt' | 'blacklisted_companies'>>,
+    patch: Partial<
+      Pick<
+        AiFilterProfile,
+        'name' | 'chatgpt_prompt' | 'blacklisted_companies' | 'location_buckets' | 'location_contains'
+      >
+    >,
   ) => Promise<void>;
   onSetDefault: () => Promise<void>;
   onRequestDelete: () => void;
@@ -531,6 +542,13 @@ function ProfileEditor({
           </Button>
         </div>
       </div>
+
+      {/* Location preferences */}
+      <LocationPreferences
+        buckets={profile.location_buckets ?? null}
+        contains={profile.location_contains ?? null}
+        onChange={(patch) => onCommitField(patch)}
+      />
 
       {/* Per-profile blacklist */}
       <div>

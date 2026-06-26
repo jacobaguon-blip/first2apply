@@ -2,7 +2,7 @@ import { FilterIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import { LABEL_COLOR_CLASSES } from '@/lib/labels';
-import { JOB_LABELS } from '@first2apply/core';
+import { JOB_LABELS, LOCATION_BUCKETS, LocationBucket } from '@first2apply/core';
 import { useSites } from '@first2apply/ui';
 import { useLinks } from '@first2apply/ui';
 import {
@@ -23,6 +23,8 @@ export type JobFiltersType = {
   sites: number[];
   links: number[];
   labels: string[];
+  locationBuckets: LocationBucket[];
+  locationContains: string;
 };
 
 const ALL_LABELS = Object.values(JOB_LABELS);
@@ -34,11 +36,15 @@ export function JobFiltersMenu({
   selectedSites,
   selectedLinks,
   selectedLabels,
+  selectedLocationBuckets,
+  selectedLocationContains,
   onApplyFilters,
 }: {
   selectedSites: number[];
   selectedLinks: number[];
   selectedLabels: string[];
+  selectedLocationBuckets: LocationBucket[];
+  selectedLocationContains: string;
   onApplyFilters: (filters: JobFiltersType) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -51,56 +57,49 @@ export function JobFiltersMenu({
     .sort((a, b) => a.name.localeCompare(b.name))
     .filter((site) => links.some((link) => link.site_id === site.id));
 
+  const applyPatch = (patch: Partial<JobFiltersType>) =>
+    onApplyFilters({
+      sites: selectedSites,
+      links: selectedLinks,
+      labels: selectedLabels,
+      locationBuckets: selectedLocationBuckets,
+      locationContains: selectedLocationContains,
+      ...patch,
+    });
+
   const onSelectSite = (siteId: number) => {
-    if (selectedSites.includes(siteId)) {
-      onApplyFilters({
-        sites: selectedSites.filter((id) => id !== siteId),
-        links: selectedLinks,
-        labels: selectedLabels,
-      });
-    } else {
-      onApplyFilters({ sites: [...selectedSites, siteId], links: selectedLinks, labels: selectedLabels });
-    }
+    const next = selectedSites.includes(siteId)
+      ? selectedSites.filter((id) => id !== siteId)
+      : [...selectedSites, siteId];
+    applyPatch({ sites: next });
   };
 
   const onSelectLink = (linkId: number) => {
-    if (selectedLinks.includes(linkId)) {
-      onApplyFilters({
-        sites: selectedSites,
-        links: selectedLinks.filter((id) => id !== linkId),
-        labels: selectedLabels,
-      });
-    } else {
-      onApplyFilters({ sites: selectedSites, links: [...selectedLinks, linkId], labels: selectedLabels });
-    }
+    const next = selectedLinks.includes(linkId)
+      ? selectedLinks.filter((id) => id !== linkId)
+      : [...selectedLinks, linkId];
+    applyPatch({ links: next });
   };
 
   const onSelectLabel = (label: string) => {
-    if (selectedLabels.includes(label)) {
-      onApplyFilters({
-        sites: selectedSites,
-        links: selectedLinks,
-        labels: selectedLabels.filter((l) => l !== label),
-      });
-    } else {
-      onApplyFilters({ sites: selectedSites, links: selectedLinks, labels: [...selectedLabels, label] });
-    }
+    const next = selectedLabels.includes(label)
+      ? selectedLabels.filter((l) => l !== label)
+      : [...selectedLabels, label];
+    applyPatch({ labels: next });
   };
 
-  const clearSites = () => {
-    onApplyFilters({ sites: [], links: selectedLinks, labels: selectedLabels });
-  };
-  const clearLinks = () => {
-    onApplyFilters({ sites: selectedSites, links: [], labels: selectedLabels });
-  };
-  const clearLabels = () => {
-    onApplyFilters({ sites: selectedSites, links: selectedLinks, labels: [] });
-  };
-  const clearAll = () => {
-    onApplyFilters({ sites: [], links: [], labels: [] });
-  };
+  const clearSites = () => applyPatch({ sites: [] });
+  const clearLinks = () => applyPatch({ links: [] });
+  const clearLabels = () => applyPatch({ labels: [] });
+  const clearAll = () =>
+    applyPatch({ sites: [], links: [], labels: [], locationBuckets: [], locationContains: '' });
 
-  const activeFilterCount = selectedSites.length + selectedLinks.length + selectedLabels.length;
+  const activeFilterCount =
+    selectedSites.length +
+    selectedLinks.length +
+    selectedLabels.length +
+    selectedLocationBuckets.length +
+    (selectedLocationContains.trim() ? 1 : 0);
 
   return (
     <DropdownMenu open={isOpen} onOpenChange={(opened) => setIsOpen(opened)}>
@@ -238,6 +237,58 @@ export function JobFiltersMenu({
           </DropdownMenuSub>
         </DropdownMenuGroup>
 
+        {/* Location */}
+        <DropdownMenuGroup>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Location</DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent sideOffset={8} alignOffset={-69}>
+                {LOCATION_BUCKETS.map((bucket) => (
+                  <DropdownMenuCheckboxItem
+                    key={bucket}
+                    checked={selectedLocationBuckets.includes(bucket)}
+                    onSelect={(evt) => {
+                      evt.preventDefault();
+                      const next = selectedLocationBuckets.includes(bucket)
+                        ? selectedLocationBuckets.filter((b) => b !== bucket)
+                        : [...selectedLocationBuckets, bucket];
+                      applyPatch({ locationBuckets: next });
+                    }}
+                    className="pr-8"
+                  >
+                    <p>{bucket[0].toUpperCase() + bucket.slice(1)}</p>
+                  </DropdownMenuCheckboxItem>
+                ))}
+
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1">
+                  <label className="text-[11px] text-muted-foreground">Location contains</label>
+                  <input
+                    type="text"
+                    value={selectedLocationContains}
+                    placeholder="e.g. Philippines"
+                    onChange={(evt) => applyPatch({ locationContains: evt.target.value })}
+                    onKeyDown={(evt) => evt.stopPropagation()}
+                    className="mt-1 h-8 w-full rounded-md border border-input bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onSelect={(evt) => {
+                    evt.preventDefault();
+                    applyPatch({ locationBuckets: [], locationContains: '' });
+                  }}
+                  disabled={selectedLocationBuckets.length === 0 && selectedLocationContains === ''}
+                  className="px-8 text-destructive"
+                >
+                  Reset Location
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+        </DropdownMenuGroup>
+
         <DropdownMenuSeparator />
 
         {/* Reset all filters button */}
@@ -245,7 +296,13 @@ export function JobFiltersMenu({
           onSelect={() => {
             clearAll();
           }}
-          disabled={selectedSites.length === 0 && selectedLinks.length === 0 && selectedLabels.length === 0}
+          disabled={
+            selectedSites.length === 0 &&
+            selectedLinks.length === 0 &&
+            selectedLabels.length === 0 &&
+            selectedLocationBuckets.length === 0 &&
+            selectedLocationContains === ''
+          }
           className="text-destructive"
         >
           Remove Filters

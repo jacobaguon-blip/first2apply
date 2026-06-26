@@ -2,8 +2,10 @@ import {
   AiFilterProfile,
   Job,
   JobLabel,
+  JobSortMode,
   JobStatus,
   Link,
+  LocationBucket,
   UserSettings,
   UserSettingsUpsert,
   WebPageRuntimeData,
@@ -290,6 +292,9 @@ export class F2aSupabaseApi {
     labels,
     limit = 50,
     after,
+    sort = 'newest_first',
+    locationBuckets,
+    locationContains,
   }: {
     status: JobStatus
     search?: string
@@ -298,11 +303,18 @@ export class F2aSupabaseApi {
     labels?: string[]
     limit?: number
     after?: string
+    sort?: JobSortMode
+    locationBuckets?: LocationBucket[]
+    locationContains?: string
   }) {
     const jobs_search = search || undefined
     const jobs_site_ids = siteIds && siteIds.length > 0 ? siteIds : undefined
     const jobs_link_ids = linkIds && linkIds.length > 0 ? linkIds : undefined
     const jobs_labels = labels && labels.length > 0 ? labels : undefined
+    const jobs_location_buckets =
+      locationBuckets && locationBuckets.length > 0 ? locationBuckets : undefined
+    const jobs_location_contains =
+      locationContains && locationContains.trim() ? locationContains.trim() : undefined
     const [jobs, counters] = await Promise.all([
       this._supabaseApiCall<Job[], PostgrestError>(async () => {
         const res = await this._supabase.rpc("list_jobs", {
@@ -313,6 +325,9 @@ export class F2aSupabaseApi {
           jobs_site_ids,
           jobs_link_ids,
           jobs_labels,
+          jobs_sort: sort,
+          jobs_location_buckets,
+          jobs_location_contains,
         })
 
         return res
@@ -329,6 +344,8 @@ export class F2aSupabaseApi {
           jobs_site_ids,
           jobs_link_ids,
           jobs_labels,
+          jobs_location_buckets,
+          jobs_location_contains,
         })
 
         return res

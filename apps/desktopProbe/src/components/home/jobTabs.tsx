@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useError } from '@/hooks/error';
 import { changeAllJobsStatus, exportJobsToCsv } from '@/lib/electronMainSdk';
-import { Job, JobStatus } from '@first2apply/core';
+import { Job, JOB_SORT_MODES, JobSortMode, JobStatus, LOCATION_BUCKETS, LocationBucket } from '@first2apply/core';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +59,18 @@ export function JobTabs() {
   const siteIds = searchParams.get('site_ids') ? searchParams.get('site_ids').split(',').map(Number) : [];
   const linkIds = searchParams.get('link_ids') ? searchParams.get('link_ids').split(',').map(Number) : [];
   const labels = searchParams.get('labels') ? searchParams.get('labels').split(',') : [];
+  const rawSort = searchParams.get('sort');
+  const sort: JobSortMode = JOB_SORT_MODES.includes(rawSort as JobSortMode)
+    ? (rawSort as JobSortMode)
+    : 'newest_first';
+
+  const rawBuckets = searchParams.get('loc_buckets');
+  const locationBuckets: LocationBucket[] = rawBuckets
+    ? (rawBuckets.split(',').filter((b): b is LocationBucket =>
+        LOCATION_BUCKETS.includes(b as LocationBucket),
+      ))
+    : [];
+  const locationContains = searchParams.get('loc_contains') || '';
 
   const [viewMode, setViewMode] = useState<'card' | 'list'>(
     () => (localStorage.getItem('jobsViewMode') as 'card' | 'list') || 'card',
@@ -81,7 +93,15 @@ export function JobTabs() {
   // Handle tab change
   const onTabChange = (tabValue: string) => {
     navigate(
-      `?status=${tabValue}&search=${search}&site_ids=${siteIds?.join(',')}&link_ids=${linkIds?.join(',')}&labels=${labels?.join(',')}&r=${Math.random()}`,
+      `?status=${tabValue}` +
+        `&search=${search}` +
+        `&site_ids=${siteIds?.join(',') ?? ''}` +
+        `&link_ids=${linkIds?.join(',') ?? ''}` +
+        `&labels=${labels?.join(',') ?? ''}` +
+        `&loc_buckets=${locationBuckets.join(',')}` +
+        `&loc_contains=${encodeURIComponent(locationContains)}` +
+        `&sort=${sort}` +
+        `&r=${Math.random()}`,
     );
   };
 
@@ -259,6 +279,9 @@ export function JobTabs() {
         linkIds={linkIds}
         labels={labels}
         viewMode={viewMode}
+        sort={sort}
+        locationBuckets={locationBuckets}
+        locationContains={locationContains}
       />
     </Tabs>
   );

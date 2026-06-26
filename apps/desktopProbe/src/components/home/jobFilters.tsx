@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { LocationBucket } from '@first2apply/core';
 import { debounce } from 'lodash';
 
 import { JobFiltersMenu, JobFiltersType } from './jobFilters/jobFiltersMenu';
@@ -13,12 +14,16 @@ export function JobFilters({
   siteIds,
   linkIds,
   labels,
+  locationBuckets,
+  locationContains,
   onSearchJobs,
 }: {
   search: string;
   siteIds: number[];
   linkIds: number[];
   labels: string[];
+  locationBuckets?: LocationBucket[];
+  locationContains?: string;
   onSearchJobs: (_: { search: string; filters: JobFiltersType }) => void;
 }) {
   const [inputValue, setInputValue] = useState(search);
@@ -26,7 +31,26 @@ export function JobFilters({
     sites: [],
     links: [],
     labels: [],
+    locationBuckets: locationBuckets ?? [],
+    locationContains: locationContains ?? '',
   });
+
+  useEffect(() => {
+    setFilters((prev) => ({
+      ...prev,
+      sites: siteIds ?? prev.sites,
+      links: linkIds ?? prev.links,
+      labels: labels ?? prev.labels,
+      locationBuckets: locationBuckets ?? prev.locationBuckets,
+      locationContains: locationContains ?? prev.locationContains,
+    }));
+  }, [
+    (siteIds ?? []).join(','),
+    (linkIds ?? []).join(','),
+    (labels ?? []).join(','),
+    (locationBuckets ?? []).join(','),
+    locationContains ?? '',
+  ]);
 
   // Debounced search for input value
   const emitDebouncedSearch = useCallback(
@@ -54,6 +78,8 @@ export function JobFilters({
         selectedSites={siteIds || []}
         selectedLinks={linkIds || []}
         selectedLabels={labels || []}
+        selectedLocationBuckets={filters.locationBuckets}
+        selectedLocationContains={filters.locationContains}
         onApplyFilters={(newFilters) => {
           setFilters(newFilters);
         }}
