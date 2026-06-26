@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-06-25
+- `19:24` -- Merge branch 'feature/sort-and-location-filter'
+  - `CLAUDE.md`
+  - `apps/desktopProbe/src/components/home/jobTabs.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/pages/filters.tsx`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
 - `19:16` -- chore: commit hooks, plans, error pages, troubleshooting docs, and config updates _(session `ef7cb9a2`)_
   - `.claude/hooks/cheatsheet-drift.sh`
   - `.claude/plans/2026-05-27-local-ai-on-pi.devils-advocate.md`
