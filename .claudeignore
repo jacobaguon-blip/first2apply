@@ -1,0 +1,25 @@
+# Build outputs
+node_modules/
+vendor/
+dist/
+build/
+out/
+.next/
+target/
+
+# Version control
+.git/
+
+# IDE and tooling
+.vscode/
+.idea/
+*.swp
+*.log
+
+# Test artifacts
+coverage/
+.nyc_output/
+
+# Compiled
+*.o
+*.class

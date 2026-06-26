@@ -63,9 +63,16 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
    Full RCA: `troubleshooting/2026-05-19-squire-blocked-by-tailscale/`. (memory: `feedback_tailscale_dns_twingate`)
 5. **Deploy is push-model, auto-updater stays disabled:** `deploy/` + `scripts/`
    (`publish-release.sh`, `deploy-to-her.sh`). (memory: `project_household_deploy`)
-6. **Supabase cloud project** exists so the desktop app runs on other machines without self-hosting.
+   - **Always bump the version** before deploying to her machine. `apply-update.sh` compares
+     `CFBundleShortVersionString` against `VERSION` and skips if equal — code-only changes
+     with the same version are silently ignored.
+   - **Remote `open` fails over SSH:** macOS blocks GUI launches from non-interactive SSH.
+     The app must be launched locally (dock/Finder) after a remote deploy.
+6. **Desktop quits on close (no tray-hide).** The Pi handles scanning, so the desktop app
+   quits fully on window close instead of hiding to the system tray.
+7. **Supabase cloud project** exists so the desktop app runs on other machines without self-hosting.
    Local Docker stack (`pnpm up`) is dev-only. (memory: `project_supabase_cloud`)
-7. **Local AI on the Pi (no API keys).** All AI inference runs on the Pi via **Ollama** (default
+8. **Local AI on the Pi (no API keys).** All AI inference runs on the Pi via **Ollama** (default
    model `qwen2.5:3b-f2a`, `num_ctx=16384` via Modelfile) and a **self-hosted Deno edge runtime**
    (`f2a-edge-local` container, port 54321) that imports each function's `handle()` and routes by
    `/functions/v1/<name>`. Provider switch is one env var: `F2A_AI_PROVIDER=local|openai`.
