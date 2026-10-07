@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-06
+- `23:06` -- fix(backend): remoteio parser tolerates both flat and nested card markup _(session `aa9a72f9`)_
+  - `apps/backend/supabase/functions/_shared/parsers/remoteio.ts`
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 
