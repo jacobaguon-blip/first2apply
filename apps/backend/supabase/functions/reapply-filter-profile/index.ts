@@ -1,4 +1,4 @@
-import { Job, getExceptionMessage } from '@first2apply/core';
+import { Job, JobStatus, getExceptionMessage } from '@first2apply/core';
 
 import { applyAdvancedMatchingFilters } from '../_shared/advancedMatching.ts';
 import { CORS_HEADERS } from '../_shared/cors.ts';
@@ -41,7 +41,7 @@ export const handle = async (req: Request): Promise<Response> => {
     const body: { includeExcluded?: boolean } = await req.json().catch(() => ({}));
     const includeExcluded = body.includeExcluded !== false;
 
-    const statuses = includeExcluded ? ['new', 'excluded_by_advanced_matching'] : ['new'];
+    const statuses: JobStatus[] = includeExcluded ? ['new', 'excluded_by_advanced_matching'] : ['new'];
 
     logger.info(`re-applying filters for user ${user.id} (statuses=${statuses.join(',')}) ...`);
 

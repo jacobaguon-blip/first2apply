@@ -12,7 +12,7 @@ A run fails only on NEW failures. Known failures live in `qa/known-failures.json
 
 ## Git hooks
 
-- pre-push runs `qa:fast` and `qa:unit`. It replaced `pnpm run typecheck`, which already fails on master.
+- pre-push runs `pnpm typecheck` (nx, all projects, exits 0 on master) and `qa:unit`. `qa:fast` stays available for on-demand use.
 - post-merge runs `qa:unit` and reminds you to run `qa/run-qa.sh ui` when `apps/desktopProbe` or `libraries/` changed.
 - Hooks print a warning and continue when an optional tool (deno) is missing.
 

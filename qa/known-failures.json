@@ -1,13 +1,10 @@
 {
   "_comment": "Baseline of known failures. A run only fails on failures NOT listed here. Edit only with a stated reason (see the reason fields and .claude/skills/f2a-qa/SKILL.md). Never add a failure just to turn a run green.",
-  "backend_typecheck": {
-    "command": "cd apps/backend/supabase/functions && deno check **/*.ts",
-    "error_count": 3,
-    "reason": "Pre-existing on master: classifyLocation import resolution (TS2307, TS2305) and a Database generic constraint (TS2344). Count captured by running the command, not guessed. Fix the errors, then lower this number."
-  },
   "deno": {
     "command": "deno test -A --no-check --sloppy-imports _shared/jobListParser.test.ts",
-    "known_failing_tests": ["parseLinkedInJobs parses v1 list markup"],
+    "known_failing_tests": [
+      "parseLinkedInJobs parses v1 list markup"
+    ],
     "reason": "Stale fixture: test expects 25 list items, the v1 fixture yields 50. Fails on master and on upstream."
   },
   "vitest": {
