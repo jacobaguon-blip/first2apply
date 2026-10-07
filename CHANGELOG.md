@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `17:41` -- feat(scraper): scan fast parsers before slow LLM-parsed custom boards _(session `a7f70073`)_
+  - `libraries/scraper/src/__tests__/scanOrder.test.ts`
+  - `libraries/scraper/src/jobScanner.ts`
+  - `libraries/scraper/src/scanOrder.ts`
 - `17:17` -- docs: session summary 2026-10-07 part 3 and backlog _(session `1133dd6d`)_
   - `BACKLOG.md`
   - `docs/sessions/2026-10-07-pi-tailscale-recovery-and-scan-audit.md`
