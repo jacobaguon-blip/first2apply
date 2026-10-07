@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `00:37` -- fix(qa): rebuild stale libraries before QA; style: prettier create-link _(session `1133dd6d`)_
+  - `apps/backend/supabase/functions/create-link/index.ts`
+  - `qa/run-qa.sh`
 - `00:29` -- feat(qa): tiered QA harness with Playwright UI tier, hooks, and f2a-qa skill _(session `14ecb212`)_
   - `.claude/skills/f2a-qa/SKILL.md`
   - `.gitignore`
