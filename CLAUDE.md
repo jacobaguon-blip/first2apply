@@ -16,6 +16,7 @@ deploy itself is reversible (`.previous.app` rollback path).
 | "deploy the desktop", "ship the changes", "update my app", "rebuild and run", "package and install the new version" | `pnpm --filter first2apply-desktop deploy:local` |
 | "deploy to her too", "ship everywhere", "rollout" | `pnpm --filter first2apply-desktop deploy:all` |
 | "rollback the desktop", "revert the last deploy" | See `docs/DEPLOY-DESKTOP.md` § Rollback (`.previous.app` swap) |
+| "run QA", "qa the merge", "test the UI" | `qa/run-qa.sh unit` (add `ui` for desktop or library changes, `all` for everything). Skill: `f2a-qa` |
 | "redeploy the Pi local-AI stack", "restart the edge runtime" | `ssh maadkal@raspberrypi 'bash /opt/first2apply-mono/deploy/deploy-local-ai.sh'` |
 | "what's the last scan / are jobs landing?" | Query `jobs` table by `created_at` (use Pi `.env` service-role key); check `f2a-edge-local` logs for `[custom] found N jobs` |
 
@@ -98,6 +99,14 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
    - Fork-specific: jobs UPSERT into `jobs` table now sets `user_id` explicitly because the DB
      default `auth.uid()` is null for service-role calls (`apps/backend/supabase/functions/scan-urls/index.ts`).
    - Spec + design: `docs/superpowers/specs/2026-05-27-local-ai-on-pi-design.md`.
+
+## QA
+
+- `qa/run-qa.sh {fast|unit|ui|all}` (or `pnpm qa:*`). Fails only on NEW failures vs `qa/known-failures.json`. Full guide: `docs/QA.md`, skill `f2a-qa`.
+- **Merge rule:** every merge to master needs `unit` green. Changes under `apps/desktopProbe` or `libraries/` also need `ui`.
+- Pre-push runs `qa:fast` + `qa:unit` (replaced nx `typecheck`, which already fails on master). `.husky/post-merge` runs `unit` and reminds about `ui`.
+- UI tier drives the packaged app (`apps/desktopProbe/out`) through a CDP filter proxy, because `_electron.launch` hangs on the app's hidden helper pages. Isolated `--user-data-dir`, never touches `/Applications`.
+- Auth specs need `F2A_QA_EMAIL` + `F2A_QA_PASSWORD` (shell env only) and a build with a real `apps/desktopProbe/.env`. Otherwise they SKIP.
 
 ## Common commands (from repo root)
 

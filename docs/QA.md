@@ -1,0 +1,33 @@
+# QA harness
+
+Entry point: `qa/run-qa.sh <fast|unit|ui|all>` (or `pnpm qa`, `pnpm qa:fast`, `pnpm qa:unit`, `pnpm qa:ui`).
+
+| Tier | Checks | Typical time |
+|------|--------|--------------|
+| fast | backend `deno check` vs baseline, desktop `tsc`, prettier on changed backend files | 3s |
+| unit | `deno test` jobListParser, desktop vitest | 5s |
+| ui | Playwright smoke and authenticated specs against the packaged desktop app | 10s (plus a one-time package build) |
+
+A run fails only on NEW failures. Known failures live in `qa/known-failures.json` with a reason each.
+
+## Git hooks
+
+- pre-push runs `qa:fast` and `qa:unit`. It replaced `pnpm run typecheck`, which already fails on master.
+- post-merge runs `qa:unit` and reminds you to run `qa/run-qa.sh ui` when `apps/desktopProbe` or `libraries/` changed.
+- Hooks print a warning and continue when an optional tool (deno) is missing.
+
+## Why the UI tier uses a CDP proxy
+
+The app creates hidden helper pages in separate Electron partitions. Playwright waits on every page it auto-attaches to, and those pages never respond, so `_electron.launch` and `connectOverCDP` both time out. The fixture (`qa/ui/fixtures.ts`) starts the packaged binary itself with `--remote-debugging-port=0`, puts `qa/ui/cdpFilterProxy.ts` in front of the DevTools socket to hide non-window pages, and attaches Playwright to the proxy.
+
+We use the packaged app (`apps/desktopProbe/out`, built by `pnpm --filter first2apply-desktop package`) because it needs no dev server and runs headlessly from a finished bundle. Each run uses a temporary `--user-data-dir`, so your real data and login are untouched.
+
+## Authenticated specs
+
+Set `F2A_QA_EMAIL` and `F2A_QA_PASSWORD` in the shell, and package with a real `apps/desktopProbe/.env`. Otherwise those specs SKIP. Never commit credentials.
+
+## Reports
+
+`qa/reports/<timestamp>.md`, logs in `qa/reports/<timestamp>/`, screenshots in `qa/reports/<timestamp>/screenshots/`. All gitignored.
+
+See `.claude/skills/f2a-qa/SKILL.md` for the full workflow.
