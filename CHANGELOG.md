@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `08:22` -- docs: session summary 2026-10-07 and QA backlog items _(session `1133dd6d`)_
+  - `BACKLOG.md`
+  - `docs/sessions/2026-10-07-upstream-parser-sync-and-qa-harness.md`
 - `00:37` -- fix(qa): rebuild stale libraries before QA; style: prettier create-link _(session `1133dd6d`)_
   - `apps/backend/supabase/functions/create-link/index.ts`
   - `qa/run-qa.sh`
