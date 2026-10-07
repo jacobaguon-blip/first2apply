@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-10-07
+- `00:29` -- feat(qa): tiered QA harness with Playwright UI tier, hooks, and f2a-qa skill _(session `14ecb212`)_
+  - `.claude/skills/f2a-qa/SKILL.md`
+  - `.gitignore`
+  - `.husky/post-merge`
+  - `CLAUDE.md`
+  - `docs/QA.md`
+
 ## 2026-06-25
 - `19:24` -- Merge branch 'feature/sort-and-location-filter'
   - `CLAUDE.md`
