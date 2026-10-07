@@ -4,10 +4,8 @@ import { ScheduledTask, schedule } from 'node-cron';
 
 import { chunk, promiseAllSequence, waitRandomBetween } from './helpers';
 import { dispatchPushoverSummary } from './notifications/dispatch';
-import {
-  DEFAULT_JOB_SCANNER_SETTINGS,
-  JobScannerSettings,
-} from './scannerSettings';
+import { prioritizeLinks } from './scanOrder';
+import { DEFAULT_JOB_SCANNER_SETTINGS, JobScannerSettings } from './scannerSettings';
 import {
   IAnalyticsClient,
   IHtmlDownloader,
@@ -33,12 +31,27 @@ export interface IScannerSupabaseApi {
   listJobs(args: { status: any; limit: number }): Promise<{ jobs: Job[] } & Record<string, unknown>>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   listSites(): Promise<any[]>;
-  scanHtmls(htmls: Array<{ linkId: number; content: string; webPageRuntimeData: unknown; maxRetries: number; retryCount: number }>): Promise<{
-    newJobs: Job[];
-    parseFailed: boolean;
-    parseErrors?: Array<{ linkId: number; message: string }>;
-  } & Record<string, unknown>>;
-  scanJobDescription(args: { jobId: number; html: string; maxRetries: number; retryCount: number }): Promise<{ job: Job; parseFailed: boolean } & Record<string, unknown>>;
+  scanHtmls(
+    htmls: Array<{
+      linkId: number;
+      content: string;
+      webPageRuntimeData: unknown;
+      maxRetries: number;
+      retryCount: number;
+    }>,
+  ): Promise<
+    {
+      newJobs: Job[];
+      parseFailed: boolean;
+      parseErrors?: Array<{ linkId: number; message: string }>;
+    } & Record<string, unknown>
+  >;
+  scanJobDescription(args: {
+    jobId: number;
+    html: string;
+    maxRetries: number;
+    retryCount: number;
+  }): Promise<{ job: Job; parseFailed: boolean } & Record<string, unknown>>;
   runPostScanHook(args: { newJobIds: number[]; areEmailAlertsEnabled: boolean }): Promise<unknown>;
   increaseScrapeFailureCount(args: { linkId: number; failures: number }): Promise<unknown>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -76,7 +89,11 @@ async function runWithConcurrency<T>(
 
 function redactSettings(s: JobScannerSettings): JobScannerSettings {
   const redact = (v?: string) => (v && v.length > 0 ? `<redacted len=${v.length}>` : v);
-  return { ...s, pushoverAppToken: redact(s.pushoverAppToken), pushoverUserKey: redact(s.pushoverUserKey) } as JobScannerSettings;
+  return {
+    ...s,
+    pushoverAppToken: redact(s.pushoverAppToken),
+    pushoverUserKey: redact(s.pushoverUserKey),
+  } as JobScannerSettings;
 }
 
 export interface JobScannerCtorArgs {
@@ -227,6 +244,13 @@ export class JobScanner {
     try {
       this._logger.info('scanning links ...');
       this._analytics.trackEvent('scan_links_start', { links_count: links.length });
+
+      // Run fast parsers before slow LLM-parsed custom boards so the queue is not starved.
+      try {
+        links = prioritizeLinks(links, (await this._supabaseApi.listSites()) ?? []);
+      } catch (error) {
+        this._logger.warn?.(`could not prioritize links, keeping original order: ${getExceptionMessage(error)}`);
+      }
       this._runningScansCount++;
       const start = new Date().getTime();
 
@@ -248,7 +272,9 @@ export class JobScanner {
             callback: async ({ html, webPageRuntimeData, maxRetries, retryCount }) => {
               if (!this._isRunning) return [];
               if (this._dryRun) {
-                this._logger.info(`[dry-run] would scanHtmls for link ${link.title} (${html.length} bytes)`, { linkId: link.id });
+                this._logger.info(`[dry-run] would scanHtmls for link ${link.title} (${html.length} bytes)`, {
+                  linkId: link.id,
+                });
                 return [];
               }
 
