@@ -1,0 +1,15 @@
+# Post-merge QA. Never blocks: git ignores post-merge exit codes, and every step degrades to a warning.
+if [ ! -f qa/run-qa.sh ]; then
+  echo "warning: qa/run-qa.sh not found, skipping post-merge QA"
+  exit 0
+fi
+
+bash qa/run-qa.sh unit || echo "warning: post-merge QA unit tier reported new failures, see qa/reports/"
+
+changed="$(git diff --name-only ORIG_HEAD HEAD 2>/dev/null | grep -E '^(apps/desktopProbe/|libraries/)' | head -1)"
+if [ -n "$changed" ]; then
+  echo ""
+  echo "QA reminder: this merge touched apps/desktopProbe or libraries/."
+  echo "Run the UI tier before treating the merge as done: qa/run-qa.sh ui"
+fi
+exit 0
