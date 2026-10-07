@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `08:52` -- fix(typecheck): make nx typecheck pass on all 11 projects and restore it in pre-push _(session `c2472b85`)_
+  - `.claude/skills/f2a-qa/SKILL.md`
+  - `BACKLOG.md`
+  - `apps/backend/supabase/functions/handle-stripe-webhook/index.ts`
+  - `apps/backend/supabase/functions/reapply-filter-profile/index.ts`
+  - `apps/blog/package.json`
 - `08:22` -- docs: session summary 2026-10-07 and QA backlog items _(session `1133dd6d`)_
   - `BACKLOG.md`
   - `docs/sessions/2026-10-07-upstream-parser-sync-and-qa-harness.md`
