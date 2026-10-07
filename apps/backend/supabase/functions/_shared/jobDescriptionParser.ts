@@ -28,7 +28,12 @@ const SITE_PROVIDER_QUERY_SELECTORS: Record<SiteProvider, SiteProviderQuerySelec
     ],
   },
   [SiteProvider.indeed]: {
-    description: ['#JobDescriptionUpdatesText', '#jobDescriptionText'],
+    description: [
+      '#JobDescriptionUpdatesText',
+      '#jobDescriptionText',
+      '.simple-job-description-html',
+      'p.error-description',
+    ],
   },
   [SiteProvider.remoteok]: {
     description: ['.description'],
@@ -71,6 +76,9 @@ const SITE_PROVIDER_QUERY_SELECTORS: Record<SiteProvider, SiteProviderQuerySelec
   },
   [SiteProvider.talent]: {
     description: ['.sc-e78c1cd5-10.sc-e78c1cd5-11.sc-207c7d5e-10.dwTTNY.gdYndp.jkXeTb > p'],
+  },
+  [SiteProvider.hiringCafe]: {
+    description: ['article.prose', 'article[class*="prose"]'],
   },
   [SiteProvider.custom]: {
     description: ['#job-description'],
@@ -138,6 +146,8 @@ export async function parseJobDescriptionUpdates({
       return parseUSAJobsJobDescription({ html });
     case SiteProvider.talent:
       return parseTalentJobDescription({ html });
+    case SiteProvider.hiringCafe:
+      return parseHiringCafeJobDescription({ html });
     case SiteProvider.custom:
       return await parseCustomJobDescription({ html, user, job, ...context });
   }
@@ -226,10 +236,31 @@ function parseIndeedJobDescription({ html }: { html: string }): JobDescriptionUp
 
   // helpers
   function extractFromScriptTag() {
-    const globalDataMatch = html.match(/window\._initialData\s*=\s*({.*?});?\s*(?=\n|$|<\/script>)/s);
+    const document = new DOMParser().parseFromString(html, 'text/html');
+    if (!document) return;
 
-    if (globalDataMatch) {
-      const globalData = JSON.parse(globalDataMatch[1]);
+    // Find the <script> tags that assign `window._initialData`. Indeed can render multiple
+    // of these, and some are plain JS object literals (not valid JSON), so try each one and
+    // skip the ones that don't parse instead of failing the whole extraction.
+    const initialDataScripts = (Array.from(document.querySelectorAll('script')) as Element[]).filter((script) =>
+      script.textContent.includes('window._initialData'),
+    );
+
+    for (const script of initialDataScripts) {
+      // strip the `window._initialData =` prefix and the trailing `;` to isolate the JSON string
+      const textContent = script.textContent.trim();
+      const jsonString = textContent.slice(
+        textContent.indexOf('window._initialData={') + 'window._initialData='.length,
+        textContent.lastIndexOf('}') + 1,
+      );
+
+      let globalData: any;
+      try {
+        globalData = JSON.parse(jsonString);
+      } catch {
+        // not valid JSON (e.g. a JS object literal) -> try the next script
+        continue;
+      }
       // Extract job data from the hostQueryExecutionResult
       const jobData = globalData?.hostQueryExecutionResult?.data?.jobData?.results?.[0]?.job;
 
@@ -604,6 +635,25 @@ function parseUSAJobsJobDescription({ html }: { html: string }): JobDescriptionU
 function parseTalentJobDescription({ html }: { html: string }): JobDescriptionUpdates {
   const { descriptionContainer } = extractCommonDomElements({
     provider: SiteProvider.talent,
+    html,
+  });
+
+  let description: string | undefined;
+  if (descriptionContainer) {
+    description = turndownService.turndown(descriptionContainer.innerHTML);
+  }
+
+  return {
+    description,
+  };
+}
+
+/**
+ * Parse a Hiring Cafe job description from the HTML.
+ */
+function parseHiringCafeJobDescription({ html }: { html: string }): JobDescriptionUpdates {
+  const { descriptionContainer } = extractCommonDomElements({
+    provider: SiteProvider.hiringCafe,
     html,
   });
 

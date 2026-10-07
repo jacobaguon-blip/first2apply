@@ -92,49 +92,45 @@ export function parseLinkedInJobs({
   }
   // Pre-built map of componentKey UUID -> job ID, populated from RSC hydration data for V6
   const jobIdMap = new Map<string, string>();
+  const mergeJobIdMap = (source: Map<string, string>) => {
+    for (const [componentKey, jobId] of source.entries()) {
+      if (!jobIdMap.has(componentKey)) {
+        jobIdMap.set(componentKey, jobId);
+      }
+    }
+  };
   if (!listFound) {
     // v3 of the new AI search results layout (UUID componentkeys instead of job-card-component-ref)
     jobsList = document.querySelector('div[componentkey="SearchResultsMainContent"]') ?? null;
 
     if (jobsList) {
-      // Evaluate a JS string containing `window.__como_rehydration__ = [...]`
-      // into the actual string array. The array uses single-quoted JS strings
-      // so it can't be parsed as JSON — we use `new Function` instead.
-      const evalRehydrationScript = (raw: string): string[] => {
-        const start = raw.indexOf('[');
-        const end = raw.lastIndexOf(']');
-        if (start === -1 || end === -1) return [];
-
-        return new Function(`return ${raw.substring(start, end + 1)};`)();
-      };
-
-      let rehydrationStrings: string[] = [];
-      const rehydrateScript = document.querySelector('script#rehydrate-data');
-      if (rehydrateScript) {
-        logger.info('Parsing rehydration data from DOM');
-        rehydrationStrings = evalRehydrationScript(rehydrateScript.textContent ?? '');
-      } else if (webPageRuntimeData?.linkedin) {
-        logger.info('Using rehydration data from webPageRuntimeData');
-        rehydrationStrings = evalRehydrationScript(webPageRuntimeData.linkedin?.comoRehydration as string);
-      }
-
-      for (const chunk of rehydrationStrings) {
-        // Each chunk contains multiple RSC rows separated by \n
-        // A job card row has both componentKey UUID and JobCardFrameworkImplDismissedState_ID
-        const rows = chunk.split('\n');
-        for (const row of rows) {
-          const keyMatch = row.match(/"componentKey":"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"/);
-          const idMatch = row.match(/JobCardFrameworkImplDismissedState_(\d+)/);
-          if (keyMatch && idMatch) {
-            jobIdMap.set(keyMatch[1], idMatch[1]);
-          }
+      if (!jobIdMap.size) {
+        const rehydrateScript = document.querySelector('script#rehydrate-data');
+        if (rehydrateScript?.textContent) {
+          logger.info('Falling back to comoRehydration data from DOM');
+          mergeJobIdMap(buildJobIdMapFromComoRehydration(rehydrateScript.textContent, logger));
+        } else if (webPageRuntimeData?.linkedin?.comoRehydration) {
+          logger.info('Falling back to comoRehydration data from webPageRuntimeData');
+          mergeJobIdMap(buildJobIdMapFromComoRehydration(webPageRuntimeData.linkedin.comoRehydration, logger));
         }
       }
 
       parserVersion = 6;
       jobElements = Array.from(
         jobsList.querySelectorAll('div[role="button"][componentkey] > div[componentkey]'),
-      ).filter((el) => {
+      ) as Element[];
+
+      // try to extract the job ID from react context attributes
+      jobElements.forEach((el) => {
+        const reactContextAttr = el.getAttribute('f2a-react-context');
+        const jobIdFromContext = extractJobIdFromReactContextAttr(reactContextAttr);
+        if (jobIdFromContext) {
+          const componentKey = el.getAttribute('componentkey') ?? '';
+          jobIdMap.set(componentKey, jobIdFromContext);
+        }
+      });
+
+      jobElements = jobElements.filter((el) => {
         const uuid = (el as Element).getAttribute('componentkey');
         return uuid && jobIdMap.has(uuid);
       }) as Element[];
@@ -455,14 +451,18 @@ export function parseLinkedInJobs({
       return null;
     }
 
-    const titleEl = mainInfoEl.querySelector(':scope > p:first-child');
+    const titleEl =
+      mainInfoEl.querySelector(':scope > p:first-child') ||
+      mainInfoEl.querySelector(':scope > div:first-child > p:first-child');
     if (!titleEl) {
-      logger.error('No titleEl found');
+      // logger.error('No titleEl found');
       return null;
     }
     const rawTitle =
       titleEl.childElementCount > 1
-        ? (titleEl.querySelector(':scope > span:not([aria-hidden])')?.textContent?.trim() ?? null)
+        ? titleEl.querySelector(':scope > span:not([aria-hidden])')?.textContent?.trim() ||
+          titleEl.querySelector(':scope > span[aria-hidden="true"]')?.textContent?.trim() ||
+          null
         : (titleEl.textContent?.trim() ?? null);
     const title = rawTitle?.replace('(Verified job)', '').trim() ?? null;
 
@@ -522,13 +522,13 @@ export function parseLinkedInJobs({
   const parseElementV6 = (el: Element): ParsedJob | null => {
     const uuid = el.getAttribute('componentkey')?.trim();
     if (!uuid) {
-      logger.error('No componentkey found');
+      // logger.error('No componentkey found');
       return null;
     }
 
     const externalId = jobIdMap.get(uuid);
     if (!externalId) {
-      logger.error('No job ID found in hydration data for component', { uuid });
+      // logger.error('No job ID found in hydration data for component', { uuid });
       return null;
     }
     const externalUrl = `https://www.linkedin.com/jobs/view/${externalId}`;
@@ -538,18 +538,22 @@ export function parseLinkedInJobs({
       ':scope > div > div > div:first-child > div:first-child > div:first-child',
     ) as Element;
     if (!mainInfoEl) {
-      logger.error('No mainInfoEl found');
+      // logger.error('No mainInfoEl found');
       return null;
     }
 
-    const titleEl = mainInfoEl.querySelector(':scope > p:first-child');
+    const titleEl =
+      mainInfoEl.querySelector(':scope > p:first-child') ||
+      mainInfoEl.querySelector(':scope > div:first-child > p:first-child');
     if (!titleEl) {
-      logger.error('No titleEl found');
+      // logger.error('No titleEl found');
       return null;
     }
     const rawTitle =
       titleEl.childElementCount > 1
-        ? (titleEl.querySelector(':scope > span:not([aria-hidden])')?.textContent?.trim() ?? null)
+        ? titleEl.querySelector(':scope > span:not([aria-hidden])')?.textContent?.trim() ||
+          titleEl.querySelector(':scope > span[aria-hidden="true"]')?.textContent?.trim() ||
+          null
         : (titleEl.textContent?.trim() ?? null);
     const title = rawTitle?.replace('(Verified job)', '').trim() ?? null;
 
@@ -557,7 +561,7 @@ export function parseLinkedInJobs({
     const locationAndType = mainInfoEl.querySelector(':scope > p:nth-child(3)')?.textContent?.trim();
 
     if (!title || !companyName) {
-      logger.error('Missing title or companyName', { title, companyName });
+      // logger.error('Missing title or companyName', { title, companyName });
       return null;
     }
 
@@ -655,4 +659,41 @@ export function parseLinkedInJobs({
     listFound,
     elementsCount: jobElements.length,
   };
+}
+
+function evalLinkedInRehydrationScript(raw: string): string[] {
+  const start = raw.indexOf('[');
+  const end = raw.lastIndexOf(']');
+  if (start === -1 || end === -1) return [];
+
+  return new Function(`return ${raw.substring(start, end + 1)};`)();
+}
+
+function buildJobIdMapFromComoRehydration(rawScript: string, logger: ILogger): Map<string, string> {
+  const jobIdMap = new Map<string, string>();
+  const rehydrationStrings = evalLinkedInRehydrationScript(rawScript);
+
+  for (const chunk of rehydrationStrings) {
+    const rows = chunk.split('\n');
+    for (const row of rows) {
+      const keyMatch = row.match(/"componentKey":"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"/);
+      const idMatch = row.match(/JobCardFrameworkImplDismissedState_(\d+)/);
+      if (keyMatch && idMatch) {
+        jobIdMap.set(keyMatch[1], idMatch[1]);
+      }
+    }
+  }
+
+  logger.info(`Built ${jobIdMap.size} componentKey -> jobId mappings from LinkedIn comoRehydration payload`);
+  return jobIdMap;
+}
+
+function extractJobIdFromReactContextAttr(attr: string | null): string | null {
+  if (!attr) return null;
+
+  const match = attr.match(
+    /JobCardFrameworkImpl(?:DismissedState|NotDismissedBooleanState|DismissedBooleanState|FooterState)_(\d+)/,
+  );
+
+  return match ? match[1] : null;
 }

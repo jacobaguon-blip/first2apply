@@ -27,7 +27,12 @@ export function parseRemoteioJobs({ siteId, html }: { siteId: number; html: stri
       elementsCount: 0,
     };
 
-  const jobElements = Array.from(jobsList.querySelectorAll(':scope > div')) as Element[];
+  // Remote.io wraps cards in an extra div on the live site, but older markup (and the test fixture) does not.
+  // Pick whichever layout yields more cards that contain a link.
+  const withLink = (els: Element[]) => els.filter((el) => el.querySelector('a'));
+  const nestedCards = withLink(Array.from(jobsList.querySelectorAll(':scope > div > div')) as Element[]);
+  const flatCards = withLink(Array.from(jobsList.querySelectorAll(':scope > div')) as Element[]);
+  const jobElements = nestedCards.length > flatCards.length ? nestedCards : flatCards;
 
   const jobs = jobElements.map((el): ParsedJob | null => {
     const jobInfo = el.querySelector('a');
