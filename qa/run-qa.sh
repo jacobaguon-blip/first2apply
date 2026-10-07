@@ -56,8 +56,10 @@ ensure_lib_builds() {
   # desktop vitest and the desktop typecheck import the built libraries
   local lib
   for lib in core scraper ui; do
-    if [ ! -d "$ROOT/libraries/$lib/build" ]; then
-      log "building @first2apply/$lib (missing build output)"
+    # rebuild when output is missing or any source file is newer than it (stale builds hid real type errors)
+    if [ ! -d "$ROOT/libraries/$lib/build" ] \
+      || [ -n "$(find "$ROOT/libraries/$lib/src" -type f -newer "$ROOT/libraries/$lib/build" -print -quit 2> /dev/null)" ]; then
+      log "building @first2apply/$lib (missing or stale build output)"
       pnpm --filter "@first2apply/$lib" build > "$REPORT_DIR/build-$lib.log" 2>&1 \
         || log "WARN: build of $lib failed, see $REPORT_DIR/build-$lib.log"
     fi
