@@ -17,7 +17,7 @@ Tiered QA harness in `qa/`. One entry point: `qa/run-qa.sh <tier>`. Exit code is
 
 | Tier | Run when | Cost | What it does |
 |------|----------|------|--------------|
-| `fast` | before every commit or push (pre-push runs it) | ~3s | backend `deno check` vs baseline count, desktop `tsc --noEmit`, prettier on changed backend files |
+| `fast` | before every commit (pre-push runs the full nx typecheck instead) | ~3s | backend `deno check` vs baseline count, desktop `tsc --noEmit`, prettier on changed backend files |
 | `unit` | after any code change, after every merge | ~5s | `deno test` of `jobListParser.test.ts`, desktop vitest |
 | `ui` | desktop or library changes, before shipping a build | ~10s plus package time on first run | Playwright against the packaged app |
 | `all` | before merging to master | sum | fast, unit, ui |
@@ -62,7 +62,7 @@ pnpm qa                      # all tiers
 Only with a stated reason, in the same commit, written in the `reason` field.
 
 - Add a test name to `known_failing_tests` only when it fails on master and is not caused by your change.
-- Raise `backend_typecheck.error_count` never. Lower it when you fix errors.
+- The backend typecheck baseline was removed (0 errors). If errors ever return, fix them rather than re-adding a baseline.
 - When a run prints "known failure now passes", remove it from the file.
 - Never add a failure just to make a run green.
 
@@ -71,4 +71,4 @@ Only with a stated reason, in the same commit, written in the `reason` field.
 - `_electron.launch` and `chromium.connectOverCDP` hang against this app because its hidden HTML-downloader pages never answer Playwright's attach. `qa/ui/cdpFilterProxy.ts` hides those pages. Do not replace the fixture with `_electron.launch`.
 - The app can hang on quit when the backend is unreachable, so the fixture SIGKILLs it.
 - deno rewrites `apps/backend/supabase/functions/deno.lock`. The runner restores it with `git checkout`.
-- `pnpm run typecheck` (nx, all projects) already fails on master (backend baseline errors, blog contentlayer). Pre-push uses `qa:fast` and `qa:unit` instead.
+- `pnpm run typecheck` (nx, all projects) passes on master and runs in pre-push with `qa:unit`. Typecheck depends on `^build` (nx.json), and the blog typecheck runs `contentlayer2 build` first.

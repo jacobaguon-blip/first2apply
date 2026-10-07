@@ -24,7 +24,6 @@
 - **[P2]** Add `F2A_FUNCTIONS_URL=http://raspberrypi:54321` (commented) to `apps/desktopProbe/.env.example` and `.env.pi.example` so the Pi-edge routing toggle is discoverable. Also document the matching `webpack.plugins.ts` `EnvironmentPlugin` whitelist requirement — any new `.env` var consumed by main-process code must be added there, otherwise webpack inlines `undefined` and the value is silently lost at build time. *Source: session 2026-05-28.*
 - **[P3]** Push wife's machine to the same desktop build via `pnpm --filter first2apply-desktop deploy:all` after household validation — currently only this Mac has the re-apply button + Pi-routing wiring. *Source: session 2026-05-28.*
 - **[P3]** Make hosted Supabase deploy work for edge functions that import `@first2apply/core` — currently the import-map alias resolves outside the upload bundle scope, so the cloud bundler fails. Options: copy/symlink `libraries/core/src/index.deno.ts` into the functions upload tree, or migrate shared modules off the `@first2apply/core` alias. Would unblock cloud fallback when the Pi is unreachable. *Source: session 2026-05-28.*
-- **[P3]** Address pre-existing typecheck error in `apps/backend/supabase/functions/handle-profile-change-webhook/index.ts:130` (DbSchema generic-constraint incompatibility). Unrelated to this session's work but blocks `pnpm --filter @first2apply/backend typecheck`. *Source: session 2026-05-28.*
 
 ## Bugs
 
@@ -36,4 +35,3 @@ _None currently logged. Resolved bugs:_
 - **[P3]** Evaluate upstream `660f4a5` pieces separately from the provider switch: the 24-hour re-scrape limit for custom job boards in `scan-urls/index.ts`, and the Dice parser fix. Skip the DeepSeek/OpenRouter swap (conflicts with local AI on the Pi). *Source: upstream parser sync.*
 - **[P3]** Upstream `ff1b497` (language and security settings on job functions) and `28017b1` (Electron upgrade) were not cherry-picked. Review for the next sync. Upstream remote is `beastx-ro/first2apply` (remote name `upstream`). *Source: upstream parser sync.*
 - **[P2]** Run the authenticated QA UI specs (`qa/ui/02-authenticated.spec.ts`) once with `F2A_QA_EMAIL`/`F2A_QA_PASSWORD` and a build from a real `apps/desktopProbe/.env`. Sort control and location filter assertions are untested. *Source: session 2026-10-07.*
-- **[P3]** Fix the 3 backend typecheck baseline errors and the blog `contentlayer` typecheck, then re-add the nx typecheck of all projects to pre-push (currently replaced by `qa:fast` + `qa:unit`). *Source: session 2026-10-07.*

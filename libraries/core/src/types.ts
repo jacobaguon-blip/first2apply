@@ -1,4 +1,8 @@
-import { LocationBucket } from './classifyLocation';
+// Kept local (not imported from ./classifyLocation) because the Deno edge runtime
+// resolves this file with strict ESM rules and cannot follow extensionless imports,
+// while the tsc/webpack build of core cannot use '.ts' extensions. index.ts asserts
+// at compile time that this stays identical to classifyLocation's LocationBucket.
+type LocationBucket = 'remote' | 'hybrid' | 'onsite' | 'unspecified';
 
 export enum SiteProvider {
   linkedin = 'linkedin',
@@ -160,7 +164,8 @@ export type AdvancedMatchingConfig = {
   ai_api_output_tokens_used: number;
 };
 
-export interface AiFilterProfile {
+// A type alias (not an interface) so it satisfies supabase-js GenericTable's Record<string, unknown> Row constraint.
+export type AiFilterProfile = {
   id: number;
   created_at: string;
   user_id: string;
@@ -170,20 +175,33 @@ export interface AiFilterProfile {
   is_default: boolean;
   location_buckets: LocationBucket[] | null;
   location_contains: string[] | null;
-}
+};
+
+export type UserCvProfileRow = {
+  user_id: string;
+  markdown: string;
+  source_filename: string | null;
+  updated_at: string;
+};
+
+export type EvaluationRow = {
+  id: string;
+  job_id: number;
+  user_id: string;
+  score: number | null;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F' | null;
+  archetype: string | null;
+  blocks: unknown | null;
+  tailored_cv: string | null;
+  tailored_cv_generated_at: string | null;
+  created_at: string;
+};
 
 export const JOB_SORT_MODES = ['newest_first', 'oldest_first'] as const;
 export type JobSortMode = (typeof JOB_SORT_MODES)[number];
 
 export type QuietHoursWindow = { start: string; end: string };
-export type QuietHoursDay =
-  | 'monday'
-  | 'tuesday'
-  | 'wednesday'
-  | 'thursday'
-  | 'friday'
-  | 'saturday'
-  | 'sunday';
+export type QuietHoursDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 export type QuietHoursSchedule = Partial<Record<QuietHoursDay, QuietHoursWindow>>;
 
 export type UserSettings = {
@@ -259,8 +277,7 @@ export type DbSchema = {
       };
       links: {
         Row: Link;
-        Insert: Pick<Link, 'url' | 'title' | 'site_id'> &
-          Partial<Pick<Link, 'scan_frequency' | 'filter_profile_id'>>;
+        Insert: Pick<Link, 'url' | 'title' | 'site_id'> & Partial<Pick<Link, 'scan_frequency' | 'filter_profile_id'>>;
         Update: {
           title?: string;
           url?: string;
@@ -366,6 +383,19 @@ export type DbSchema = {
         Insert: Pick<AccountMasterCoverLetterRow, 'account_id' | 'content_jsonb'> &
           Partial<Pick<AccountMasterCoverLetterRow, 'uploaded_filename'>>;
         Update: Partial<Pick<AccountMasterCoverLetterRow, 'content_jsonb' | 'uploaded_filename'>>;
+        Relationships: [];
+      };
+      user_cv_profiles: {
+        Row: UserCvProfileRow;
+        Insert: Pick<UserCvProfileRow, 'user_id' | 'markdown'> &
+          Partial<Pick<UserCvProfileRow, 'source_filename' | 'updated_at'>>;
+        Update: Partial<Omit<UserCvProfileRow, 'user_id'>>;
+        Relationships: [];
+      };
+      evaluations: {
+        Row: EvaluationRow;
+        Insert: Pick<EvaluationRow, 'job_id' | 'user_id'> & Partial<Omit<EvaluationRow, 'job_id' | 'user_id'>>;
+        Update: Partial<Omit<EvaluationRow, 'id' | 'job_id' | 'user_id'>>;
         Relationships: [];
       };
     };

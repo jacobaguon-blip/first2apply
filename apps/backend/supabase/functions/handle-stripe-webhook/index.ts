@@ -53,9 +53,12 @@ Deno.serve(async (req) => {
         throw new Error('Customer is deleted??');
       }
 
-      // get the matching user by email
+      // get the matching user by email (a customer without an email can never match a user)
+      if (!customer.email) {
+        throw new Error(`No user found for email ${customer.email}`);
+      }
       const { data, error: getUserIdError } = await supabaseClient.rpc('get_user_id_by_email', {
-        email: customer.email?.toLowerCase(),
+        email: customer.email.toLowerCase(),
       });
       if (getUserIdError) {
         throw getUserIdError;
@@ -80,7 +83,7 @@ Deno.serve(async (req) => {
         .update({
           stripe_customer_id: customer.id,
           stripe_subscription_id: subscription.id,
-          subscription_end_date: new Date(subscription.current_period_end * 1000),
+          subscription_end_date: new Date(subscription.current_period_end * 1000).toISOString(),
           subscription_tier: tier,
           is_trial: false,
         })

@@ -10,7 +10,7 @@
     "debug:edge": "npx supabase functions serve --inspect-mode run",
     "gitPreCommit": "npx lint-staged --relative",
     "gitCommitMessage": "npx commitlint",
-    "gitPrePush": "pnpm run qa:fast && pnpm run qa:unit",
+    "gitPrePush": "pnpm run typecheck && pnpm run qa:unit",
     "qa": "bash qa/run-qa.sh all",
     "qa:fast": "bash qa/run-qa.sh fast",
     "qa:unit": "bash qa/run-qa.sh unit",
