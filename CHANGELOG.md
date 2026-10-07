@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `17:17` -- docs: session summary 2026-10-07 part 3 and backlog _(session `1133dd6d`)_
+  - `BACKLOG.md`
+  - `docs/sessions/2026-10-07-pi-tailscale-recovery-and-scan-audit.md`
 - `16:04` -- docs(backlog): scan queue starvation finding _(session `a1c8b9cf`)_
   - `BACKLOG.md`
 - `11:55` -- docs: session summary 2026-10-07 part 2 and backlog _(session `1133dd6d`)_
