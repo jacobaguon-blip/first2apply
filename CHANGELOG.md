@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `11:44` -- docs(backlog): supabase restored, hiring.cafe row inserted _(session `00bca3df`)_
+  - `BACKLOG.md`
 - `09:02` -- docs(backlog): paused Supabase project and Pi Tailscale findings _(session `052db4b8`)_
   - `BACKLOG.md`
 - `08:52` -- fix(typecheck): make nx typecheck pass on all 11 projects and restore it in pre-push _(session `c2472b85`)_
