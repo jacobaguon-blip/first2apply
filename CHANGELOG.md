@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apps/serverProbe/src/main.ts`
   - `apps/serverProbe/src/referralNudge.ts`
   - `pnpm-lock.yaml`
+- `13:08` -- feat(edge): draft-referral function and Pi router entry _(session `1133dd6d`)_
+  - `apps/backend/supabase/functions/_localServer.ts`
+  - `apps/backend/supabase/functions/_shared/referralDraft.ts`
+  - `apps/backend/supabase/functions/draft-referral/index.ts`
+  - `libraries/core/src/types.ts`
 - `12:41` -- feat(db): referral contacts tables, company_key, contact queries _(session `1133dd6d`)_
   - `apps/backend/supabase/migrations/20261008000000_referral_contacts.sql`
 - `12:49` -- feat(core): companyKey twin of the SQL function, shared fixtures, parity script _(session `2ce4f342`)_

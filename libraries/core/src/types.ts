@@ -140,6 +140,7 @@ export type Profile = {
   subscription_end_date: string;
   subscription_tier: SubscriptionTier;
   is_trial: boolean;
+  career_ops_enabled?: boolean;
 };
 
 export type StripeBillingPlan = {

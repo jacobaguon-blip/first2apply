@@ -17,6 +17,7 @@ import { handle as scanUrlsHandle } from './scan-urls/index.ts';
 import { handle as scanJobDescriptionHandle } from './scan-job-description/index.ts';
 import { handle as evaluateJobHandle } from './evaluate-job/index.ts';
 import { handle as tailorCvHandle } from './tailor-cv/index.ts';
+import { handle as draftReferralHandle } from './draft-referral/index.ts';
 import { handle as parseCvHandle } from './parse-cv/index.ts';
 import { handle as reapplyFilterProfileHandle } from './reapply-filter-profile/index.ts';
 import { CORS_HEADERS } from './_shared/cors.ts';
@@ -73,6 +74,8 @@ Deno.serve({ port, hostname: '0.0.0.0' }, async (req) => {
       return evaluateJobHandle(req);
     case 'tailor-cv':
       return tailorCvHandle(req);
+    case 'draft-referral':
+      return draftReferralHandle(req);
     case 'parse-cv':
       return parseCvHandle(req);
     case 'reapply-filter-profile':
