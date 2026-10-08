@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `18:22` -- docs(backlog): ollama cold-start race _(session `1133dd6d`)_
+  - `BACKLOG.md`
 - `18:21` -- docs: Pi ops gotchas, backlog status after scan-priority and QA work _(session `1133dd6d`)_
   - `BACKLOG.md`
   - `CLAUDE.md`
