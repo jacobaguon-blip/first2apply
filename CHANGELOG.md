@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `13:14` -- test(qa): seed connections and add referral contacts UI spec _(session `af9bfb03`)_
+  - `.claude/skills/f2a-qa/SKILL.md`
+  - `docs/QA.md`
+  - `qa/seed-qa-account.sh`
+  - `qa/ui/03-referrals.spec.ts`
 - `13:04` -- fix(referrals): review fixes before applying the migration _(session `44ffb7f5`)_
   - `apps/backend/scripts/company-key-parity.mjs`
   - `apps/backend/supabase/functions/_shared/careerOpsPrompts.ts`
