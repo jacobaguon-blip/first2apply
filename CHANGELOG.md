@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `13:05` -- feat(desktop): contacts badge on job cards and People you know here panel _(session `e7409b12`)_
+  - `apps/desktopProbe/src/components/home/jobContacts.tsx`
+  - `apps/desktopProbe/src/components/home/jobTabsContent.tsx`
+  - `apps/desktopProbe/src/components/home/jobsList.tsx`
+  - `libraries/ui/src/components/jobs/jobCard.tsx`
 - `13:02` -- feat(desktop): save LinkedIn connections, add Contacts page route and nav item _(session `f97d2645`)_
   - `apps/desktopProbe/src/app.tsx`
   - `apps/desktopProbe/src/components/navbar.tsx`
