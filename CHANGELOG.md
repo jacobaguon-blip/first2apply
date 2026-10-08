@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `14:09` -- docs: referral contacts gotchas, scenarios, backlog; seed QA master CV _(session `f3676c69`)_
+  - `CLAUDE.md`
+  - `docs/BACKLOG.md`
+  - `qa/seed-qa-account.sh`
+  - `scenarios.md`
 - `13:38` -- fix(test): rls check removes profile rows before deleting its throwaway users _(session `af9bfb03`)_
   - `apps/backend/scripts/referral-rls-check.mjs`
 - `13:35` -- test(db): row-level security check for connections and referral_outreach _(session `42123cce`)_
