@@ -100,6 +100,21 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
      default `auth.uid()` is null for service-role calls (`apps/backend/supabase/functions/scan-urls/index.ts`).
    - Spec + design: `docs/superpowers/specs/2026-05-27-local-ai-on-pi-design.md`.
 
+## Pi ops gotchas (learned 2026-10-07)
+
+- **Pi DNS is pinned and independent of Tailscale.** `/etc/resolv.conf` on the Pi is immutable (`chattr +i`)
+  with `192.168.4.1`, `1.1.1.1`, `8.8.8.8`. Old copy: `/etc/resolv.conf.pre-f2a-dns-fix`. Docker copies the host
+  resolv.conf at container start, so after any DNS change run `docker restart f2a-edge-local` (the probe restarts
+  via systemd). Tailscale key expiry is disabled for `raspberrypi`. LAN fallback: `ssh maadkal@raspberrypi.local`.
+- **Probe image ships through CI.** Every push to master runs the Release workflow (ghcr `f2a-server-probe:latest`).
+  Roll out with `ssh maadkal@raspberrypi 'bash /opt/first2apply/deploy.sh'` (keeps `:previous` for rollback).
+- **Control server for manual scans:** `POST http://127.0.0.1:7879/scan/link/<id>` on the Pi with
+  `Authorization: Bearer $F2A_PROBE_SECRET` (read it from `docker inspect f2a-server-probe`, never print it).
+- **Scan order:** `libraries/scraper/src/scanOrder.ts` runs non-custom links before slow LLM-parsed custom boards.
+- **Migrations:** `create or replace function` with new params makes an overload, not a replacement. Drop the old
+  signature in the same migration. After merging a migration run `supabase migration list` (apps/backend) and
+  `supabase db push`; the cloud project can silently lag behind master.
+
 ## QA
 
 - `qa/run-qa.sh {fast|unit|ui|all}` (or `pnpm qa:*`). Fails only on NEW failures vs `qa/known-failures.json`. Full guide: `docs/QA.md`, skill `f2a-qa`.
