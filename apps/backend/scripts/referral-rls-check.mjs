@@ -92,8 +92,11 @@ try {
     bForeignJob.status >= 400,
   );
 } finally {
+  // profiles.user_id has no ON DELETE CASCADE, so remove the profile row before the user.
   for (const u of [a, b]) {
-    await fetch(`${url}/auth/v1/admin/users/${u.id}`, { method: 'DELETE', headers: admin });
+    await fetch(`${url}/rest/v1/profiles?user_id=eq.${u.id}`, { method: 'DELETE', headers: admin });
+    const res = await fetch(`${url}/auth/v1/admin/users/${u.id}`, { method: 'DELETE', headers: admin });
+    if (!res.ok) console.error(`WARNING: could not delete throwaway user ${u.id}: ${await res.text()}`);
   }
 }
 console.log(failures === 0 ? 'OK' : `FAILED: ${failures}`);
