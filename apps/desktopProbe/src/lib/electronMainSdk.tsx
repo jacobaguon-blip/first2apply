@@ -830,6 +830,17 @@ export async function tailorCv(jobId: number): Promise<{ tailored_cv?: string }>
   return _mainProcessApiCall('tailor-cv', { jobId });
 }
 
+export async function draftReferral(
+  jobId: number,
+  connectionId: number,
+): Promise<{ outreach?: { id: number; draft: string | null; status: string } }> {
+  return _mainProcessApiCall('draft-referral', { jobId, connectionId });
+}
+
+export async function updateReferralOutreach(jobId: number, connectionId: number, patch: Record<string, unknown>) {
+  return _mainProcessApiCall('update-referral-outreach', { jobId, connectionId, patch });
+}
+
 export type SaveConnectionsResult = { saved: number; created: number; updated: number; skippedNoUrl: number };
 
 export async function saveConnections(

@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `libraries/scraper/src/__tests__/referralNudge.test.ts`
   - `libraries/scraper/src/index.ts`
   - `libraries/scraper/src/referralNudge.ts`
+- `13:21` -- feat(desktop): draft referral messages and persist outreach status _(session `af9bfb03`)_
+  - `apps/desktopProbe/src/components/home/jobContacts.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/lib/referralDates.ts`
+  - `apps/desktopProbe/src/server/__tests__/referralDates.test.ts`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
 - `13:04` -- fix(referrals): review fixes before applying the migration _(session `44ffb7f5`)_
   - `apps/backend/scripts/company-key-parity.mjs`
   - `apps/backend/supabase/functions/_shared/careerOpsPrompts.ts`
