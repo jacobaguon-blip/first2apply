@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `14:21` -- test(edge): end-to-end check of draft-referral with a fake model against the real database _(session `496aa471`)_
+  - `apps/backend/scripts/draft-referral-e2e.ts`
 - `14:09` -- docs: referral contacts gotchas, scenarios, backlog; seed QA master CV _(session `f3676c69`)_
   - `CLAUDE.md`
   - `docs/BACKLOG.md`
