@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `23:17` -- fix(edge): wait for Ollama to come up instead of failing the scan _(session `af9bfb03`)_
+  - `.claude/skills/f2a-qa/SKILL.md`
+  - `apps/backend/supabase/functions/_shared/localFetch.test.ts`
+  - `apps/backend/supabase/functions/_shared/localFetch.ts`
+  - `apps/backend/supabase/functions/_shared/openAI.ts`
+  - `qa/run-qa.sh`
 - `18:22` -- docs(backlog): ollama cold-start race _(session `1133dd6d`)_
   - `BACKLOG.md`
 - `18:21` -- docs: Pi ops gotchas, backlog status after scan-priority and QA work _(session `1133dd6d`)_
