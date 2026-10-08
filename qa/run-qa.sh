@@ -192,7 +192,7 @@ record_suite() { # suite tier label results.tsv exitcode logfile
 tier_unit() {
   if have deno; then
     local out="$REPORT_DIR/deno-test.log" tsv="$REPORT_DIR/deno-test.tsv"
-    (cd "$FUNCS" && deno test -A --no-check --sloppy-imports _shared/jobListParser.test.ts > "$out" 2>&1)
+    (cd "$FUNCS" && deno test -A --no-check --sloppy-imports _shared/jobListParser.test.ts _shared/localFetch.test.ts > "$out" 2>&1)
     local code=$?
     restore_deno_lock
     node "$UTIL" deno-parse "$out" > "$tsv"

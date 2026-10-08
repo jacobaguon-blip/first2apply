@@ -4,6 +4,7 @@ import { getExceptionMessage } from '@first2apply/core';
 import { SupabaseClient } from '@supabase/supabasefork';
 import OpenAI from 'openai';
 
+import { buildResilientFetch } from './localFetch.ts';
 import { ILogger } from './logger.ts';
 
 // Type for OpenAI API response with usage information
@@ -28,6 +29,8 @@ export type OpenAiConfig = {
   apiKey: string;
 };
 
+type OpenAiFetch = NonNullable<ConstructorParameters<typeof OpenAI>[0]>['fetch'];
+
 export function buildOpenAiClient({ modelName }: { modelName?: SupportedModel }) {
   const requestedModel = modelName ?? 'gpt-4o';
   if (!(requestedModel in COST_PER_MODEL)) {
@@ -41,6 +44,11 @@ export function buildOpenAiClient({ modelName }: { modelName?: SupportedModel })
     const openAi = new OpenAI({
       baseURL: env.ollamaUrl,
       apiKey: 'local',
+      // Ollama is stopped when idle and started on demand, so wait for it instead of failing the scan.
+      fetch: buildResilientFetch({
+        onRetry: ({ attempt, waitedMs }) =>
+          console.log(`local model not reachable yet (attempt ${attempt}, waited ${waitedMs / 1000}s), retrying ...`),
+      }) as OpenAiFetch,
     });
     console.log(`Using local model ${env.ollamaModel} (mapped from ${requestedModel}) via ${env.ollamaUrl}.`);
     const llmConfig = {
