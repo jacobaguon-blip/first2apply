@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `15:00` -- fix(pi): ollama-on-demand no longer kills Ollama during a slow model load _(session `e2d2003c`)_
+  - `deploy/pi/ollama-on-demand.sh`
 - `12:27` -- docs(plans): referral and contacts surfacing implementation plan _(session `1133dd6d`)_
   - `docs/plans/2026-10-08-referral-contacts.md`
 - `12:10` -- docs(plans): referral and contacts surfacing design _(session `1133dd6d`)_
