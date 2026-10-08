@@ -927,6 +927,42 @@ export function initRendererIpcApi({
     }),
   );
 
+  ipcMain.handle('draft-referral', async (_e, { jobId, connectionId }: { jobId: number; connectionId: number }) =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data, error } = await supabase.functions.invoke<{
+        outreach?: { id: number; draft: string | null; status: string };
+        error?: { code: string; message: string };
+      }>('draft-referral', { body: { job_id: jobId, connection_id: connectionId } });
+      if (error) throw error;
+      if (data?.error) throw new Error(`${data.error.code}: ${data.error.message}`);
+      return data;
+    }),
+  );
+
+  ipcMain.handle(
+    'update-referral-outreach',
+    async (
+      _e,
+      { jobId, connectionId, patch }: { jobId: number; connectionId: number; patch: Record<string, unknown> },
+    ) =>
+      _apiCall(async () => {
+        const supabase = supabaseApi.getSupabaseClient();
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) throw userError ?? new Error('not signed in');
+        const { data, error } = await supabase
+          .from('referral_outreach')
+          .upsert(
+            { user_id: userData.user.id, job_id: jobId, connection_id: connectionId, ...patch },
+            { onConflict: 'user_id,job_id,connection_id' },
+          )
+          .select()
+          .single();
+        if (error) throw error;
+        return { outreach: data };
+      }),
+  );
+
   ipcMain.handle(
     'save-connections',
     async (
