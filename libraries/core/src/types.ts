@@ -197,6 +197,50 @@ export type EvaluationRow = {
   created_at: string;
 };
 
+export type ConnectionRow = {
+  id: number;
+  user_id: string;
+  first_name: string;
+  last_name: string;
+  linkedin_url: string;
+  company: string;
+  company_key: string;
+  position_title: string;
+  connected_on: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReferralOutreachRow = {
+  id: number;
+  user_id: string;
+  job_id: number;
+  connection_id: number;
+  status: 'drafted' | 'asked' | 'replied' | 'referred' | 'no_reply' | 'declined';
+  draft: string | null;
+  asked_at: string | null;
+  follow_up_at: string | null;
+  last_nudged_at: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
+export type JobContact = {
+  connection_id: number;
+  first_name: string;
+  last_name: string;
+  linkedin_url: string;
+  company: string;
+  position_title: string;
+  connected_on: string | null;
+  outreach_id: number | null;
+  outreach_status: ReferralOutreachRow['status'] | null;
+  outreach_draft: string | null;
+  asked_at: string | null;
+  follow_up_at: string | null;
+  notes: string | null;
+};
+
 export const JOB_SORT_MODES = ['newest_first', 'oldest_first'] as const;
 export type JobSortMode = (typeof JOB_SORT_MODES)[number];
 
@@ -398,9 +442,26 @@ export type DbSchema = {
         Update: Partial<Omit<EvaluationRow, 'id' | 'job_id' | 'user_id'>>;
         Relationships: [];
       };
+      connections: {
+        Row: ConnectionRow;
+        Insert: Pick<ConnectionRow, 'user_id' | 'linkedin_url'> &
+          Partial<Omit<ConnectionRow, 'id' | 'user_id' | 'linkedin_url' | 'company_key'>>;
+        Update: Partial<Omit<ConnectionRow, 'id' | 'user_id' | 'company_key'>>;
+        Relationships: [];
+      };
+      referral_outreach: {
+        Row: ReferralOutreachRow;
+        Insert: Pick<ReferralOutreachRow, 'user_id' | 'job_id' | 'connection_id'> &
+          Partial<Omit<ReferralOutreachRow, 'id' | 'user_id' | 'job_id' | 'connection_id'>>;
+        Update: Partial<Omit<ReferralOutreachRow, 'id' | 'user_id' | 'job_id' | 'connection_id'>>;
+        Relationships: [];
+      };
     };
     Views: {};
     Functions: {
+      get_job_contacts: { Args: { p_job_id: number }; Returns: JobContact[] };
+      count_job_contacts: { Args: { p_job_ids: number[] }; Returns: Array<{ job_id: number; contact_count: number }> };
+      company_key: { Args: { name: string | null }; Returns: string };
       list_jobs: {
         Args: {
           jobs_status: JobStatus;
