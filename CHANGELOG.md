@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `23:35` -- docs(backlog): ollama cold-start fixed _(session `b7ff23f8`)_
+  - `BACKLOG.md`
 - `23:17` -- fix(edge): wait for Ollama to come up instead of failing the scan _(session `af9bfb03`)_
   - `.claude/skills/f2a-qa/SKILL.md`
   - `apps/backend/supabase/functions/_shared/localFetch.test.ts`
