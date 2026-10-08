@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-10-08
+- `10:52` -- docs(backlog): cloud AI provider option (Gemini first), add scenarios.md _(session `6f1d4960`)_
+  - `docs/BACKLOG.md`
+  - `scenarios.md`
+
 ## 2026-10-06
 - `23:09` -- docs(backlog): follow-ups from upstream parser sync _(session `aa9a72f9`)_
   - `BACKLOG.md`
