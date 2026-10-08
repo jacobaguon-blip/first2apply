@@ -18,7 +18,7 @@ Tiered QA harness in `qa/`. One entry point: `qa/run-qa.sh <tier>`. Exit code is
 | Tier | Run when | Cost | What it does |
 |------|----------|------|--------------|
 | `fast` | before every commit (pre-push runs the full nx typecheck instead) | ~3s | backend `deno check` vs baseline count, desktop `tsc --noEmit`, prettier on changed backend files |
-| `unit` | after any code change, after every merge | ~5s | `deno test` of `jobListParser.test.ts` and `localFetch.test.ts`, desktop vitest |
+| `unit` | after any code change, after every merge | ~5s | `deno test` of `jobListParser.test.ts`, `localFetch.test.ts` and `referralDraft.test.ts`, desktop vitest |
 | `ui` | desktop or library changes, before shipping a build | ~10s plus package time on first run | Playwright against the packaged app |
 | `all` | before merging to master | sum | fast, unit, ui |
 

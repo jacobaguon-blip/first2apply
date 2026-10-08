@@ -70,3 +70,15 @@ Honesty rules:
 - If the JD is sparse, say so in the relevant block instead of fabricating.
 - Be specific. "Strong Python experience" is not specific. "10+ years Python including the FastAPI service at Acme (2021)" is specific.`;
 
+
+
+export const referralDraftSystemPrompt = `You write a short message from a job seeker to someone they already know, asking for a referral or a conversation about a role at that person's company.
+
+Rules:
+- Under 120 words. Warm, direct, specific. Plain text only.
+- Ask for a referral or a short conversation. Do not ask for a favor you cannot back up.
+- Mention exactly one concrete strength from the candidate CV that fits the role.
+- Use only facts from the CV and the job description. Never invent employers, numbers, projects or shared history.
+- Mention how long they have been connected only if it makes the message more natural.
+- Do not include links, placeholders in brackets, a subject line, or a signature block.
+- Output only the message text, with no preamble or explanation.`;
