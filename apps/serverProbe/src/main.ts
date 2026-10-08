@@ -27,6 +27,7 @@ import { ConsoleLogger, EnvSettingsProvider, NoopAnalytics } from './adapters';
 import { HiddenWindowDownloader } from './htmlDownloader';
 import { ServerSupabaseApi } from './supabaseApi';
 import { startControlServer } from './controlServer';
+import { startReferralNudge } from './referralNudge';
 
 type CliMode = 'selftest' | 'dry-run' | 'scan-once' | 'serve';
 
@@ -202,8 +203,20 @@ async function main() {
     logger.info('control server disabled (F2A_PROBE_SECRET not set)');
   }
 
+  let referralNudge: { stop: () => void } | undefined;
+  if (env.pushoverAppToken && env.pushoverUserKey) {
+    referralNudge = startReferralNudge({
+      supabase,
+      logger,
+      pushover: { appToken: env.pushoverAppToken, userKey: env.pushoverUserKey },
+    });
+  } else {
+    logger.info('referral nudge disabled (Pushover app token or user key not set)');
+  }
+
   const shutdown = async (sig: string) => {
     logger.info(`received ${sig}, shutting down`);
+    referralNudge?.stop();
     scanner.close();
     await waitForScansToFinish(scanner);
     await health.close().catch(() => {});
