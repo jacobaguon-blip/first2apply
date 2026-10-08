@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apps/backend/supabase/functions/_shared/referralDraft.test.ts`
   - `apps/backend/supabase/functions/_shared/referralDraft.ts`
   - `qa/run-qa.sh`
+- `12:52` -- feat(core): referral status helpers, nudge selection, DbSchema types _(session `1133dd6d`)_
+  - `libraries/core/src/__tests__/referral.test.ts`
+  - `libraries/core/src/index.deno.ts`
+  - `libraries/core/src/index.ts`
+  - `libraries/core/src/referral.ts`
+  - `libraries/core/src/types.ts`
 - `12:27` -- docs(plans): referral and contacts surfacing implementation plan _(session `1133dd6d`)_
   - `docs/plans/2026-10-08-referral-contacts.md`
 - `12:10` -- docs(plans): referral and contacts surfacing design _(session `1133dd6d`)_
