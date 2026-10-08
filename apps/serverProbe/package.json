@@ -18,9 +18,11 @@
     "@first2apply/core": "workspace:*",
     "@first2apply/scraper": "workspace:*",
     "@supabase/supabase-js": "^2.45.4",
-    "exponential-backoff": "^3.1.1"
+    "exponential-backoff": "^3.1.1",
+    "node-cron": "^3.0.3"
   },
   "devDependencies": {
+    "@types/node-cron": "^3.0.11",
     "electron": "39.0.0",
     "typescript": "^5.6.3"
   }
