@@ -115,6 +115,24 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
   signature in the same migration. After merging a migration run `supabase migration list` (apps/backend) and
   `supabase db push`; the cloud project can silently lag behind master.
 
+## Referral contacts (added 2026-10-08)
+
+- **`company_key` lives in two places** and must change together: `libraries/core/src/companyKey.ts` and the SQL
+  function `public.company_key` (migration `20261008000000_referral_contacts.sql`). Verify with
+  `node apps/backend/scripts/company-key-parity.mjs` (needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; the Pi
+  `.env` has both). The key columns on `jobs` and `connections` are STORED generated columns: changing the rules
+  needs a migration that drops and re-adds them, not just `create or replace function`.
+- **Privacy:** `connections` never stores email. `draft-referral` sends only the contact's first name, position and
+  company to the model, never the last name or profile URL. Nothing is ever sent to a contact automatically.
+- **Row-level security check:** `node apps/backend/scripts/referral-rls-check.mjs` (also needs
+  `SUPABASE_ANON_KEY`, the desktop `.env` `SUPABASE_KEY`). `profiles.user_id` has no cascade, so delete a user's
+  `profiles` row before deleting the auth user.
+- **Nudge:** daily Pushover reminder for asked outreach whose follow-up date passed. Code in
+  `libraries/scraper/src/referralNudge.ts`, scheduled by `apps/serverProbe/src/referralNudge.ts`. Env:
+  `F2A_REFERRAL_NUDGE_CRON` (default `0 9 * * *`) and `F2A_REFERRAL_NUDGE_TZ` (default Pi `TZ`, then America/Denver).
+- **Drafting speed:** on the Pi's 3B CPU model a draft can queue for many minutes behind scanner parses. See the
+  cloud AI provider item in `docs/BACKLOG.md`.
+
 ## QA
 
 - `qa/run-qa.sh {fast|unit|ui|all}` (or `pnpm qa:*`). Fails only on NEW failures vs `qa/known-failures.json`. Full guide: `docs/QA.md`, skill `f2a-qa`.

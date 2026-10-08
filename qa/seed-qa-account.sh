@@ -10,6 +10,7 @@
 #   - 1 search (link) with last_scraped_at in 2099 so the Pi scanner never touches it
 #     (the app shows an onboarding screen instead of jobs when an account has no searches)
 #   - 3 connections (2 at "QA Co A", 1 at "QA Co B, Inc.", no email) for the referral contacts spec
+#   - a short master CV (user_cv_profiles) so draft-referral and tailor-cv have something to read
 #   - profiles.career_ops_enabled = true (the Sort control only renders for career-ops accounts)
 set -euo pipefail
 
@@ -106,4 +107,14 @@ PY
   echo "seeded 3 QA connections"
 else
   echo "QA connections already present ($conn_count)"
+fi
+
+# master CV (needed by draft-referral and tailor-cv), created once
+cv_count="$(api "$SUPABASE_URL/rest/v1/user_cv_profiles?select=user_id&user_id=eq.$uid" | python3 -c 'import sys, json; print(len(json.load(sys.stdin)))')"
+if [ "$cv_count" -eq 0 ]; then
+  api -X POST "$SUPABASE_URL/rest/v1/user_cv_profiles" -H "Prefer: return=minimal" \
+    -d "{\"user_id\":\"$uid\",\"markdown\":\"# QA Candidate\\n\\n- 6 years in technical support engineering for B2B software\\n- Resolved escalations with Python and SQL, cut median resolution time by a third\\n- Wrote customer-facing runbooks adopted by the whole support team\",\"source_filename\":\"qa-seed-cv.md\"}" > /dev/null
+  echo "seeded QA master CV"
+else
+  echo "QA master CV already present"
 fi
