@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `13:27` -- fix(desktop): harden save-connections, dedupe urls, scoped lookup, zero contact counts _(session `af9bfb03`)_
+  - `apps/desktopProbe/src/components/home/jobTabsContent.tsx`
+  - `apps/desktopProbe/src/components/home/jobsList.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/pages/connections.tsx`
+  - `apps/desktopProbe/src/server/__tests__/connectionsSave.test.ts`
 - `13:04` -- fix(referrals): review fixes before applying the migration _(session `44ffb7f5`)_
   - `apps/backend/scripts/company-key-parity.mjs`
   - `apps/backend/supabase/functions/_shared/careerOpsPrompts.ts`
