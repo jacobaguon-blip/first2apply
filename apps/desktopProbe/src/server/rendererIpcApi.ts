@@ -11,6 +11,7 @@ import crypto from 'crypto';
 
 import { IAnalyticsClient } from '../lib/analytics';
 import { F2aAutoUpdater } from './autoUpdater';
+import { chunk, MAX_CONNECTION_ROWS, prepareConnections } from './connectionsSave';
 import { HtmlDownloader } from './htmlDownloader';
 import { JobScanner } from '@first2apply/scraper';
 import { ENV } from '../env';
@@ -986,36 +987,48 @@ export function initRendererIpcApi({
         if (userError || !userData.user) throw userError ?? new Error('not signed in');
         const userId = userData.user.id;
 
-        const usable = rows.filter((r) => r.url.trim() !== '');
-        const skippedNoUrl = rows.length - usable.length;
+        if (!Array.isArray(rows)) throw new Error('rows must be an array');
+        if (rows.length > MAX_CONNECTION_ROWS) {
+          throw new Error(`Too many rows (${rows.length}), the limit is ${MAX_CONNECTION_ROWS}`);
+        }
+
+        const prepared = prepareConnections(rows);
         const now = new Date().toISOString();
-        const payload = usable.map((r) => ({
+        const payload = prepared.rows.map((r) => ({
           user_id: userId,
           first_name: r.firstName,
           last_name: r.lastName,
-          linkedin_url: r.url.trim(),
+          linkedin_url: r.url,
           company: r.company,
           position_title: r.position,
           connected_on: r.connectedOnIso,
           updated_at: now,
         }));
 
-        // Existing urls tell us how many rows were updates versus new people.
-        const { data: existing, error: existingError } = await supabase
-          .from('connections')
-          .select('linkedin_url')
-          .eq('user_id', userId);
-        if (existingError) throw existingError;
-        const known = new Set((existing ?? []).map((e: { linkedin_url: string }) => e.linkedin_url));
-
-        for (let i = 0; i < payload.length; i += 500) {
-          const { error } = await supabase
+        // Existing urls (only those in the payload) tell us how many rows were updates versus new people.
+        const known = new Set<string>();
+        for (const urls of chunk(payload.map((p) => p.linkedin_url))) {
+          const { data: existing, error: existingError } = await supabase
             .from('connections')
-            .upsert(payload.slice(i, i + 500), { onConflict: 'user_id,linkedin_url' });
+            .select('linkedin_url')
+            .eq('user_id', userId)
+            .in('linkedin_url', urls);
+          if (existingError) throw existingError;
+          for (const e of existing ?? []) known.add((e as { linkedin_url: string }).linkedin_url);
+        }
+
+        for (const batch of chunk(payload)) {
+          const { error } = await supabase.from('connections').upsert(batch, { onConflict: 'user_id,linkedin_url' });
           if (error) throw error;
         }
         const updated = payload.filter((p) => known.has(p.linkedin_url)).length;
-        return { saved: payload.length, created: payload.length - updated, updated, skippedNoUrl };
+        return {
+          saved: payload.length,
+          created: payload.length - updated,
+          updated,
+          skippedNoUrl: prepared.skippedNoUrl,
+          duplicatesDropped: prepared.duplicatesDropped,
+        };
       }),
   );
 
