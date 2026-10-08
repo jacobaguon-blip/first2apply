@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `docs/QA.md`
   - `qa/seed-qa-account.sh`
   - `qa/ui/03-referrals.spec.ts`
+- `13:19` -- refactor(referral): move nudge core to scraper, claim before send, bound query, add tests _(session `881ead5a`)_
+  - `apps/serverProbe/src/referralNudge.ts`
+  - `libraries/scraper/src/__tests__/referralNudge.test.ts`
+  - `libraries/scraper/src/index.ts`
+  - `libraries/scraper/src/referralNudge.ts`
 - `13:04` -- fix(referrals): review fixes before applying the migration _(session `44ffb7f5`)_
   - `apps/backend/scripts/company-key-parity.mjs`
   - `apps/backend/supabase/functions/_shared/careerOpsPrompts.ts`
