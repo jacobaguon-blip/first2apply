@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `13:38` -- fix(test): rls check removes profile rows before deleting its throwaway users _(session `af9bfb03`)_
+  - `apps/backend/scripts/referral-rls-check.mjs`
 - `13:35` -- test(db): row-level security check for connections and referral_outreach _(session `42123cce`)_
   - `apps/backend/scripts/referral-rls-check.mjs`
 - `13:14` -- test(qa): seed connections and add referral contacts UI spec _(session `af9bfb03`)_
