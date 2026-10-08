@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `22:53` -- fix(backend): linkedin parser v6
   - `apps/backend/supabase/functions/_shared/parsers/linkedin.ts`
 ## 2026-10-07
+- `18:04` -- fix(db): drop legacy list_jobs/count_jobs overloads; qa: authenticated UI now passes _(session `a1c8b9cf`)_
+  - `.claude/skills/f2a-qa/SKILL.md`
+  - `apps/backend/supabase/migrations/20261007000000_drop_legacy_job_function_overloads.sql`
+  - `docs/QA.md`
+  - `qa/run-qa.sh`
+  - `qa/seed-qa-account.sh`
 - `17:41` -- feat(scraper): scan fast parsers before slow LLM-parsed custom boards _(session `a7f70073`)_
   - `libraries/scraper/src/__tests__/scanOrder.test.ts`
   - `libraries/scraper/src/jobScanner.ts`
