@@ -1,12 +1,11 @@
 // LinkedIn connections import. CSV parsing runs in the renderer, Save upserts into the
 // per-user `connections` table (re-importing updates people, it never deletes anyone).
-
-import { Button, Label } from '@first2apply/ui';
-import { companyKey } from '@first2apply/core';
 import { useMemo, useState } from 'react';
 
-import { saveConnections, type SaveConnectionsResult } from '@/lib/electronMainSdk';
-import { parseConnectionsCsv, type Connection } from '@/server/connections/csv';
+import { type SaveConnectionsResult, saveConnections } from '@/lib/electronMainSdk';
+import { type Connection, parseConnectionsCsv } from '@/server/connections/csv';
+import { companyKey } from '@first2apply/core';
+import { Button, Label } from '@first2apply/ui';
 
 import { DefaultLayout } from './defaultLayout';
 
@@ -96,7 +95,8 @@ export function ConnectionsPage() {
             {result && (
               <p className="text-sm" data-testid="save-result">
                 Saved {result.saved}: {result.created} new, {result.updated} updated
-                {result.skippedNoUrl > 0 && `, ${result.skippedNoUrl} skipped (no profile URL)`}.
+                {result.skippedNoUrl > 0 && `, ${result.skippedNoUrl} skipped (no profile URL)`}
+                {result.duplicatesDropped > 0 && `, ${result.duplicatesDropped} duplicates ignored`}.
               </p>
             )}
             <div className="max-h-64 overflow-auto rounded border text-xs">

@@ -9,8 +9,8 @@ import { Job } from '@first2apply/core';
 import { JobCard, useSites } from '@first2apply/ui';
 import { useLinks } from '@first2apply/ui';
 
-import { ContactBadge } from './jobContacts';
 import { DeleteJobDialog } from './deleteJobDialog';
+import { ContactBadge } from './jobContacts';
 
 /**
  * List of jobs component.

@@ -830,7 +830,9 @@ export async function tailorCv(jobId: number): Promise<{ tailored_cv?: string }>
   return _mainProcessApiCall('tailor-cv', { jobId });
 }
 
-export type SaveConnectionsResult = { saved: number; created: number; updated: number; skippedNoUrl: number };
+export type SaveConnectionsResult = { saved: number; created: number; updated: number; skippedNoUrl: number;
+  duplicatesDropped: number;
+};
 
 export async function saveConnections(
   rows: Array<{
