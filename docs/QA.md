@@ -2,11 +2,11 @@
 
 Entry point: `qa/run-qa.sh <fast|unit|ui|all>` (or `pnpm qa`, `pnpm qa:fast`, `pnpm qa:unit`, `pnpm qa:ui`).
 
-| Tier | Checks | Typical time |
-|------|--------|--------------|
-| fast | backend `deno check` vs baseline, desktop `tsc`, prettier on changed backend files | 3s |
-| unit | `deno test` jobListParser, desktop vitest | 5s |
-| ui | Playwright smoke and authenticated specs against the packaged desktop app | 10s (plus a one-time package build) |
+| Tier | Checks                                                                             | Typical time                        |
+| ---- | ---------------------------------------------------------------------------------- | ----------------------------------- |
+| fast | backend `deno check` vs baseline, desktop `tsc`, prettier on changed backend files | 3s                                  |
+| unit | `deno test` jobListParser, desktop vitest                                          | 5s                                  |
+| ui   | Playwright smoke and authenticated specs against the packaged desktop app          | 10s (plus a one-time package build) |
 
 A run fails only on NEW failures. Known failures live in `qa/known-failures.json` with a reason each.
 
@@ -24,7 +24,7 @@ We use the packaged app (`apps/desktopProbe/out`, built by `pnpm --filter first2
 
 ## Authenticated specs
 
-Set `F2A_QA_EMAIL` and `F2A_QA_PASSWORD` in the shell, and package with a real `apps/desktopProbe/.env`. Otherwise those specs SKIP. Never commit credentials.
+The runner loads the QA login from the macOS Keychain (service `f2a-qa`) when `F2A_QA_EMAIL`/`F2A_QA_PASSWORD` are not set, and the app is packaged with the real `apps/desktopProbe/.env`. Otherwise those specs SKIP. Never commit credentials.\n\nThe QA account and its fixture data (4 jobs, 1 never-scanned search, `career_ops_enabled`) are created by `qa/seed-qa-account.sh`, which needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (the Pi has both in `/opt/first2apply-mono/apps/backend/supabase/functions/.env`). It is idempotent.
 
 ## Reports
 

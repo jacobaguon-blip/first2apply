@@ -36,7 +36,7 @@ pnpm qa                      # all tiers
 
 ## Auth env vars (optional)
 
-- `F2A_QA_EMAIL` and `F2A_QA_PASSWORD` enable `qa/ui/02-authenticated.spec.ts` (log in, visit every main page, check the sort control and location filter, screenshot each page).
+- The runner loads `F2A_QA_EMAIL` and `F2A_QA_PASSWORD` from the macOS Keychain (service `f2a-qa`) when unset. Recreate the account and its fixtures with `qa/seed-qa-account.sh` (needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`). They enable `qa/ui/02-authenticated.spec.ts` (log in, visit every main page, check the sort control and location filter, screenshot each page).
 - They also need a build against a real backend, so keep a real `apps/desktopProbe/.env` in place when packaging.
 - Pass them in the shell environment only. Never write credentials into files.
 - Without them those specs report SKIP, not FAIL.

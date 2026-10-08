@@ -11,7 +11,7 @@ test.describe.configure({ mode: 'serial' });
 
 // Real routes from apps/desktopProbe/src/app.tsx and nav labels from components/navbar.tsx.
 const PAGES: Array<{ name: string; path: string; heading: RegExp }> = [
-  { name: 'jobs', path: '/', heading: /Jobs|New|Applied|Archived/ },
+  { name: 'jobs', path: '/', heading: /Be the|New|Applied|Archived/ },
   { name: 'searches', path: '/links', heading: /Job Searches/ },
   { name: 'ai-filters', path: '/filters', heading: /Advanced Matching/ },
   { name: 'settings', path: '/settings', heading: /Settings/ },
@@ -39,8 +39,10 @@ test.describe('desktop authenticated pages', () => {
     test(`page renders without error: ${p.name}`, async () => {
       const { page, pageErrors } = ctx;
       const before = pageErrors.length;
-      await page.locator(`nav a[href="${p.path}"]`).click();
-      await expect(page.getByText(p.heading).first()).toBeVisible();
+      // "/" matches both the logo link and the Jobs link, the nav entry is the last match
+      await page.locator(`nav a[href="${p.path}"]`).last().click();
+      // nav labels are hidden below the 2xl breakpoint, so only count visible matches
+      await expect(page.getByText(p.heading).filter({ visible: true }).first()).toBeVisible();
       await expect(page.getByText('Something went wrong')).toHaveCount(0);
       await expect(page.getByText('Page not found')).toHaveCount(0);
       await page.waitForTimeout(1000);
@@ -56,14 +58,17 @@ test.describe('desktop authenticated pages', () => {
 
   test('jobs list has the sort control and location filter', async () => {
     const { page } = ctx;
-    await page.locator('nav a[href="/"]').click();
+    await page.locator('nav a[href="/"]').last().click();
     await page.waitForTimeout(2000);
 
     // Sort control: button labelled "Sort: <mode>" in the Fit bar (jobTabsContent.tsx).
-    // The bar only renders when the active tab has jobs.
+    // The bar only renders for career-ops accounts with jobs in the active tab.
     const sortButton = page.getByRole('button', { name: /^Sort:/ });
     if ((await sortButton.count()) === 0) {
-      test.skip(true, 'jobs list is empty for this account, sort control is not rendered without jobs');
+      test.skip(
+        true,
+        'sort control not rendered: the account needs jobs, a search (link), and profiles.career_ops_enabled, see qa/seed-qa-account.sh',
+      );
     }
     await expect(sortButton).toBeVisible();
     await sortButton.click();
@@ -77,7 +82,10 @@ test.describe('desktop authenticated pages', () => {
     const total = await triggers.count();
     let found = false;
     for (let i = 0; i < total && !found; i++) {
-      await triggers.nth(i).click({ trial: false }).catch(() => undefined);
+      await triggers
+        .nth(i)
+        .click({ trial: false })
+        .catch(() => undefined);
       found = await page
         .getByRole('menuitem', { name: 'Location' })
         .isVisible()

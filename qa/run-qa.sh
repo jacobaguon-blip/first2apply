@@ -41,6 +41,19 @@ row() { # tier check status detail
   return 0
 }
 have() { command -v "$1" > /dev/null 2>&1; }
+# Load the QA login from the macOS Keychain (service "f2a-qa") when not set in the environment.
+load_qa_credentials() {
+  [ -n "${F2A_QA_EMAIL:-}" ] && return 0
+  have security || return 0
+  local entry
+  entry="$(security find-generic-password -s f2a-qa 2> /dev/null)" || return 0
+  F2A_QA_EMAIL="$(printf '%s\n' "$entry" | sed -n 's/.*"acct"<blob>="\(.*\)"/\1/p' | head -1)"
+  F2A_QA_PASSWORD="$(security find-generic-password -s f2a-qa -w 2> /dev/null)" || F2A_QA_PASSWORD=""
+  [ -n "$F2A_QA_EMAIL" ] && [ -n "$F2A_QA_PASSWORD" ] && export F2A_QA_EMAIL F2A_QA_PASSWORD
+  return 0
+}
+load_qa_credentials
+
 log() { printf '%s\n' "$*" >&2; }
 
 # -{74}-------------------- helpers
