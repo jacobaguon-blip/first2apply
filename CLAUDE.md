@@ -154,7 +154,7 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
   from `@first2apply/core`, so there is no third mirror.
 - **Desktop UI** → `apps/desktopProbe/src/pages/` + `components/`.
 - **Release / changelog** → `CHANGELOG.md`, release-it conventional commits (`chore(release): …`).
-- **Decisions / history** → `decisions.md`, `BACKLOG.md`, `troubleshooting/<date>-<slug>/`.
+- **Decisions / history** → `decisions.md`, `docs/BACKLOG.md` (the only backlog, used by `/feature-bug`), `troubleshooting/<date>-<slug>/`.
 
 ## Maintaining this file
 
