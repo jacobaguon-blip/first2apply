@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `12:49` -- feat(core): companyKey twin of the SQL function, shared fixtures, parity script _(session `2ce4f342`)_
+  - `apps/backend/scripts/company-key-parity.mjs`
+  - `libraries/core/src/__fixtures__/companyKey.fixtures.json`
+  - `libraries/core/src/__tests__/companyKey.test.ts`
+  - `libraries/core/src/companyKey.ts`
+  - `libraries/core/src/index.deno.ts`
 - `12:27` -- docs(plans): referral and contacts surfacing implementation plan _(session `1133dd6d`)_
   - `docs/plans/2026-10-08-referral-contacts.md`
 - `12:10` -- docs(plans): referral and contacts surfacing design _(session `1133dd6d`)_
