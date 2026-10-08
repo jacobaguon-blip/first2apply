@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `12:10` -- docs(plans): referral and contacts surfacing design _(session `1133dd6d`)_
+  - `docs/plans/2026-10-08-referral-contacts-design.md`
 - `11:38` -- docs(backlog): merge root BACKLOG.md into docs/BACKLOG.md, the one /feature-bug files into _(session `af9bfb03`)_
   - `BACKLOG.md`
   - `CLAUDE.md`
