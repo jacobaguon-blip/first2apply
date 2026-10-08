@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `13:02` -- feat(desktop): save LinkedIn connections, add Contacts page route and nav item _(session `f97d2645`)_
+  - `apps/desktopProbe/src/app.tsx`
+  - `apps/desktopProbe/src/components/navbar.tsx`
+  - `apps/desktopProbe/src/pages/connections.tsx`
 - `12:59` -- feat(desktop): IPC for saving connections and counting job contacts _(session `f97d2645`)_
   - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
   - `apps/desktopProbe/src/server/rendererIpcApi.ts`
