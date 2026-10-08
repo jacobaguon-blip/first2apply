@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-08
+- `12:59` -- feat(desktop): IPC for saving connections and counting job contacts _(session `f97d2645`)_
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
 - `12:41` -- feat(db): referral contacts tables, company_key, contact queries _(session `1133dd6d`)_
   - `apps/backend/supabase/migrations/20261008000000_referral_contacts.sql`
 - `12:49` -- feat(core): companyKey twin of the SQL function, shared fixtures, parity script _(session `2ce4f342`)_
