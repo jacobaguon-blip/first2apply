@@ -4,9 +4,14 @@ import { referralDraftSystemPrompt } from './careerOpsPrompts.ts';
 type ChatClient = {
   chat: {
     completions: {
-      create: (args: Record<string, unknown>) => Promise<{
+      // Method syntax keeps parameter checking bivariant, so the real OpenAI client is assignable.
+      create(args: {
+        model: string;
+        temperature?: number;
+        messages: Array<{ role: 'system' | 'user'; content: string }>;
+      }): Promise<{
         choices: Array<{ finish_reason?: string | null; message: { content: string | null } }>;
-        usage?: unknown;
+        usage?: { prompt_tokens?: number; completion_tokens?: number };
       }>;
     };
   };
