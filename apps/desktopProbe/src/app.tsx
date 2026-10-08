@@ -22,6 +22,7 @@ import { AppStateProvider } from './hooks/appState';
 import { SessionProvider } from './hooks/session';
 import { SettingsProvider } from './hooks/settings';
 import { electronApiSdk } from './lib/electronMainSdk';
+import { ConnectionsPage } from './pages/connections';
 import { FeedbackPage } from './pages/feedback';
 import { FiltersPage } from './pages/filters';
 import { ForgotPasswordPage } from './pages/forgotPassword';
@@ -91,6 +92,7 @@ const router = createMemoryRouter(
       <Route path="/filters" element={<AuthGuardedComponent component={FiltersPage} />} />
       <Route path="/master-content" element={<AuthGuardedComponent component={MasterContentPage} />} />
       <Route path="/my-cv" element={<AuthGuardedComponent component={MyCvPage} />} />
+      <Route path="/connections" element={<AuthGuardedComponent component={ConnectionsPage} />} />
       <Route path="/settings" element={<AuthGuardedComponent component={SettingsPage} />} />
       <Route path="/help" element={<AuthGuardedComponent component={HelpPage} />} />
       <Route path="/feedback" element={<AuthGuardedComponent component={FeedbackPage} />} />

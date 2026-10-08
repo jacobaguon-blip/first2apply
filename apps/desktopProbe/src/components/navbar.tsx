@@ -9,7 +9,7 @@ import {
   QuestionMarkCircledIcon,
   SunIcon,
 } from '@radix-ui/react-icons';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Users } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { Icons } from '@/components/icons';
@@ -70,6 +70,11 @@ export function Navbar() {
           },
         ]
       : []),
+    {
+      name: 'Contacts',
+      path: '/connections',
+      icon: <Users className="h-7 w-7" />,
+    },
     {
       name: 'Feedback',
       path: '/feedback',

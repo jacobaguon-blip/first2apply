@@ -2,6 +2,7 @@ import {
   AiFilterProfile,
   First2ApplyApiSdk,
   Job,
+  JobContact,
   JobLabel,
   JobSite,
   JobStatus,
@@ -827,6 +828,31 @@ export async function parseCv(args: {
 
 export async function tailorCv(jobId: number): Promise<{ tailored_cv?: string }> {
   return _mainProcessApiCall('tailor-cv', { jobId });
+}
+
+export type SaveConnectionsResult = { saved: number; created: number; updated: number; skippedNoUrl: number };
+
+export async function saveConnections(
+  rows: Array<{
+    firstName: string;
+    lastName: string;
+    url: string;
+    company: string;
+    position: string;
+    connectedOnIso: string | null;
+  }>,
+): Promise<SaveConnectionsResult> {
+  return _mainProcessApiCall('save-connections', { rows });
+}
+
+export async function countJobContacts(
+  jobIds: number[],
+): Promise<{ rows: Array<{ job_id: number; contact_count: number }> }> {
+  return _mainProcessApiCall('count-job-contacts', { jobIds });
+}
+
+export async function getJobContacts(jobId: number): Promise<{ contacts: JobContact[] }> {
+  return _mainProcessApiCall('get-job-contacts', { jobId });
 }
 
 export type JobEvaluationBlocks = {

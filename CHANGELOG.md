@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `apps/backend/supabase/functions/_shared/referralDraft.test.ts`
   - `apps/backend/supabase/migrations/20261008000000_referral_contacts.sql`
   - `libraries/core/src/__fixtures__/companyKey.fixtures.json`
+- `13:05` -- feat(desktop): contacts badge on job cards and People you know here panel _(session `e7409b12`)_
+  - `apps/desktopProbe/src/components/home/jobContacts.tsx`
+  - `apps/desktopProbe/src/components/home/jobTabsContent.tsx`
+  - `apps/desktopProbe/src/components/home/jobsList.tsx`
+  - `libraries/ui/src/components/jobs/jobCard.tsx`
+- `13:02` -- feat(desktop): save LinkedIn connections, add Contacts page route and nav item _(session `f97d2645`)_
+  - `apps/desktopProbe/src/app.tsx`
+  - `apps/desktopProbe/src/components/navbar.tsx`
+  - `apps/desktopProbe/src/pages/connections.tsx`
+- `12:59` -- feat(desktop): IPC for saving connections and counting job contacts _(session `f97d2645`)_
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
 - `12:41` -- feat(db): referral contacts tables, company_key, contact queries _(session `1133dd6d`)_
   - `apps/backend/supabase/migrations/20261008000000_referral_contacts.sql`
 - `12:49` -- feat(core): companyKey twin of the SQL function, shared fixtures, parity script _(session `2ce4f342`)_

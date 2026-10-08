@@ -9,6 +9,7 @@ import { Job } from '@first2apply/core';
 import { JobCard, useSites } from '@first2apply/ui';
 import { useLinks } from '@first2apply/ui';
 
+import { ContactBadge } from './jobContacts';
 import { DeleteJobDialog } from './deleteJobDialog';
 
 /**
@@ -17,6 +18,7 @@ import { DeleteJobDialog } from './deleteJobDialog';
 export function JobsList({
   jobs,
   evaluations,
+  contactCounts,
   selectedJobId,
   hasMore,
   parentContainerId,
@@ -28,6 +30,7 @@ export function JobsList({
 }: {
   jobs: Job[];
   evaluations?: Map<number, JobEvaluationRow>;
+  contactCounts?: Map<number, number>;
   selectedJobId?: number;
   hasMore: boolean;
   parentContainerId: string;
@@ -149,6 +152,7 @@ export function JobsList({
                     {job.location ? ` · ${job.location}` : ''}
                   </p>
                 </div>
+                <ContactBadge count={contactCounts?.get(job.id) ?? 0} />
                 <FitChip evaluation={evaluations?.get(job.id)} />
                 <span className="shrink-0 whitespace-nowrap text-xs text-foreground/70">
                   {getRelativeTimeString(new Date(job.created_at))}
@@ -164,7 +168,14 @@ export function JobsList({
               ref={itemRefs[index]}
               onClick={() => onSelect(job)}
             >
-              <JobCard job={job} siteMap={siteMap} siteLogos={siteLogos} onArchive={onArchive} onDelete={onDelete} />
+              <JobCard
+                job={job}
+                siteMap={siteMap}
+                siteLogos={siteLogos}
+                onArchive={onArchive}
+                onDelete={onDelete}
+                companyBadge={<ContactBadge count={contactCounts?.get(job.id) ?? 0} />}
+              />
 
               <hr className="mt-6 w-full border-muted" />
             </li>

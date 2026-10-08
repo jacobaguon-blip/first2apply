@@ -927,6 +927,81 @@ export function initRendererIpcApi({
     }),
   );
 
+  ipcMain.handle(
+    'save-connections',
+    async (
+      _e,
+      {
+        rows,
+      }: {
+        rows: Array<{
+          firstName: string;
+          lastName: string;
+          url: string;
+          company: string;
+          position: string;
+          connectedOnIso: string | null;
+        }>;
+      },
+    ) =>
+      _apiCall(async () => {
+        const supabase = supabaseApi.getSupabaseClient();
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) throw userError ?? new Error('not signed in');
+        const userId = userData.user.id;
+
+        const usable = rows.filter((r) => r.url.trim() !== '');
+        const skippedNoUrl = rows.length - usable.length;
+        const now = new Date().toISOString();
+        const payload = usable.map((r) => ({
+          user_id: userId,
+          first_name: r.firstName,
+          last_name: r.lastName,
+          linkedin_url: r.url.trim(),
+          company: r.company,
+          position_title: r.position,
+          connected_on: r.connectedOnIso,
+          updated_at: now,
+        }));
+
+        // Existing urls tell us how many rows were updates versus new people.
+        const { data: existing, error: existingError } = await supabase
+          .from('connections')
+          .select('linkedin_url')
+          .eq('user_id', userId);
+        if (existingError) throw existingError;
+        const known = new Set((existing ?? []).map((e: { linkedin_url: string }) => e.linkedin_url));
+
+        for (let i = 0; i < payload.length; i += 500) {
+          const { error } = await supabase
+            .from('connections')
+            .upsert(payload.slice(i, i + 500), { onConflict: 'user_id,linkedin_url' });
+          if (error) throw error;
+        }
+        const updated = payload.filter((p) => known.has(p.linkedin_url)).length;
+        return { saved: payload.length, created: payload.length - updated, updated, skippedNoUrl };
+      }),
+  );
+
+  ipcMain.handle('count-job-contacts', async (_e, { jobIds }: { jobIds: number[] }) =>
+    _apiCall(async () => {
+      if (jobIds.length === 0) return { rows: [] as Array<{ job_id: number; contact_count: number }> };
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data, error } = await supabase.rpc('count_job_contacts', { p_job_ids: jobIds });
+      if (error) throw error;
+      return { rows: (data ?? []) as Array<{ job_id: number; contact_count: number }> };
+    }),
+  );
+
+  ipcMain.handle('get-job-contacts', async (_e, { jobId }: { jobId: number }) =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data, error } = await supabase.rpc('get_job_contacts', { p_job_id: jobId });
+      if (error) throw error;
+      return { contacts: data ?? [] };
+    }),
+  );
+
   ipcMain.handle('list-job-evaluations', async (_e, { jobIds }: { jobIds: number[] }) =>
     _apiCall(async () => {
       if (!jobIds || jobIds.length === 0) return { rows: [] };

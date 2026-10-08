@@ -9,6 +9,7 @@ import { useSession } from '@/hooks/session';
 import { useSettings } from '@/hooks/settings';
 import {
   batchEvaluateJobs,
+  countJobContacts,
   getJobById,
   listJobEvaluations,
   listJobs,
@@ -43,6 +44,7 @@ import { BrowserWindow, BrowserWindowHandle } from '../browserWindow';
 import { JobDetails } from './jobDetails';
 import { JobFilters } from './jobFilters';
 import { JobFiltersType } from './jobFilters/jobFiltersMenu';
+import { JobContactsPanel } from './jobContacts';
 import { JobNotes } from './jobNotes';
 import { JobListing } from './jobTabs';
 import { JobsList } from './jobsList';
@@ -122,6 +124,28 @@ export function JobTabsContent({
       cancelled = true;
     };
   }, [careerOpsEnabled, listing.jobs.map((j) => j.id).join(',')]);
+
+  // Contact counts per job (no career-ops gate, the badge works without it).
+  const [contactCounts, setContactCounts] = useState<Map<number, number>>(new Map());
+
+  useEffect(() => {
+    if (listing.jobs.length === 0) return;
+    const ids = listing.jobs.map((j) => j.id);
+    let cancelled = false;
+    countJobContacts(ids)
+      .then((r) => {
+        if (cancelled) return;
+        setContactCounts((prev) => {
+          const next = new Map(prev);
+          for (const row of r.rows) next.set(row.job_id, row.contact_count);
+          return next;
+        });
+      })
+      .catch((): void => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [listing.jobs.map((j) => j.id).join(',')]);
 
   // When sort=fit, reorder the loaded page in-memory by score desc. Unscored jobs sink.
   const visibleJobs = useMemo(() => {
@@ -534,6 +558,7 @@ export function JobTabsContent({
                   <JobsList
                     jobs={visibleJobs}
                     evaluations={evaluations}
+                    contactCounts={contactCounts}
                     selectedJobId={selectedJobId}
                     hasMore={listing.hasMore}
                     parentContainerId="jobsList"
@@ -578,6 +603,7 @@ export function JobTabsContent({
                         onUpdateLabels={onUpdateJobLabels}
                         onOpenUrl={onOpenUrl}
                       />
+                      {careerOpsEnabled && <JobContactsPanel jobId={selectedJob.id} />}
                       <JobNotes jobId={selectedJobId} />
                       <hr className="border-t border-muted" />
                       <JobDetails job={selectedJob} isScrapingDescription={!!selectedJob.isLoadingJD}></JobDetails>
