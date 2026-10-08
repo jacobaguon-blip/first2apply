@@ -7,6 +7,7 @@ import {
 } from "../ui/tooltip"
 import { Button } from "../ui/button"
 import { ArchiveIcon, TrashIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import { LABEL_COLOR_CLASSES } from "../../lib/labels"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 
@@ -16,6 +17,8 @@ export type JobCardProps = {
   siteLogos: Record<number, string>
   onArchive: (job: Job) => void
   onDelete: (job: Job) => void
+  /** Optional slot rendered next to the company name (for example a contacts badge). */
+  companyBadge?: ReactNode
 }
 export function JobCard({
   job,
@@ -23,14 +26,16 @@ export function JobCard({
   siteLogos,
   onArchive,
   onDelete,
+  companyBadge,
 }: JobCardProps) {
   return (
     <>
       <div className="flex flex-wrap-reverse items-center justify-between gap-1.5">
         {/* Company Name */}
-        <p className="my-1.5 text-xs text-muted-foreground">
-          {job.companyName}
-        </p>
+        <div className="my-1.5 flex items-center gap-2">
+          <p className="text-xs text-muted-foreground">{job.companyName}</p>
+          {companyBadge}
+        </div>
 
         {/* Action buttons */}
         <div className="ml-auto flex items-center gap-2">
