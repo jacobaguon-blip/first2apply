@@ -29,12 +29,23 @@ const LEGAL_SUFFIXES = new Set([
 
 export function companyKey(name?: string | null): string {
   if (!name) return '';
-  let s = name.toLowerCase();
-  s = s.replace(/\bco-?op\b/g, ' ');
-  s = s.replace(/\bcooperative\b/g, ' ');
-  s = s.replace(/&/g, ' and ');
-  s = s.replace(/[^a-z0-9]+/g, ' ');
-  let tokens = s.split(/\s+/).filter(Boolean);
+  const s = name
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, ' ');
+  const raw = s.split(/\s+/).filter(Boolean);
+  // Drop co-op words on whole tokens, not regex word boundaries, so this matches the SQL twin
+  // for non-ASCII text: "co" "op", "coop", "cooperative".
+  let tokens: string[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] === 'co' && raw[i + 1] === 'op') {
+      i += 1;
+    } else if (raw[i] === 'coop' || raw[i] === 'cooperative') {
+      continue;
+    } else {
+      tokens.push(raw[i]);
+    }
+  }
   if (tokens.length > 1 && tokens[0] === 'the') tokens = tokens.slice(1);
   while (tokens.length > 1 && LEGAL_SUFFIXES.has(tokens[tokens.length - 1])) {
     tokens = tokens.slice(0, -1);

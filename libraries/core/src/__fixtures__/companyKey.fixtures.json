@@ -1,17 +1,90 @@
 [
-  { "input": "REI Co-op", "key": "rei" },
-  { "input": "REI, Inc.", "key": "rei" },
-  { "input": "The Home Depot, Inc.", "key": "home depot" },
-  { "input": "Acme Corp.", "key": "acme" },
-  { "input": "Acme Corporation Ltd", "key": "acme" },
-  { "input": "Ford Motor Company", "key": "ford motor" },
-  { "input": "The Coca-Cola Company", "key": "coca cola" },
-  { "input": "AT&T", "key": "at and t" },
-  { "input": "Johnson & Johnson", "key": "johnson and johnson" },
-  { "input": "Meta Platforms, Inc.", "key": "meta platforms" },
-  { "input": "Metaverse Labs", "key": "metaverse labs" },
-  { "input": "  Stripe  ", "key": "stripe" },
-  { "input": "Inc.", "key": "inc" },
-  { "input": "", "key": "" },
-  { "input": null, "key": "" }
+  {
+    "input": "REI Co-op",
+    "key": "rei"
+  },
+  {
+    "input": "REI, Inc.",
+    "key": "rei"
+  },
+  {
+    "input": "The Home Depot, Inc.",
+    "key": "home depot"
+  },
+  {
+    "input": "Acme Corp.",
+    "key": "acme"
+  },
+  {
+    "input": "Acme Corporation Ltd",
+    "key": "acme"
+  },
+  {
+    "input": "Ford Motor Company",
+    "key": "ford motor"
+  },
+  {
+    "input": "The Coca-Cola Company",
+    "key": "coca cola"
+  },
+  {
+    "input": "AT&T",
+    "key": "at and t"
+  },
+  {
+    "input": "Johnson & Johnson",
+    "key": "johnson and johnson"
+  },
+  {
+    "input": "Meta Platforms, Inc.",
+    "key": "meta platforms"
+  },
+  {
+    "input": "Metaverse Labs",
+    "key": "metaverse labs"
+  },
+  {
+    "input": "  Stripe  ",
+    "key": "stripe"
+  },
+  {
+    "input": "Inc.",
+    "key": "inc"
+  },
+  {
+    "input": "",
+    "key": ""
+  },
+  {
+    "input": null,
+    "key": ""
+  },
+  {
+    "input": "Foo Co-op Inc",
+    "key": "foo"
+  },
+  {
+    "input": "Co-op",
+    "key": ""
+  },
+  {
+    "input": "The",
+    "key": "the"
+  },
+  {
+    "input": "Ltd Foo",
+    "key": "ltd foo"
+  },
+  {
+    "input": "Foo Cooperative",
+    "key": "foo"
+  },
+  {
+    "input": "Foo Coop",
+    "key": "foo"
+  },
+  {
+    "input": "Nestlé S.A.",
+    "key": "nestl s a"
+  }
 ]

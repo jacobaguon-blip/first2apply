@@ -70,8 +70,6 @@ Honesty rules:
 - If the JD is sparse, say so in the relevant block instead of fabricating.
 - Be specific. "Strong Python experience" is not specific. "10+ years Python including the FastAPI service at Acme (2021)" is specific.`;
 
-
-
 export const referralDraftSystemPrompt = `You write a short message from a job seeker to someone they already know, asking for a referral or a conversation about a role at that person's company.
 
 Rules:

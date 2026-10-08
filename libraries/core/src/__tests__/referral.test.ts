@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { buildNudgeMessage, DEFAULT_FOLLOW_UP_DAYS, nextOutreachFields, selectDueOutreach } from '../referral';
+import { DEFAULT_FOLLOW_UP_DAYS, buildNudgeMessage, nextOutreachFields, selectDueOutreach } from '../referral';
 
 const NOW = new Date('2026-10-08T12:00:00Z');
 

@@ -22,10 +22,13 @@ for (const { input, key: expected } of fixtures) {
     headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name: input }),
   });
+  if (!res.ok) throw new Error(`rpc failed (${res.status}): ${await res.text()}`);
   const actual = await res.json();
   if (actual !== expected) {
     failures++;
-    console.error(`MISMATCH ${JSON.stringify(input)}: sql=${JSON.stringify(actual)} expected=${JSON.stringify(expected)}`);
+    console.error(
+      `MISMATCH ${JSON.stringify(input)}: sql=${JSON.stringify(actual)} expected=${JSON.stringify(expected)}`,
+    );
   }
 }
 console.log(failures === 0 ? `OK: ${fixtures.length} fixtures match` : `FAILED: ${failures} mismatches`);

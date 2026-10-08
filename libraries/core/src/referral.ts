@@ -50,7 +50,10 @@ export function selectDueOutreach<T extends DueCandidate>(rows: T[], now: Date =
   });
 }
 
-export function buildNudgeMessage(people: Array<{ firstName: string; company: string }>): { title: string; message: string } {
+export function buildNudgeMessage(people: Array<{ firstName: string; company: string }>): {
+  title: string;
+  message: string;
+} {
   const count = people.length;
   const names = people.slice(0, 3).map((p) => `${p.firstName} at ${p.company}`);
   const more = count > 3 ? ` and ${count - 3} more` : '';

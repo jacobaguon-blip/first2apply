@@ -23,7 +23,11 @@ Deno.test('connectionAgeText buckets the time since connecting', () => {
 });
 
 Deno.test('the user message carries only first name, position and company for the contact', () => {
-  const msg = buildReferralUserMessage({ ...input, contactLastName: 'Stone', contactUrl: 'https://linkedin.com/in/x' } as never);
+  const msg = buildReferralUserMessage({
+    ...input,
+    contactLastName: 'Stone',
+    contactUrl: 'https://linkedin.com/in/x',
+  } as never);
   assertStringIncludes(msg, 'Avery');
   assertStringIncludes(msg, 'Engineering Manager');
   assert(!msg.includes('Stone'), 'last name must not be sent to the model');
@@ -39,8 +43,7 @@ const fakeClient = (content: string | null) => ({
   openAi: {
     chat: {
       completions: {
-        create: () =>
-          Promise.resolve({ choices: [{ finish_reason: 'stop', message: { content } }], usage: {} }),
+        create: () => Promise.resolve({ choices: [{ finish_reason: 'stop', message: { content } }], usage: {} }),
       },
     },
   },
