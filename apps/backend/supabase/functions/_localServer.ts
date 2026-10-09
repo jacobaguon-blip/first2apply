@@ -13,14 +13,14 @@
  * `post-scan-hook` is intentionally a no-op locally: it sends email
  * notifications which we don't want from a self-hosted parse server.
  */
-import { handle as scanUrlsHandle } from './scan-urls/index.ts';
-import { handle as scanJobDescriptionHandle } from './scan-job-description/index.ts';
-import { handle as evaluateJobHandle } from './evaluate-job/index.ts';
-import { handle as tailorCvHandle } from './tailor-cv/index.ts';
+import { CORS_HEADERS } from './_shared/cors.ts';
 import { handle as draftReferralHandle } from './draft-referral/index.ts';
+import { handle as evaluateJobHandle } from './evaluate-job/index.ts';
 import { handle as parseCvHandle } from './parse-cv/index.ts';
 import { handle as reapplyFilterProfileHandle } from './reapply-filter-profile/index.ts';
-import { CORS_HEADERS } from './_shared/cors.ts';
+import { handle as scanJobDescriptionHandle } from './scan-job-description/index.ts';
+import { handle as scanUrlsHandle } from './scan-urls/index.ts';
+import { handle as tailorCvHandle } from './tailor-cv/index.ts';
 
 const ok = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -42,7 +42,9 @@ const isAuthorized = (req: Request): boolean => {
   return /^Bearer\s+\S+/.test(auth);
 };
 
-console.log(`[local-fn] starting on :${port} (provider=${Deno.env.get('F2A_AI_PROVIDER') ?? 'local'}, ollama=${Deno.env.get('F2A_OLLAMA_URL') ?? '(default)'}, model=${Deno.env.get('F2A_OLLAMA_MODEL') ?? '(default)'}, bind=0.0.0.0)`);
+console.log(
+  `[local-fn] starting on :${port} (provider=${Deno.env.get('F2A_AI_PROVIDER') ?? 'local'}, ollama=${Deno.env.get('F2A_OLLAMA_URL') ?? '(default)'}, model=${Deno.env.get('F2A_OLLAMA_MODEL') ?? '(default)'}, bind=0.0.0.0)`,
+);
 
 // Bind to all interfaces so the desktop (over Tailscale → tailscale0) and the
 // host-networked probe (loopback) both reach us. The router's bearer gate +
