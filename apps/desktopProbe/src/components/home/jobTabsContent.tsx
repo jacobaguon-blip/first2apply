@@ -8,7 +8,9 @@ import { useError } from '@/hooks/error';
 import { useSession } from '@/hooks/session';
 import { useSettings } from '@/hooks/settings';
 import {
+  type JobEvaluationRow,
   batchEvaluateJobs,
+  countJobContacts,
   getJobById,
   listJobEvaluations,
   listJobs,
@@ -16,7 +18,6 @@ import {
   scanJob,
   updateJobLabels,
   updateJobStatus,
-  type JobEvaluationRow,
 } from '@/lib/electronMainSdk';
 import { Job, JobLabel, JobSortMode, JobStatus, LocationBucket } from '@first2apply/core';
 import {
@@ -31,15 +32,8 @@ import {
 } from '@first2apply/ui';
 import { toast } from '@first2apply/ui';
 
-type SortMode = JobSortMode | 'fit';
-
-const SORT_LABELS: Record<SortMode, string> = {
-  newest_first: 'Newest first',
-  oldest_first: 'Oldest first',
-  fit: 'Best fit',
-};
-
 import { BrowserWindow, BrowserWindowHandle } from '../browserWindow';
+import { JobContactsPanel } from './jobContacts';
 import { JobDetails } from './jobDetails';
 import { JobFilters } from './jobFilters';
 import { JobFiltersType } from './jobFilters/jobFiltersMenu';
@@ -47,6 +41,14 @@ import { JobNotes } from './jobNotes';
 import { JobListing } from './jobTabs';
 import { JobsList } from './jobsList';
 import { JobDetailsSkeleton, JobSummarySkeleton, JobsListSkeleton } from './jobsSkeleton';
+
+type SortMode = JobSortMode | 'fit';
+
+const SORT_LABELS: Record<SortMode, string> = {
+  newest_first: 'Newest first',
+  oldest_first: 'Oldest first',
+  fit: 'Best fit',
+};
 
 const JOB_BATCH_SIZE = 30;
 const ALL_JOB_STATUSES: JobStatus[] = ['new', 'applied', 'archived', 'excluded_by_advanced_matching'];
@@ -122,6 +124,30 @@ export function JobTabsContent({
       cancelled = true;
     };
   }, [careerOpsEnabled, listing.jobs.map((j) => j.id).join(',')]);
+
+  // Contact counts per job (no career-ops gate, the badge works without it).
+  const [contactCounts, setContactCounts] = useState<Map<number, number>>(new Map());
+
+  useEffect(() => {
+    if (listing.jobs.length === 0) return;
+    const ids = listing.jobs.map((j) => j.id);
+    let cancelled = false;
+    countJobContacts(ids)
+      .then((r) => {
+        if (cancelled) return;
+        setContactCounts((prev) => {
+          const next = new Map(prev);
+          // The RPC returns no row for jobs with zero contacts.
+          for (const id of ids) next.set(id, 0);
+          for (const row of r.rows) next.set(row.job_id, row.contact_count);
+          return next;
+        });
+      })
+      .catch((e) => console.warn('countJobContacts failed', e));
+    return () => {
+      cancelled = true;
+    };
+  }, [listing.jobs.map((j) => j.id).join(',')]);
 
   // When sort=fit, reorder the loaded page in-memory by score desc. Unscored jobs sink.
   const visibleJobs = useMemo(() => {
@@ -493,10 +519,7 @@ export function JobTabsContent({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuRadioGroup
-                              value={sortMode}
-                              onValueChange={(v) => onSortChange(v as SortMode)}
-                            >
+                            <DropdownMenuRadioGroup value={sortMode} onValueChange={(v) => onSortChange(v as SortMode)}>
                               <DropdownMenuRadioItem value="newest_first">Newest first</DropdownMenuRadioItem>
                               <DropdownMenuRadioItem value="oldest_first">Oldest first</DropdownMenuRadioItem>
                               <DropdownMenuRadioItem value="fit">Best fit</DropdownMenuRadioItem>
@@ -534,6 +557,7 @@ export function JobTabsContent({
                   <JobsList
                     jobs={visibleJobs}
                     evaluations={evaluations}
+                    contactCounts={contactCounts}
                     selectedJobId={selectedJobId}
                     hasMore={listing.hasMore}
                     parentContainerId="jobsList"
@@ -578,6 +602,7 @@ export function JobTabsContent({
                         onUpdateLabels={onUpdateJobLabels}
                         onOpenUrl={onOpenUrl}
                       />
+                      {careerOpsEnabled && <JobContactsPanel jobId={selectedJob.id} />}
                       <JobNotes jobId={selectedJobId} />
                       <hr className="border-t border-muted" />
                       <JobDetails job={selectedJob} isScrapingDescription={!!selectedJob.isLoadingJD}></JobDetails>

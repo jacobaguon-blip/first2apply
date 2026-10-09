@@ -24,7 +24,7 @@ We use the packaged app (`apps/desktopProbe/out`, built by `pnpm --filter first2
 
 ## Authenticated specs
 
-The runner loads the QA login from the macOS Keychain (service `f2a-qa`) when `F2A_QA_EMAIL`/`F2A_QA_PASSWORD` are not set, and the app is packaged with the real `apps/desktopProbe/.env`. Otherwise those specs SKIP. Never commit credentials.\n\nThe QA account and its fixture data (4 jobs, 1 never-scanned search, `career_ops_enabled`) are created by `qa/seed-qa-account.sh`, which needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (the Pi has both in `/opt/first2apply-mono/apps/backend/supabase/functions/.env`). It is idempotent.
+The runner loads the QA login from the macOS Keychain (service `f2a-qa`) when `F2A_QA_EMAIL`/`F2A_QA_PASSWORD` are not set, and the app is packaged with the real `apps/desktopProbe/.env`. Otherwise those specs SKIP. Never commit credentials.\n\nThe QA account and its fixture data (4 jobs, 1 never-scanned search, 3 connections for `qa/ui/03-referrals.spec.ts`, `career_ops_enabled`) are created by `qa/seed-qa-account.sh`, which needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (the Pi has both in `/opt/first2apply-mono/apps/backend/supabase/functions/.env`). It is idempotent.
 
 ## Reports
 

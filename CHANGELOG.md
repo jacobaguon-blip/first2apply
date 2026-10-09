@@ -8,6 +8,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## 2026-10-08
 - `15:00` -- fix(pi): ollama-on-demand no longer kills Ollama during a slow model load _(session `e2d2003c`)_
   - `deploy/pi/ollama-on-demand.sh`
+- `14:21` -- test(edge): end-to-end check of draft-referral with a fake model against the real database _(session `496aa471`)_
+  - `apps/backend/scripts/draft-referral-e2e.ts`
+- `14:09` -- docs: referral contacts gotchas, scenarios, backlog; seed QA master CV _(session `f3676c69`)_
+  - `CLAUDE.md`
+  - `docs/BACKLOG.md`
+  - `qa/seed-qa-account.sh`
+  - `scenarios.md`
+- `13:38` -- fix(test): rls check removes profile rows before deleting its throwaway users _(session `af9bfb03`)_
+  - `apps/backend/scripts/referral-rls-check.mjs`
+- `13:35` -- test(db): row-level security check for connections and referral_outreach _(session `42123cce`)_
+  - `apps/backend/scripts/referral-rls-check.mjs`
+- `13:14` -- test(qa): seed connections and add referral contacts UI spec _(session `af9bfb03`)_
+  - `.claude/skills/f2a-qa/SKILL.md`
+  - `docs/QA.md`
+  - `qa/seed-qa-account.sh`
+  - `qa/ui/03-referrals.spec.ts`
+- `13:19` -- refactor(referral): move nudge core to scraper, claim before send, bound query, add tests _(session `881ead5a`)_
+  - `apps/serverProbe/src/referralNudge.ts`
+  - `libraries/scraper/src/__tests__/referralNudge.test.ts`
+  - `libraries/scraper/src/index.ts`
+  - `libraries/scraper/src/referralNudge.ts`
+- `13:21` -- feat(desktop): draft referral messages and persist outreach status _(session `af9bfb03`)_
+  - `apps/desktopProbe/src/components/home/jobContacts.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/lib/referralDates.ts`
+  - `apps/desktopProbe/src/server/__tests__/referralDates.test.ts`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
+- `13:27` -- fix(desktop): harden save-connections, dedupe urls, scoped lookup, zero contact counts _(session `af9bfb03`)_
+  - `apps/desktopProbe/src/components/home/jobTabsContent.tsx`
+  - `apps/desktopProbe/src/components/home/jobsList.tsx`
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/pages/connections.tsx`
+  - `apps/desktopProbe/src/server/__tests__/connectionsSave.test.ts`
+- `13:04` -- fix(referrals): review fixes before applying the migration _(session `44ffb7f5`)_
+  - `apps/backend/scripts/company-key-parity.mjs`
+  - `apps/backend/supabase/functions/_shared/careerOpsPrompts.ts`
+  - `apps/backend/supabase/functions/_shared/referralDraft.test.ts`
+  - `apps/backend/supabase/migrations/20261008000000_referral_contacts.sql`
+  - `libraries/core/src/__fixtures__/companyKey.fixtures.json`
+- `13:05` -- feat(desktop): contacts badge on job cards and People you know here panel _(session `e7409b12`)_
+  - `apps/desktopProbe/src/components/home/jobContacts.tsx`
+  - `apps/desktopProbe/src/components/home/jobTabsContent.tsx`
+  - `apps/desktopProbe/src/components/home/jobsList.tsx`
+  - `libraries/ui/src/components/jobs/jobCard.tsx`
+- `13:02` -- feat(desktop): save LinkedIn connections, add Contacts page route and nav item _(session `f97d2645`)_
+  - `apps/desktopProbe/src/app.tsx`
+  - `apps/desktopProbe/src/components/navbar.tsx`
+  - `apps/desktopProbe/src/pages/connections.tsx`
+- `12:59` -- feat(desktop): IPC for saving connections and counting job contacts _(session `f97d2645`)_
+  - `apps/desktopProbe/src/lib/electronMainSdk.tsx`
+  - `apps/desktopProbe/src/server/rendererIpcApi.ts`
+- `13:06` -- feat(probe): daily Pushover nudge for due referral follow-ups _(session `1133dd6d`)_
+  - `apps/serverProbe/package.json`
+  - `apps/serverProbe/src/main.ts`
+  - `apps/serverProbe/src/referralNudge.ts`
+  - `pnpm-lock.yaml`
+- `13:08` -- feat(edge): draft-referral function and Pi router entry _(session `1133dd6d`)_
+  - `apps/backend/supabase/functions/_localServer.ts`
+  - `apps/backend/supabase/functions/_shared/referralDraft.ts`
+  - `apps/backend/supabase/functions/draft-referral/index.ts`
+  - `libraries/core/src/types.ts`
+- `12:41` -- feat(db): referral contacts tables, company_key, contact queries _(session `1133dd6d`)_
+  - `apps/backend/supabase/migrations/20261008000000_referral_contacts.sql`
+- `12:49` -- feat(core): companyKey twin of the SQL function, shared fixtures, parity script _(session `2ce4f342`)_
+  - `apps/backend/scripts/company-key-parity.mjs`
+  - `libraries/core/src/__fixtures__/companyKey.fixtures.json`
+  - `libraries/core/src/__tests__/companyKey.test.ts`
+  - `libraries/core/src/companyKey.ts`
+  - `libraries/core/src/index.deno.ts`
+- `12:52` -- feat(edge): referral draft prompt and generator with tests _(session `8b392147`)_
+  - `.claude/skills/f2a-qa/SKILL.md`
+  - `apps/backend/supabase/functions/_shared/careerOpsPrompts.ts`
+  - `apps/backend/supabase/functions/_shared/referralDraft.test.ts`
+  - `apps/backend/supabase/functions/_shared/referralDraft.ts`
+  - `qa/run-qa.sh`
+- `12:52` -- feat(core): referral status helpers, nudge selection, DbSchema types _(session `1133dd6d`)_
+  - `libraries/core/src/__tests__/referral.test.ts`
+  - `libraries/core/src/index.deno.ts`
+  - `libraries/core/src/index.ts`
+  - `libraries/core/src/referral.ts`
+  - `libraries/core/src/types.ts`
 - `12:27` -- docs(plans): referral and contacts surfacing implementation plan _(session `1133dd6d`)_
   - `docs/plans/2026-10-08-referral-contacts.md`
 - `12:10` -- docs(plans): referral and contacts surfacing design _(session `1133dd6d`)_

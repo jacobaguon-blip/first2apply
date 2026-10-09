@@ -11,6 +11,7 @@ import crypto from 'crypto';
 
 import { IAnalyticsClient } from '../lib/analytics';
 import { F2aAutoUpdater } from './autoUpdater';
+import { chunk, MAX_CONNECTION_ROWS, prepareConnections } from './connectionsSave';
 import { HtmlDownloader } from './htmlDownloader';
 import { JobScanner } from '@first2apply/scraper';
 import { ENV } from '../env';
@@ -924,6 +925,129 @@ export function initRendererIpcApi({
       if (error) throw error;
       if (data?.error) throw new Error(`${data.error.code}: ${data.error.message}`);
       return data;
+    }),
+  );
+
+  ipcMain.handle('draft-referral', async (_e, { jobId, connectionId }: { jobId: number; connectionId: number }) =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data, error } = await supabase.functions.invoke<{
+        outreach?: { id: number; draft: string | null; status: string };
+        error?: { code: string; message: string };
+      }>('draft-referral', { body: { job_id: jobId, connection_id: connectionId } });
+      if (error) throw error;
+      if (data?.error) throw new Error(`${data.error.code}: ${data.error.message}`);
+      return data;
+    }),
+  );
+
+  ipcMain.handle(
+    'update-referral-outreach',
+    async (
+      _e,
+      { jobId, connectionId, patch }: { jobId: number; connectionId: number; patch: Record<string, unknown> },
+    ) =>
+      _apiCall(async () => {
+        const supabase = supabaseApi.getSupabaseClient();
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) throw userError ?? new Error('not signed in');
+        const { data, error } = await supabase
+          .from('referral_outreach')
+          .upsert(
+            { user_id: userData.user.id, job_id: jobId, connection_id: connectionId, ...patch },
+            { onConflict: 'user_id,job_id,connection_id' },
+          )
+          .select()
+          .single();
+        if (error) throw error;
+        return { outreach: data };
+      }),
+  );
+
+  ipcMain.handle(
+    'save-connections',
+    async (
+      _e,
+      {
+        rows,
+      }: {
+        rows: Array<{
+          firstName: string;
+          lastName: string;
+          url: string;
+          company: string;
+          position: string;
+          connectedOnIso: string | null;
+        }>;
+      },
+    ) =>
+      _apiCall(async () => {
+        const supabase = supabaseApi.getSupabaseClient();
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        if (userError || !userData.user) throw userError ?? new Error('not signed in');
+        const userId = userData.user.id;
+
+        if (!Array.isArray(rows)) throw new Error('rows must be an array');
+        if (rows.length > MAX_CONNECTION_ROWS) {
+          throw new Error(`Too many rows (${rows.length}), the limit is ${MAX_CONNECTION_ROWS}`);
+        }
+
+        const prepared = prepareConnections(rows);
+        const now = new Date().toISOString();
+        const payload = prepared.rows.map((r) => ({
+          user_id: userId,
+          first_name: r.firstName,
+          last_name: r.lastName,
+          linkedin_url: r.url,
+          company: r.company,
+          position_title: r.position,
+          connected_on: r.connectedOnIso,
+          updated_at: now,
+        }));
+
+        // Existing urls (only those in the payload) tell us how many rows were updates versus new people.
+        const known = new Set<string>();
+        for (const urls of chunk(payload.map((p) => p.linkedin_url))) {
+          const { data: existing, error: existingError } = await supabase
+            .from('connections')
+            .select('linkedin_url')
+            .eq('user_id', userId)
+            .in('linkedin_url', urls);
+          if (existingError) throw existingError;
+          for (const e of existing ?? []) known.add((e as { linkedin_url: string }).linkedin_url);
+        }
+
+        for (const batch of chunk(payload)) {
+          const { error } = await supabase.from('connections').upsert(batch, { onConflict: 'user_id,linkedin_url' });
+          if (error) throw error;
+        }
+        const updated = payload.filter((p) => known.has(p.linkedin_url)).length;
+        return {
+          saved: payload.length,
+          created: payload.length - updated,
+          updated,
+          skippedNoUrl: prepared.skippedNoUrl,
+          duplicatesDropped: prepared.duplicatesDropped,
+        };
+      }),
+  );
+
+  ipcMain.handle('count-job-contacts', async (_e, { jobIds }: { jobIds: number[] }) =>
+    _apiCall(async () => {
+      if (jobIds.length === 0) return { rows: [] as Array<{ job_id: number; contact_count: number }> };
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data, error } = await supabase.rpc('count_job_contacts', { p_job_ids: jobIds });
+      if (error) throw error;
+      return { rows: (data ?? []) as Array<{ job_id: number; contact_count: number }> };
+    }),
+  );
+
+  ipcMain.handle('get-job-contacts', async (_e, { jobId }: { jobId: number }) =>
+    _apiCall(async () => {
+      const supabase = supabaseApi.getSupabaseClient();
+      const { data, error } = await supabase.rpc('get_job_contacts', { p_job_id: jobId });
+      if (error) throw error;
+      return { contacts: data ?? [] };
     }),
   );
 

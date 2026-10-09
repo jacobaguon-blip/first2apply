@@ -2,6 +2,7 @@ import {
   AiFilterProfile,
   First2ApplyApiSdk,
   Job,
+  JobContact,
   JobLabel,
   JobSite,
   JobStatus,
@@ -395,10 +396,7 @@ export async function getStripeConfig(): Promise<StripeConfig> {
  * Get the current user's quiet-hours / pushover-device settings.
  */
 export async function getUserSettings(): Promise<UserSettings | null> {
-  const { settings } = await _mainProcessApiCall<{ settings: UserSettings | null }>(
-    'get-user-settings',
-    {},
-  );
+  const { settings } = await _mainProcessApiCall<{ settings: UserSettings | null }>('get-user-settings', {});
   return settings;
 }
 
@@ -406,10 +404,7 @@ export async function getUserSettings(): Promise<UserSettings | null> {
  * Upsert the current user's quiet-hours / pushover-device settings.
  */
 export async function upsertUserSettings(patch: UserSettingsUpsert): Promise<UserSettings> {
-  const { settings } = await _mainProcessApiCall<{ settings: UserSettings }>(
-    'upsert-user-settings',
-    { patch },
-  );
+  const { settings } = await _mainProcessApiCall<{ settings: UserSettings }>('upsert-user-settings', { patch });
   return settings;
 }
 
@@ -523,9 +518,9 @@ export type ReapplyFiltersResult = {
   errors: number;
 };
 
-export async function reapplyFilters(
-  { includeExcluded = true }: { includeExcluded?: boolean } = {},
-): Promise<ReapplyFiltersResult> {
+export async function reapplyFilters({
+  includeExcluded = true,
+}: { includeExcluded?: boolean } = {}): Promise<ReapplyFiltersResult> {
   return await _mainProcessApiCall<ReapplyFiltersResult>('reapply-filters', { includeExcluded });
 }
 
@@ -772,10 +767,7 @@ export type ShortcutInstallPayload = {
   expiresAt: number;
 };
 
-export async function startShortcutInstall(args: {
-  endpoint: string;
-  token: string;
-}): Promise<ShortcutInstallPayload> {
+export async function startShortcutInstall(args: { endpoint: string; token: string }): Promise<ShortcutInstallPayload> {
   return _mainProcessApiCall<ShortcutInstallPayload>('start-shortcut-install', args);
 }
 
@@ -810,10 +802,7 @@ export async function getMasterCv(): Promise<MasterCv> {
   return _mainProcessApiCall<MasterCv>('get-master-cv');
 }
 
-export async function saveMasterCv(args: {
-  markdown: string;
-  source_filename?: string | null;
-}): Promise<unknown> {
+export async function saveMasterCv(args: { markdown: string; source_filename?: string | null }): Promise<unknown> {
   return _mainProcessApiCall('save-master-cv', args);
 }
 
@@ -827,6 +816,48 @@ export async function parseCv(args: {
 
 export async function tailorCv(jobId: number): Promise<{ tailored_cv?: string }> {
   return _mainProcessApiCall('tailor-cv', { jobId });
+}
+
+export async function draftReferral(
+  jobId: number,
+  connectionId: number,
+): Promise<{ outreach?: { id: number; draft: string | null; status: string } }> {
+  return _mainProcessApiCall('draft-referral', { jobId, connectionId });
+}
+
+export async function updateReferralOutreach(jobId: number, connectionId: number, patch: Record<string, unknown>) {
+  return _mainProcessApiCall('update-referral-outreach', { jobId, connectionId, patch });
+}
+
+export type SaveConnectionsResult = {
+  saved: number;
+  created: number;
+  updated: number;
+  skippedNoUrl: number;
+  duplicatesDropped: number;
+};
+
+export async function saveConnections(
+  rows: Array<{
+    firstName: string;
+    lastName: string;
+    url: string;
+    company: string;
+    position: string;
+    connectedOnIso: string | null;
+  }>,
+): Promise<SaveConnectionsResult> {
+  return _mainProcessApiCall('save-connections', { rows });
+}
+
+export async function countJobContacts(
+  jobIds: number[],
+): Promise<{ rows: Array<{ job_id: number; contact_count: number }> }> {
+  return _mainProcessApiCall('count-job-contacts', { jobIds });
+}
+
+export async function getJobContacts(jobId: number): Promise<{ contacts: JobContact[] }> {
+  return _mainProcessApiCall('get-job-contacts', { jobId });
 }
 
 export type JobEvaluationBlocks = {

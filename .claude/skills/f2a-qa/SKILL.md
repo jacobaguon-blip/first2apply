@@ -18,7 +18,7 @@ Tiered QA harness in `qa/`. One entry point: `qa/run-qa.sh <tier>`. Exit code is
 | Tier | Run when | Cost | What it does |
 |------|----------|------|--------------|
 | `fast` | before every commit (pre-push runs the full nx typecheck instead) | ~3s | backend `deno check` vs baseline count, desktop `tsc --noEmit`, prettier on changed backend files |
-| `unit` | after any code change, after every merge | ~5s | `deno test` of `jobListParser.test.ts` and `localFetch.test.ts`, desktop vitest |
+| `unit` | after any code change, after every merge | ~5s | `deno test` of `jobListParser.test.ts`, `localFetch.test.ts` and `referralDraft.test.ts`, desktop vitest |
 | `ui` | desktop or library changes, before shipping a build | ~10s plus package time on first run | Playwright against the packaged app |
 | `all` | before merging to master | sum | fast, unit, ui |
 
@@ -36,7 +36,7 @@ pnpm qa                      # all tiers
 
 ## Auth env vars (optional)
 
-- The runner loads `F2A_QA_EMAIL` and `F2A_QA_PASSWORD` from the macOS Keychain (service `f2a-qa`) when unset. Recreate the account and its fixtures with `qa/seed-qa-account.sh` (needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`). They enable `qa/ui/02-authenticated.spec.ts` (log in, visit every main page, check the sort control and location filter, screenshot each page).
+- The runner loads `F2A_QA_EMAIL` and `F2A_QA_PASSWORD` from the macOS Keychain (service `f2a-qa`) when unset. Recreate the account and its fixtures with `qa/seed-qa-account.sh` (needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`). They enable `qa/ui/02-authenticated.spec.ts` (log in, visit every main page, check the sort control and location filter, screenshot each page). The seed also creates 3 connections, which `qa/ui/03-referrals.spec.ts` uses (contact badge, contacts panel, company-name normalization, no panel without contacts). That spec needs the connections table in the cloud project.
 - They also need a build against a real backend, so keep a real `apps/desktopProbe/.env` in place when packaging.
 - Pass them in the shell environment only. Never write credentials into files.
 - Without them those specs report SKIP, not FAIL.
