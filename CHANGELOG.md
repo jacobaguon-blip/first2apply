@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-10-09
+- `08:47` -- style(edge): prettier _localServer.ts (import order and one log line, no behavior change) _(session `795e8de1`)_
+  - `apps/backend/supabase/functions/_localServer.ts`
+
 ## 2026-10-08
 - `15:00` -- fix(pi): ollama-on-demand no longer kills Ollama during a slow model load _(session `e2d2003c`)_
   - `deploy/pi/ollama-on-demand.sh`
