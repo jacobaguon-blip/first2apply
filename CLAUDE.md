@@ -114,6 +114,13 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
 - **Migrations:** `create or replace function` with new params makes an overload, not a replacement. Drop the old
   signature in the same migration. After merging a migration run `supabase migration list` (apps/backend) and
   `supabase db push`; the cloud project can silently lag behind master.
+- **Ollama idle manager:** `ollama-on-demand.timer` (script tracked in `deploy/pi/ollama-on-demand.sh`, installed at
+  `/opt/first2apply/ollama-on-demand.sh`) stops Ollama after 5 idle minutes. A model that is still LOADING is invisible
+  to `/api/ps`, so the old script killed Ollama mid-load and scans wedged (probe `healthz` stale). It now counts recent
+  log activity and a 15 minute post-start grace as activity. If `healthz` says `stale`, check `docker logs ollama` for
+  "client connection closed before llama-server finished loading". Probe scan concurrency is 1 (`F2A_SCAN_CONCURRENCY`
+  in `/opt/first2apply/.env`), the CPU model runs one request at a time. `pi-scanner-1` (project `/opt/dealhawk`) also
+  uses 100%+ CPU on the same Pi.
 
 ## Referral contacts (added 2026-10-08)
 

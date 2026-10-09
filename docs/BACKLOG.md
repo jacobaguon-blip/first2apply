@@ -23,6 +23,7 @@ Last updated: 2026-10-08
 - ~~Resolve pre-existing `chatgpt_prompt` TS errors~~ — verified clean; references type against `AiFilterProfile` (which still has the field), not `AdvancedMatchingConfig`. Backlog item was stale. *Resolved: 2026-05-19.*
 
 ### P3
+- **Probe wedged by Ollama idle manager (fixed 2026-10-09).** See CLAUDE.md Pi ops gotchas. Still open: the 3B model plus the other CPU-heavy `pi-scanner-1` project make scans and drafts slow, a hosted model (cloud provider item above) removes both problems. *Source: session 2026-10-09.*
 - **Referral follow-ups.** Alias management UI for `company_aliases` (the table is empty and only editable by service role), an outreach history view across jobs, and a decision on whether drafting should send contacts to a cloud model (see the cloud AI provider item). *Source: session 2026-10-08.*
 - **Referral drafting latency on the Pi.** The first draft can queue behind scanner parses on the 3B CPU model (the QA draft sat for 10+ minutes). Options: run drafting through a cloud provider, or give interactive calls priority over scan parses. *Source: session 2026-10-08.*
 - **Posted-date sort behind feature flag.** Only enable for Indeed + LinkedIn (the boards that reliably expose posted-date). Requires `posted_date timestamptz` column on `jobs`, parser changes, and a "best effort" UI label. *Source: session 2026-05-28.*
