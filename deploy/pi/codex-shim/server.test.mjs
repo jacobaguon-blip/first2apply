@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, test } from 'node:test';
 
-import { buildPrompt, buildServer, normalizeSchema, stripFences } from './server.mjs';
+import { buildPrompt, buildServer, clampToSchema, normalizeSchema, stripFences } from './server.mjs';
 
 let server, base, dir;
 
@@ -42,7 +42,34 @@ test('normalizeSchema closes objects and requires every property', () => {
 
 test('normalizeSchema unwraps zod optional-nullable and drops unsupported keywords', () => {
   const out = normalizeSchema({ type: 'object', properties: { logo: { anyOf: [{ anyOf: [{ not: {} }, { type: 'string', maxLength: 5 }] }, { type: 'null' }] } } });
-  assert.deepEqual(out.properties.logo, { anyOf: [{ type: 'string' }, { type: 'null' }] });
+  assert.equal(out.properties.logo.anyOf.length, 2);
+  assert.equal(out.properties.logo.anyOf[0].type, 'string');
+  assert.equal(out.properties.logo.anyOf[0].maxLength, undefined);
+  assert.deepEqual(out.properties.logo.anyOf[1], { type: 'null' });
+});
+
+test('normalizeSchema keeps length limits as a description hint', () => {
+  const out = normalizeSchema({ type: 'object', properties: { location: { type: 'string', maxLength: 100, description: 'Where.' }, tags: { type: 'array', maxItems: 5, items: { type: 'string' } } } });
+  assert.equal(out.properties.location.maxLength, undefined);
+  assert.match(out.properties.location.description, /^Where\. Must be at most 100 characters/);
+  assert.match(out.properties.tags.description, /at most 5 items/);
+});
+
+test('clampToSchema trims over-long strings and arrays, through nullable anyOf', () => {
+  const schema = { type: 'object', properties: { jobs: { type: 'array', maxItems: 2, items: { type: 'object', properties: { location: { anyOf: [{ type: 'string', maxLength: 10 }, { type: 'null' }] }, tags: { type: 'array', items: { type: 'string', maxLength: 3 } } } } } } };
+  const out = clampToSchema({ jobs: [{ location: 'Denver, CO; Austin, TX', tags: ['abcdef'] }, { location: null, tags: [] }, { location: 'x', tags: [] }] }, schema);
+  assert.equal(out.jobs.length, 2);
+  assert.equal(out.jobs[0].location, 'Denver, CO');
+  assert.deepEqual(out.jobs[0].tags, ['abc']);
+  assert.equal(out.jobs[1].location, null);
+});
+
+test('json_schema replies are clamped end to end', async () => {
+  process.env.STUB_REPLY = '{"loc":"abcdefghij"}';
+  const res = await post({ messages: [{ role: 'user', content: 'x' }], response_format: { type: 'json_schema', json_schema: { name: 'T', schema: { type: 'object', properties: { loc: { type: 'string', maxLength: 4 } } } } } });
+  const json = await res.json();
+  delete process.env.STUB_REPLY;
+  assert.equal(json.choices[0].message.content, '{"loc":"abcd"}');
 });
 
 test('stripFences and buildPrompt', () => {

@@ -44,6 +44,13 @@ export function normalizeSchema(node) {
       .filter(([k]) => !UNSUPPORTED_KEYWORDS.includes(k))
       .map(([k, v]) => [k, normalizeSchema(v)]),
   );
+  // Strict mode rejects the limits, but the edge's zod parse still enforces them and drops the whole
+  // chunk on a violation (a 100+ char location did exactly that). Keep them as a hint the model can read.
+  const hints = [];
+  if (node.maxLength !== undefined) hints.push(`at most ${node.maxLength} characters, shorten or abbreviate if needed`);
+  if (node.minLength !== undefined) hints.push(`at least ${node.minLength} characters`);
+  if (node.maxItems !== undefined) hints.push(`at most ${node.maxItems} items`);
+  if (hints.length) out.description = [out.description, `Must be ${hints.join(', ')}.`].filter(Boolean).join(' ');
   if (Array.isArray(out.anyOf)) {
     out.anyOf = out.anyOf.filter((branch) => !isNever(branch));
     if (out.anyOf.length === 1) {
@@ -56,6 +63,31 @@ export function normalizeSchema(node) {
     out.required = Object.keys(out.properties);
   }
   return out;
+}
+
+/**
+ * Strict mode cannot carry size limits, and a low-effort model ignores the description hint, so enforce the
+ * original schema's maxLength and maxItems on the reply. Trimming an over-long location is harmless; letting
+ * it through makes the edge's zod parse drop the whole chunk.
+ */
+export function clampToSchema(value, schema) {
+  if (!schema || value === null || value === undefined) return value;
+  if (Array.isArray(schema.anyOf)) {
+    const kind = Array.isArray(value) ? 'array' : typeof value === 'object' ? 'object' : typeof value;
+    const branch = schema.anyOf.find((b) => b.type === kind || (kind === 'number' && b.type === 'integer'));
+    return clampToSchema(value, branch);
+  }
+  if (typeof value === 'string' && schema.maxLength !== undefined && value.length > schema.maxLength) {
+    return value.slice(0, schema.maxLength).trimEnd();
+  }
+  if (Array.isArray(value)) {
+    const items = schema.maxItems !== undefined ? value.slice(0, schema.maxItems) : value;
+    return items.map((item) => clampToSchema(item, schema.items));
+  }
+  if (typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, clampToSchema(v, schema.properties?.[k])]));
+  }
+  return value;
 }
 
 const contentToText = (content) =>
@@ -176,7 +208,14 @@ export function buildServer(config = cfg()) {
 
       const started = Date.now();
       const { text, tokens } = await limit(() => runCodex({ prompt, schema, config }));
-      const content = rf ? stripFences(text) : text;
+      let content = rf ? stripFences(text) : text;
+      if (schema) {
+        try {
+          content = JSON.stringify(clampToSchema(JSON.parse(content), schema));
+        } catch {
+          // not JSON, hand it back untouched and let the caller's retry path handle it
+        }
+      }
       console.log(`ok model=${config.model} requested=${body.model} ${Date.now() - started}ms tokens=${tokens}`);
 
       send(res, 200, {
