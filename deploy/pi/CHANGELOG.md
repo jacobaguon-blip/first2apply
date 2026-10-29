@@ -29,6 +29,11 @@ Home Assistant). The owner has a ChatGPT plan with Codex access, so inference mo
 - Ollama stopped: container `ollama` stopped with `--restart=no`, `ollama-on-demand.timer` disabled.
   Left in place on purpose: Docker volume `ollama` (the model files, several GB) and
   `/opt/first2apply/ollama-on-demand.sh` (+ `.pre-load-grace`). Delete them once this change has proven itself.
+- Ollama cannot come back by itself: container restart policy is `no`, `ollama-on-demand.timer` is disabled
+  (the `.service` is `static`, only the timer triggered it, `systemctl mask` is not possible because a real
+  unit file exists), and the Pi's `/opt/first2apply-mono/deploy/compose.local-ai.yaml` and `deploy-local-ai.sh`
+  were replaced with the Ollama-free versions on 2026-10-29. The old files are kept next to them as
+  `*.pre-codex-shim`.
 
 **Measured.**
 - Load average fell from about 22 to 5 within a minute of stopping Ollama. `f2a-server-probe` went
@@ -66,8 +71,8 @@ Home Assistant). The owner has a ChatGPT plan with Codex access, so inference mo
 2. `docker start ollama && docker update --restart=unless-stopped ollama`.
 3. `sudo systemctl enable --now ollama-on-demand.timer`.
 4. Recreate edge: `docker compose -f /opt/first2apply-mono/deploy/compose.local-ai.yaml up -d --no-deps --force-recreate edge`.
-   This needs the pre-change compose file (the Ollama service was removed from the repo copy), so check out
-   the commit before `feat/codex-shim` for `deploy/pi/`. Ollama also needs its idle script back.
+   This needs the pre-change compose file: copy `/opt/first2apply-mono/deploy/compose.local-ai.yaml.pre-codex-shim`
+   back over `compose.local-ai.yaml` first (it still defines Ollama and the `depends_on`).
 
 **Gotchas hit while deploying (save yourself the time).**
 - `deploy-local-ai.sh` runs `docker compose pull`, which hangs for many minutes on a loaded Pi. With
