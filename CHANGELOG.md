@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2026-10-29
+- `12:42` -- chore(pi): retire Ollama, document the Codex shim, add Pi changelog _(session `d59bd595`)_
+  - `CLAUDE.md`
+  - `apps/backend/scripts/draft-referral-e2e.ts`
+  - `apps/backend/supabase/functions/_localServer.ts`
+  - `apps/backend/supabase/functions/_shared/customJobsParser.ts`
+  - `apps/backend/supabase/functions/_shared/env.ts`
+
 ## 2026-10-28
 - `17:20` -- feat(pi): codex shim, OpenAI-compatible server backed by codex exec _(session `3e81a1af`)_
   - `deploy/pi/codex-shim/server.mjs`
