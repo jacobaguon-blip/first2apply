@@ -27,7 +27,7 @@ const fake = Deno.serve({ port: 0, onListen: () => {} }, async (req) => {
 const port = (fake.addr as Deno.NetAddr).port;
 
 Deno.env.set('F2A_AI_PROVIDER', 'local');
-Deno.env.set('F2A_OLLAMA_URL', `http://127.0.0.1:${port}/v1`);
+Deno.env.set('F2A_LLM_URL', `http://127.0.0.1:${port}/v1`);
 Deno.env.set('F2A_WEBHOOK_SECRET', 'e2e');
 const { handle } = await import('../supabase/functions/draft-referral/index.ts');
 

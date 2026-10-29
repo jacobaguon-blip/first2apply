@@ -38,21 +38,21 @@ export function buildOpenAiClient({ modelName }: { modelName?: SupportedModel })
   }
 
   if (env.aiProvider === 'local') {
-    // Route the OpenAI client at a local OpenAI-compatible server (Ollama).
+    // Route the OpenAI client at the local OpenAI-compatible server (the Codex shim).
     // No API key, no per-token cost. The requested gpt-4o/gpt-4o-mini name is
     // mapped to the single local model; call sites stay unchanged.
     const openAi = new OpenAI({
-      baseURL: env.ollamaUrl,
+      baseURL: env.localLlmUrl,
       apiKey: 'local',
-      // Ollama is stopped when idle and started on demand, so wait for it instead of failing the scan.
+      // The shim restarts on deploys, so wait for it instead of failing the scan.
       fetch: buildResilientFetch({
         onRetry: ({ attempt, waitedMs }) =>
           console.log(`local model not reachable yet (attempt ${attempt}, waited ${waitedMs / 1000}s), retrying ...`),
       }) as OpenAiFetch,
     });
-    console.log(`Using local model ${env.ollamaModel} (mapped from ${requestedModel}) via ${env.ollamaUrl}.`);
+    console.log(`Using local model ${env.localLlmModel} (mapped from ${requestedModel}) via ${env.localLlmUrl}.`);
     const llmConfig = {
-      model: env.ollamaModel,
+      model: env.localLlmModel,
       costPerMillionInputTokens: 0,
       costPerMillionOutputTokens: 0,
     };

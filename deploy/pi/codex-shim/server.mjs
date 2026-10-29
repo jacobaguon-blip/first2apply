@@ -3,7 +3,7 @@
  * OpenAI-compatible shim in front of `codex exec`.
  *
  * The edge functions talk to any OpenAI-compatible server through the `local` provider branch in
- * `_shared/openAI.ts` (baseURL = F2A_OLLAMA_URL). This server accepts POST /v1/chat/completions and
+ * `_shared/openAI.ts` (baseURL = F2A_LLM_URL). This server accepts POST /v1/chat/completions and
  * answers it by running `codex exec` signed in with a ChatGPT plan, so inference needs no API key
  * and no local model.
  *

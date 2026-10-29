@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# Idempotent deploy of the local-AI stack (Ollama + self-hosted edge runtime)
+# Idempotent deploy of the local-AI edge runtime
 # on the Pi. Safe to re-run: existing containers are migrated to the compose
 # project on first run; subsequent runs are no-ops if nothing changed.
 #
-#   - Pulls latest deno + ollama images.
+#   - Pulls the latest deno image.
 #   - Brings up the stack with restart: unless-stopped.
 #   - Verifies the f2a-edge-local /health endpoint responds.
 #
 # Pre-requisites: /opt/first2apply-mono populated (rsync the repo's
 # apps/backend/supabase/functions + libraries/core); /opt/first2apply-mono/
 # apps/backend/supabase/functions/.env present with SUPABASE_URL,
-# SUPABASE_SERVICE_ROLE_KEY, F2A_AI_PROVIDER=local, F2A_OLLAMA_URL,
-# F2A_OLLAMA_MODEL, F2A_LOCAL_FN_PORT, F2A_WEBHOOK_SECRET.
+# SUPABASE_SERVICE_ROLE_KEY, F2A_AI_PROVIDER=local, F2A_LLM_URL,
+# F2A_LLM_MODEL, F2A_LOCAL_FN_PORT, F2A_WEBHOOK_SECRET. The f2a-codex-shim
+# systemd unit must be running (see deploy/pi/codex-shim).
 set -euo pipefail
 
 COMPOSE_FILE="$(dirname "$0")/compose.local-ai.yaml"
@@ -33,7 +34,7 @@ fi
 
 # Bring down any pre-compose containers with the same names so compose can take
 # them over without conflict (first run after migrating off ad-hoc docker run).
-for c in ollama f2a-edge-local; do
+for c in f2a-edge-local; do
   if docker inspect "$c" >/dev/null 2>&1; then
     # Only force-remove if NOT already managed by this compose project.
     label=$(docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' "$c" 2>/dev/null || true)
@@ -48,7 +49,7 @@ echo "pulling latest images..."
 docker compose -f "$COMPOSE_FILE" pull
 
 echo "starting stack..."
-docker compose -f "$COMPOSE_FILE" up -d
+docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
 echo "waiting for edge health..."
 for i in $(seq 1 12); do

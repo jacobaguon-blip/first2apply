@@ -66,9 +66,9 @@ export interface IScannerSupabaseApi {
  * cursor until the queue is empty. Items are processed in their original
  * order in terms of dispatch; completion order is whatever finishes first.
  *
- * Used by scanLinks to keep the local-AI inference host (Ollama on a Pi 5
- * CPU) from being slammed with N parallel parse requests that all queue
- * inside Ollama and time out.
+ * Used by scanLinks to keep the local-AI inference host from being slammed
+ * with N parallel parse requests (the old CPU-only Ollama queued them all and
+ * timed out; the Codex shim is plan rate limited).
  */
 async function runWithConcurrency<T>(
   items: T[],
@@ -255,8 +255,8 @@ export class JobScanner {
       const start = new Date().getTime();
 
       // Concurrency cap on per-link work: download + scanHtmls (which fans
-      // out to the edge function / local LLM). The household setup runs
-      // Ollama on a Pi 5 CPU which serializes inference, so the previous
+      // out to the edge function / local LLM). The household setup used to run
+      // Ollama on a Pi 5 CPU which serialized inference, so the previous
       // unlimited Promise.all queued 38+ requests inside Ollama and blew
       // past the 28-min per-call ceiling on later requests. Capping at a
       // small number lets one download overlap with one in-flight parse

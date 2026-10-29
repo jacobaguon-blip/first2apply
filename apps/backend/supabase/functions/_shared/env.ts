@@ -8,12 +8,13 @@ export type First2ApplyBackendEnv = {
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
   openAiConfig: OpenAiConfig;
-  // AI provider selection. `local` routes the OpenAI client at a local
-  // OpenAI-compatible server (Ollama) — no API key, no cost. `openai` is the
-  // legacy cloud path (requires a funded OPENAI_API_KEY). Default: local.
+  // AI provider selection. `local` routes the OpenAI client at an OpenAI-compatible
+  // server on the Pi (the Codex shim in deploy/pi/codex-shim, billed to a ChatGPT
+  // plan, no API key). `openai` is the cloud path (requires a funded OPENAI_API_KEY).
+  // Default: local.
   aiProvider: AiProvider;
-  ollamaUrl: string;
-  ollamaModel: string;
+  localLlmUrl: string;
+  localLlmModel: string;
   mailerLiteApiKey?: string;
   mailerSendApiKey?: string;
   mailerFromEmail: string;
@@ -33,11 +34,9 @@ export function parseEnv(): First2ApplyBackendEnv {
       apiKey: Deno.env.get('OPENAI_API_KEY') ?? '',
     },
     aiProvider: (Deno.env.get('F2A_AI_PROVIDER') ?? 'local') === 'openai' ? 'openai' : 'local',
-    ollamaUrl: Deno.env.get('F2A_OLLAMA_URL') ?? 'http://127.0.0.1:11434/v1',
-    // Default to the f2a variant which pins num_ctx=16384 via Modelfile.
-    // 3b is the production default — quality demonstrated on extraction work
-    // and CPU-friendlier than 7b on a Pi 5. Override with F2A_OLLAMA_MODEL.
-    ollamaModel: Deno.env.get('F2A_OLLAMA_MODEL') ?? 'qwen2.5:3b-f2a',
+    // F2A_OLLAMA_* are the pre-2026-10-29 names, still read so an old Pi .env keeps working.
+    localLlmUrl: Deno.env.get('F2A_LLM_URL') ?? Deno.env.get('F2A_OLLAMA_URL') ?? 'http://127.0.0.1:11435/v1',
+    localLlmModel: Deno.env.get('F2A_LLM_MODEL') ?? Deno.env.get('F2A_OLLAMA_MODEL') ?? 'gpt-6-luna',
     mailerLiteApiKey: Deno.env.get('MAILERLITE_API_KEY'),
     mailerSendApiKey: Deno.env.get('MAILERSEND_API_KEY'),
     mailerFromEmail: Deno.env.get('MAILER_FROM_EMAIL') ?? 'contact@first2apply.com',
