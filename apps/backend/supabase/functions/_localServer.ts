@@ -1,6 +1,6 @@
 /**
  * Minimal self-hosted router for the first2apply edge functions, run on the Pi
- * so all AI parsing happens locally against Ollama (no API key, no 429s).
+ * so all AI parsing goes through the local Codex shim (no API key, no 429s).
  *
  * Mounts each function's exported `handle(req)` under `/functions/v1/<name>`.
  * The probe's supabase-js client is configured to rewrite cloud function URLs
@@ -43,7 +43,7 @@ const isAuthorized = (req: Request): boolean => {
 };
 
 console.log(
-  `[local-fn] starting on :${port} (provider=${Deno.env.get('F2A_AI_PROVIDER') ?? 'local'}, ollama=${Deno.env.get('F2A_OLLAMA_URL') ?? '(default)'}, model=${Deno.env.get('F2A_OLLAMA_MODEL') ?? '(default)'}, bind=0.0.0.0)`,
+  `[local-fn] starting on :${port} (provider=${Deno.env.get('F2A_AI_PROVIDER') ?? 'local'}, llm=${Deno.env.get('F2A_LLM_URL') ?? Deno.env.get('F2A_OLLAMA_URL') ?? '(default)'}, model=${Deno.env.get('F2A_LLM_MODEL') ?? Deno.env.get('F2A_OLLAMA_MODEL') ?? '(default)'}, bind=0.0.0.0)`,
 );
 
 // Bind to all interfaces so the desktop (over Tailscale → tailscale0) and the

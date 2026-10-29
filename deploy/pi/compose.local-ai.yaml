@@ -1,11 +1,12 @@
-# Local-AI stack: Ollama (private assistant) + f2a-edge-local (self-hosted
-# Supabase edge runtime) running on the Pi, both bound to localhost / Tailscale
-# only (never publicly exposed). Brought up alongside the existing
-# f2a-server-probe systemd unit.
+# Local-AI stack: f2a-edge-local (self-hosted Supabase edge runtime) on the Pi,
+# bound to localhost / Tailscale only (never publicly exposed). It calls the
+# f2a-codex-shim systemd unit (deploy/pi/codex-shim) for inference. Ollama was
+# removed 2026-10-29, see deploy/pi/CHANGELOG.md. Brought up alongside the
+# existing f2a-server-probe systemd unit.
 #
 # Bring up:        docker compose -f compose.local-ai.yaml up -d
 # Bring down:      docker compose -f compose.local-ai.yaml down
-# Update only ollama image: docker compose -f compose.local-ai.yaml pull ollama && docker compose -f compose.local-ai.yaml up -d ollama
+# Recreate only edge (picks up .env changes): docker compose -f compose.local-ai.yaml up -d --no-deps --force-recreate edge
 #
 # Volume mounts are bind-mounted from /opt/first2apply-mono (rsync'd from the
 # repo) so updates to the edge functions are picked up with a `restart edge`.
@@ -13,24 +14,6 @@
 name: f2a-local-ai
 
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    restart: unless-stopped
-    # Host network so the edge service can reach 127.0.0.1:11434 without
-    # configuring a docker bridge address. Ollama only binds the published
-    # port to localhost — see entrypoint env below.
-    network_mode: host
-    environment:
-      OLLAMA_HOST: 127.0.0.1:11434
-    volumes:
-      - ollama:/root/.ollama
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-
   edge:
     image: denoland/deno:latest
     container_name: f2a-edge-local
@@ -41,11 +24,3 @@ services:
     volumes:
       - /opt/first2apply-mono:/mono
     command: deno run --allow-all _localServer.ts
-    depends_on:
-      ollama:
-        condition: service_started
-
-volumes:
-  ollama:
-    name: ollama
-    external: true

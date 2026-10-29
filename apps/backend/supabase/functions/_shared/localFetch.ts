@@ -1,10 +1,9 @@
 /**
- * fetch wrapper for the local Ollama client.
+ * fetch wrapper for the local LLM client (the Codex shim on the Pi).
  *
- * On the Pi, ollama-on-demand.timer stops Ollama after 5 idle minutes and starts it again
- * (within about 30s) once the edge runtime is up. A request that lands in that window fails
- * with a connection error, which used to be recorded as a failed scan. Network-level failures
- * are retried until Ollama answers or maxWaitMs passes. HTTP error statuses are NOT retried
+ * A request that lands while the shim restarts (a deploy or a crash loop) fails with a
+ * connection error, which would be recorded as a failed scan. Network-level failures
+ * are retried until the shim answers or maxWaitMs passes. HTTP error statuses are NOT retried
  * and an aborted request (the caller's own timeout) is never retried.
  */
 export function buildResilientFetch({

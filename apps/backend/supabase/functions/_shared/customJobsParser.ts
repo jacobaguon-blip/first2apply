@@ -198,9 +198,9 @@ const PARSE_CHUNK_MAX_CHARS = 16_000;
 const PARSE_CHUNK_OVERLAP = 500;
 const MAX_JOBS_PER_PAGE = 30;
 // 28 min per chunk: matches the probe's undici 30-min dispatcher headroom. On a
-// Pi 5 CPU, multiple concurrent edge calls all queue inside Ollama (single CPU
-// model is serialized), so individual requests routinely wait minutes in the
-// queue before processing begins. A stricter timeout would kill legitimate
+// Pi 5 CPU, multiple concurrent edge calls queued inside the old local model (single
+// CPU model, serialized), so individual requests routinely waited minutes. The Codex
+// shim answers in seconds, but the headroom stays as a safety net. A stricter timeout would kill legitimate
 // queued requests. A real timeout still beats hanging the whole scan.
 const PARSE_CALL_TIMEOUT_MS = 1_680_000;
 const SYSTEM_PROMPT = `You are an expert web scraper specialized in extracting job listings from HTML pages. 
@@ -437,7 +437,7 @@ async function callJobsParse({
       {
         model: llmConfig.model,
         messages,
-        // max_tokens (not max_completion_tokens) for Ollama OpenAI-compat parity.
+        // max_tokens (not max_completion_tokens) for OpenAI-compat parity with the local shim.
         max_tokens: 16_000,
         response_format: zodResponseFormat(PARSE_JOBS_PAGE_SCHEMA, 'ParseJobsPageResponse'),
       },

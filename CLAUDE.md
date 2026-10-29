@@ -73,10 +73,16 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
    quits fully on window close instead of hiding to the system tray.
 7. **Supabase cloud project** exists so the desktop app runs on other machines without self-hosting.
    Local Docker stack (`pnpm up`) is dev-only. (memory: `project_supabase_cloud`)
-8. **Local AI on the Pi (no API keys).** All AI inference runs on the Pi via **Ollama** (default
-   model `qwen2.5:3b-f2a`, `num_ctx=16384` via Modelfile) and a **self-hosted Deno edge runtime**
-   (`f2a-edge-local` container, port 54321) that imports each function's `handle()` and routes by
-   `/functions/v1/<name>`. Provider switch is one env var: `F2A_AI_PROVIDER=local|openai`.
+8. **Local AI on the Pi (no API keys).** Since 2026-10-29 inference runs through the **Codex shim**
+   (`deploy/pi/codex-shim/server.mjs`, systemd `f2a-codex-shim`, `127.0.0.1:11435`), an OpenAI-compatible
+   server that runs `codex exec` (model `gpt-6-luna`, effort `low`) on the owner's ChatGPT plan. It replaced
+   Ollama, which pinned the Pi CPU. The **self-hosted Deno edge runtime** (`f2a-edge-local` container, port
+   54321) imports each function's `handle()` and routes by `/functions/v1/<name>`. Provider switch is one env
+   var: `F2A_AI_PROVIDER=local|openai` (`local` = shim, `openai` = cloud key fallback). Edge env names are
+   `F2A_LLM_URL` and `F2A_LLM_MODEL` (legacy `F2A_OLLAMA_*` still read). **Full Pi history, ops commands,
+   rollback and gotchas: `deploy/pi/CHANGELOG.md` (also at `/opt/first2apply/CHANGELOG.md` on the Pi).**
+   An `.env` change needs `docker compose -f /opt/first2apply-mono/deploy/compose.local-ai.yaml up -d --no-deps --force-recreate edge`
+   (`docker restart` does not re-read `env_file`).
    - Pi files: `/opt/first2apply-mono/` (functions + libs), `/opt/first2apply-mono/deploy/`
      (`compose.local-ai.yaml`, `deploy-local-ai.sh`).
    - Probe wiring: `/opt/first2apply/preload.js` + `NODE_OPTIONS=--require=/preload.js` in
@@ -114,13 +120,12 @@ Nx monorepo, pnpm v10, Node 20+. `@beastx/first2apply`.
 - **Migrations:** `create or replace function` with new params makes an overload, not a replacement. Drop the old
   signature in the same migration. After merging a migration run `supabase migration list` (apps/backend) and
   `supabase db push`; the cloud project can silently lag behind master.
-- **Ollama idle manager:** `ollama-on-demand.timer` (script tracked in `deploy/pi/ollama-on-demand.sh`, installed at
-  `/opt/first2apply/ollama-on-demand.sh`) stops Ollama after 5 idle minutes. A model that is still LOADING is invisible
-  to `/api/ps`, so the old script killed Ollama mid-load and scans wedged (probe `healthz` stale). It now counts recent
-  log activity and a 15 minute post-start grace as activity. If `healthz` says `stale`, check `docker logs ollama` for
-  "client connection closed before llama-server finished loading". Probe scan concurrency is 1 (`F2A_SCAN_CONCURRENCY`
-  in `/opt/first2apply/.env`), the CPU model runs one request at a time. `pi-scanner-1` (project `/opt/dealhawk`) also
-  uses 100%+ CPU on the same Pi.
+- **Codex shim:** unit `f2a-codex-shim`, logs `journalctl -u f2a-codex-shim`, health `curl localhost:11435/health`.
+  Auth lives in `/opt/first2apply/codex-home/auth.json` (secret, re-login command in `deploy/pi/CHANGELOG.md`).
+  Each parse costs 16k to 25k Codex tokens against the plan's rolling window. If scans start failing with auth or
+  limit errors, flip `F2A_AI_PROVIDER=openai` with a funded key. Ollama is retired (container stopped, timer
+  disabled, volume `ollama` and `/opt/first2apply/ollama-on-demand.sh` kept until the shim has proven itself).
+  `pi-scanner-1` (project `/opt/dealhawk`) also uses CPU on the same Pi.
 
 ## Referral contacts (added 2026-10-08)
 

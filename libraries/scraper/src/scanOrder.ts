@@ -4,8 +4,8 @@ type SiteLike = { id: number; provider?: string };
 
 /**
  * Orders links so fast, deterministic parsers (LinkedIn, Indeed, ...) run before
- * custom boards, which go through a slow LLM parse (minutes per link on a CPU-only
- * Ollama). The scan queue is serialized, so without this a pile of custom links
+ * custom boards, which go through a slow LLM parse (seconds per link via the Codex shim,
+ * minutes on the old CPU-only Ollama). The scan queue is serialized, so without this a pile of custom links
  * starves everything else. The sort is stable: relative order inside each group is kept.
  */
 export function prioritizeLinks(links: Link[], sites: SiteLike[]): Link[] {
