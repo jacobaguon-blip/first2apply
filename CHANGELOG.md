@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-29
+- `14:49` -- fix(pi): codex shim enforces schema maxLength and maxItems on replies _(session `4be5e149`)_
+  - `deploy/pi/CHANGELOG.md`
+  - `deploy/pi/codex-shim/server.mjs`
+  - `deploy/pi/codex-shim/server.test.mjs`
 - `13:10` -- chore: gitignore Codex login credentials _(session `97b482b0`)_
   - `.gitignore`
 - `12:45` -- docs(pi): record how Ollama is kept from restarting _(session `97b482b0`)_

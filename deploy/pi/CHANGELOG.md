@@ -4,6 +4,26 @@ Operational history for the Raspberry Pi (`raspberrypi`, Tailscale MagicDNS). Th
 `deploy/pi/CHANGELOG.md`. The deployed copy lives at `/opt/first2apply/CHANGELOG.md`, so read it on the
 Pi before touching anything. Newest entry first. Add an entry for every durable change to the Pi.
 
+## 2026-10-29 (later): shim now enforces schema length limits
+
+**Symptom.** Custom board link 30 (Rocky Brands, UltiPro) returned 0 jobs. Edge log: `parse failed ... too_big,
+maximum 100, path jobs.N.location`. Multi-location jobs had locations over 100 characters, the edge's zod
+parse rejected the whole chunk, and every job in it was dropped.
+
+**Cause.** Codex strict `--output-schema` rejects `maxLength` and `maxItems`, so the shim stripped them and the
+model never saw the limit. A description hint was not enough, `gpt-6-luna` at low effort ignored it.
+
+**Fix.** `clampToSchema` in `deploy/pi/codex-shim/server.mjs` trims strings to `maxLength` and arrays to `maxItems`
+on the reply, using the original schema. The hint stays too. Deployed to `/opt/first2apply/codex-shim/server.mjs`
+(previous copy: `server.mjs.prev`), service restarted. Rescan of link 30: 0 jobs, then 17 found and 14 new.
+
+**Also seen on the first production scans.** Link 43 (Ikon Pass, `account.ikonpass.com/careers`) returns "page not
+found", so the careers URL is dead, not a shim problem. Link 24 (Stellantis) returned 0 jobs, unverified whether
+the page is JavaScript rendered. Link 36 (Cotopaxi): 12 found, 11 new. Link 149 (Peak Design): 1 found.
+
+**Lesson.** When the shim changes a schema, anything the changed schema used to guarantee must be re-enforced
+on the way back.
+
 ## 2026-10-29: AI inference moved from Ollama to a Codex shim (ChatGPT plan)
 
 **Why.** Ollama running `qwen2.5:3b-f2a` on the Pi 5 CPU kept the load average at 12 to 22, wedged
