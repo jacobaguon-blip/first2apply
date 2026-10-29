@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 2026-10-29
+- `12:45` -- docs(pi): record how Ollama is kept from restarting _(session `97b482b0`)_
+  - `deploy/pi/CHANGELOG.md`
 - `12:42` -- chore(pi): retire Ollama, document the Codex shim, add Pi changelog _(session `d59bd595`)_
   - `CLAUDE.md`
   - `apps/backend/scripts/draft-referral-e2e.ts`
