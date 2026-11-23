@@ -17,3 +17,5 @@ type _BucketsMatch = NonNullable<AiFilterProfile['location_buckets']>[number] ex
   : never;
 export const _locationBucketsMatch: _BucketsMatch = true;
 export * from './companyKey';
+
+export type { PreparedApplication } from './preparedApplication';
