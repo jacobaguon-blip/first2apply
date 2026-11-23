@@ -1,12 +1,13 @@
 import { getExceptionMessage } from '@first2apply/core';
 
+import { tailorCvSystemPrompt } from '../_shared/careerOpsPrompts.ts';
 import { CORS_HEADERS } from '../_shared/cors.ts';
 import { getEdgeFunctionContext } from '../_shared/edgeFunctions.ts';
 import { createLoggerWithMeta } from '../_shared/logger.ts';
 import { buildOpenAiClient, logAiUsage } from '../_shared/openAI.ts';
-import { tailorCvSystemPrompt } from '../_shared/careerOpsPrompts.ts';
+import { parsePreparedApplication, prepareApplicationSystemPrompt } from './prepareApplication.ts';
 
-type TailorCvBody = { job_id: number };
+type TailorCvBody = { job_id: number; prepare_application?: boolean };
 
 async function checkFeatureFlag(
   // deno-lint-ignore no-explicit-any
@@ -45,7 +46,7 @@ export const handle = async (req: Request): Promise<Response> => {
       );
     }
 
-    const { job_id } = (await req.json()) as TailorCvBody;
+    const { job_id, prepare_application } = (await req.json()) as TailorCvBody;
     if (!job_id) throw new Error('job_id is required');
 
     const { data: cvRow, error: cvErr } = await supabaseClient
@@ -55,10 +56,9 @@ export const handle = async (req: Request): Promise<Response> => {
       .maybeSingle();
     if (cvErr) throw cvErr;
     if (!cvRow?.markdown) {
-      return new Response(
-        JSON.stringify({ error: { code: 'no_master_cv', message: 'Upload a master CV first.' } }),
-        { headers: { 'Content-Type': 'application/json', ...CORS_HEADERS } },
-      );
+      return new Response(JSON.stringify({ error: { code: 'no_master_cv', message: 'Upload a master CV first.' } }), {
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+      });
     }
 
     const { data: job, error: jobErr } = await supabaseClient
@@ -88,8 +88,12 @@ export const handle = async (req: Request): Promise<Response> => {
     const response = await openAi.chat.completions.create({
       model: llmConfig.model,
       temperature: 0.3,
+      ...(prepare_application === true ? { response_format: { type: 'json_object' } as const } : {}),
       messages: [
-        { role: 'system', content: tailorCvSystemPrompt },
+        {
+          role: 'system',
+          content: prepare_application === true ? prepareApplicationSystemPrompt : tailorCvSystemPrompt,
+        },
         { role: 'user', content: userMsg },
       ],
     });
@@ -99,18 +103,23 @@ export const handle = async (req: Request): Promise<Response> => {
     const tailored = response.choices?.[0]?.message?.content?.trim() ?? '';
     if (!tailored) throw new Error('LLM returned empty tailored CV');
 
+    if (prepare_application === true) {
+      const application = parsePreparedApplication(tailored, cvRow.markdown, job.description ?? '');
+      return new Response(JSON.stringify({ application }), {
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+      });
+    }
+
     const nowIso = new Date().toISOString();
-    const { error: upsertErr } = await supabaseClient
-      .from('evaluations')
-      .upsert(
-        {
-          job_id,
-          user_id: user.id,
-          tailored_cv: tailored,
-          tailored_cv_generated_at: nowIso,
-        },
-        { onConflict: 'job_id,user_id' },
-      );
+    const { error: upsertErr } = await supabaseClient.from('evaluations').upsert(
+      {
+        job_id,
+        user_id: user.id,
+        tailored_cv: tailored,
+        tailored_cv_generated_at: nowIso,
+      },
+      { onConflict: 'job_id,user_id' },
+    );
     if (upsertErr) throw upsertErr;
 
     return new Response(JSON.stringify({ tailored_cv: tailored }), {

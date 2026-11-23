@@ -10,6 +10,7 @@ import {
   ListJobsParams,
   ListJobsResult,
   Note,
+  type PreparedApplication,
   Profile,
   Review,
   StripeConfig,
@@ -812,6 +813,15 @@ export async function parseCv(args: {
   contentBase64: string;
 }): Promise<{ markdown?: string; source_filename?: string; warning?: string }> {
   return _mainProcessApiCall('parse-cv', args);
+}
+
+export async function prepareApplication(jobId: number): Promise<PreparedApplication> {
+  const result = await _mainProcessApiCall<{ application?: PreparedApplication }>('tailor-cv', {
+    jobId,
+    prepareApplication: true,
+  });
+  if (!result?.application) throw new Error('Career Ops did not return an application draft.');
+  return result.application;
 }
 
 export async function tailorCv(jobId: number): Promise<{ tailored_cv?: string }> {

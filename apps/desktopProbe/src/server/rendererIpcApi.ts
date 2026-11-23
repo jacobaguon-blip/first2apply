@@ -1,5 +1,4 @@
-import { getExceptionMessage } from '@first2apply/core';
-import { Job } from '@first2apply/core';
+import { getExceptionMessage, Job, type PreparedApplication } from '@first2apply/core';
 import { F2aSupabaseApi } from '@first2apply/ui';
 import { app, BrowserWindow, dialog, ipcMain, Notification, shell } from 'electron';
 import fs from 'fs';
@@ -915,13 +914,14 @@ export function initRendererIpcApi({
       }),
   );
 
-  ipcMain.handle('tailor-cv', async (_e, { jobId }: { jobId: number }) =>
+  ipcMain.handle('tailor-cv', async (_e, { jobId, prepareApplication }: { jobId: number; prepareApplication?: boolean }) =>
     _apiCall(async () => {
       const supabase = supabaseApi.getSupabaseClient();
       const { data, error } = await supabase.functions.invoke<{
         tailored_cv?: string;
+        application?: PreparedApplication;
         error?: { code: string; message: string };
-      }>('tailor-cv', { body: { job_id: jobId } });
+      }>('tailor-cv', { body: { job_id: jobId, prepare_application: prepareApplication } });
       if (error) throw error;
       if (data?.error) throw new Error(`${data.error.code}: ${data.error.message}`);
       return data;
